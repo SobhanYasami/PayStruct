@@ -1,0 +1,99 @@
+# ==========================
+# Global
+# ==========================
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.log
+*.tmp
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build / cache
+dist/
+build/
+.cache/
+tmp/
+*.bak
+
+# ==========================
+# Backend (Go)
+# ==========================
+/backend/bin/
+/backend/tmp/
+/backend/.env
+/backend/.env.*
+/backend/*.log
+/backend/coverage/
+/backend/tests/testdata/
+/backend/database/*.db
+/backend/storage/
+/backend/vendor/
+/backend/*.out
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go coverage
+*.coverprofile
+*.cov
+
+# ==========================
+# Frontend (Next.js / Node)
+# ==========================
+/frontend/node_modules/
+/frontend/.next/
+/frontend/out/
+/frontend/build/
+/frontend/.turbo/
+/frontend/.vercel/
+/frontend/.env
+/frontend/.env.*
+/frontend/coverage/
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+/frontend/pnpm-debug.log*
+/frontend/.eslintcache
+/frontend/.stylelintcache
+
+# ==========================
+# Storage
+# ==========================
+/storage/*
+!/storage/.gitkeep
+
+# ==========================
+# Logs
+# ==========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================
+# Misc
+# ==========================
+*.DS_Store
+*.pem
+*.crt
+*.key
