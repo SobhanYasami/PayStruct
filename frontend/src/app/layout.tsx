@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Navbar from "@/components/layout/Navbar";
 
 export const metadata: Metadata = {
 	title: "PayStruct",
@@ -13,7 +14,13 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang='fa'>
-			<body className={``}>{children}</body>
+			<body
+				className={``}
+				dir='rtl'
+			>
+				<Navbar />
+				{children}
+			</body>
 		</html>
 	);
 }
