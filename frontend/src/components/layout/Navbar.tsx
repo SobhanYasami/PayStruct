@@ -7,7 +7,6 @@ import {
 	Users,
 	Building2,
 	Wallet,
-	FileText,
 	BarChart3,
 	Settings,
 	Menu,
@@ -36,11 +35,6 @@ const navItems: NavItem[] = [
 		title: "پیمانکاران",
 		href: "/dashboard/contractors",
 		icon: <Wallet size={20} />,
-	},
-	{
-		title: "پرداخت‌ها",
-		href: "/dashboard/payments",
-		icon: <FileText size={20} />,
 	},
 	{
 		title: "گزارش‌ها",
