@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { X, Plus, Archive, Trash2, DownloadCloud, Edit2 } from "lucide-react";
+import { Plus, Archive, Trash2, DownloadCloud, Edit2 } from "lucide-react";
 import Image from "next/image";
 
 /**
