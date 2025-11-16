@@ -1,9 +1,15 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { Plus, Archive, Trash2, DownloadCloud, Edit2 } from "lucide-react";
-import Image from "next/image";
+/* -------------------- Types -------------------- */
+import {
+	Project,
+	ProjectStatus,
+	StakeholderRef,
+	Phase,
+	User,
+} from "@/types/projects";
 
 /**
  * Projects page (Persian / RTL) - features:
@@ -21,56 +27,13 @@ import Image from "next/image";
  * - Mobile responsive and RTL
  */
 
-/* -------------------- Types -------------------- */
-type Phase = {
-	id: string;
-	title: string;
-	start?: string; // ISO date
-	end?: string; // ISO date
-	completed?: boolean;
-};
-
-type StakeholderRef = {
-	id: string;
-	name: string;
-	role?: string;
-	type: "customer" | "contractor";
-};
-
-type ProjectStatus =
-	| "Planning"
-	| "Active"
-	| "On Hold"
-	| "Completed"
-	| "Cancelled";
-
-type Project = {
-	id: string;
-	name: string;
-	code?: string;
-	description?: string;
-	category?: string;
-	phases: Phase[];
-	customers: StakeholderRef[];
-	contractors: StakeholderRef[];
-	budget?: number;
-	priority?: "Low" | "Medium" | "High" | "Critical";
-	status?: ProjectStatus;
-	tags?: string[];
-	files?: { id: string; name: string }[];
-	archived?: boolean;
-	history?: Array<{ when: string; by: string; changes: string }>;
-	createdAt: string;
-	updatedAt: string;
-};
-
 /* -------------------- Helpers -------------------- */
-
 const uid = (prefix = "") => prefix + Math.random().toString(36).slice(2, 9);
-
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
-const STORAGE_KEY = "paystruct_projects_v1";
+const STORAGE_KEY =
+	process.env.NEXT_PUBLIC_STORAGE_KEY || "paystruct_projects_v1";
+
 const MOCK_CUSTOMERS = [
 	{ id: "c1", name: "شرکت آلفا" },
 	{ id: "c2", name: "آقای احمدی" },
@@ -1034,7 +997,6 @@ export default function Projects() {
 }
 
 /* -------------------- ProjectEditor Component -------------------- */
-
 function ProjectEditor({
 	project,
 	customers,
@@ -1044,8 +1006,8 @@ function ProjectEditor({
 	onAttachFile,
 }: {
 	project: Project;
-	customers: { id: string; name: string }[];
-	contractors: { id: string; name: string }[];
+	customers: User[];
+	contractors: User[];
 	onChange: (p: Project) => void;
 	onSave: (p: Project) => void;
 	onAttachFile: (file: File) => void;
