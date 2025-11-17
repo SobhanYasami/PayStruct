@@ -19,7 +19,6 @@ import {
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -86,6 +85,18 @@ export default function Projects() {
 	}, [projects]);
 
 	/* -------------------- Operations -------------------- */
+	const createProject = (
+		project: Omit<Project, "id" | "createdAt" | "updatedAt">,
+	) => {
+		const newProject: Project = {
+			...project,
+			id: uid("prj_"),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+		setProjects((prev) => [newProject, ...prev]);
+		setIsCreateDialogOpen(false);
+	};
 
 	const updateProject = (id: string, updates: Partial<Project>) => {
 		setProjects((prev) =>
@@ -115,18 +126,54 @@ export default function Projects() {
 	return (
 		<div
 			dir='rtl'
-			className='min-h-screen bg-gray-50'
+			className='h-[100vh-52px] bg-blue-500'
 		>
-			<div className='container mx-auto px-4 py-8'>
-				<Header
-					searchTerm={searchTerm}
-					setSearchTerm={setSearchTerm}
-					isCreateDialogOpen={isCreateDialogOpen}
-					setIsCreateDialogOpen={setIsCreateDialogOpen}
-					setProjects={setProjects}
-				/>
+			<div className='container h-full mx-auto px-4 py-8'>
+				{/* Header */}
+				<div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8'>
+					<div>
+						<h1 className='text-3xl font-bold text-gray-900'>
+							مدیریت پروژه‌ها
+						</h1>
+						<p className='text-gray-600 mt-2'>
+							سیستم مدیریت پروژه‌های ساخت و ساز
+						</p>
+					</div>
+
+					<div className='flex flex-col sm:flex-row gap-3 w-full sm:w-auto'>
+						<div className='relative'>
+							<Search
+								className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400'
+								size={20}
+							/>
+							<Input
+								placeholder='جستجو بر اساس نام یا فاز...'
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								className='pr-10 w-full sm:w-64'
+							/>
+						</div>
+
+						{/* Create Project Button - Direct trigger without DialogTrigger */}
+						<Button
+							className='gap-2 bg-blue-600 hover:bg-blue-700 text-white'
+							onClick={() => setIsCreateDialogOpen(true)}
+						>
+							<Plus size={20} />
+							ایجاد پروژه جدید
+						</Button>
+					</div>
+				</div>
+
+				{/* Create Project Dialog */}
+				{/* <CreateProjectDialog
+					open={isCreateDialogOpen}
+					onOpenChange={setIsCreateDialogOpen}
+					onCreate={createProject}
+				/> */}
+
 				{/* Projects Table */}
-				<Card>
+				{/* <Card>
 					<CardHeader>
 						<CardTitle>لیست پروژه‌ها</CardTitle>
 					</CardHeader>
@@ -211,83 +258,22 @@ export default function Projects() {
 							</div>
 						)}
 					</CardContent>
-				</Card>
+				</Card> */}
 
 				{/* View Project Dialog */}
-				<ViewProjectDialog
+				{/* <ViewProjectDialog
 					project={viewingProject}
 					open={isViewDialogOpen}
 					onOpenChange={setIsViewDialogOpen}
-				/>
+				/> */}
 
 				{/* Edit Project Dialog */}
-				<EditProjectDialog
+				{/* <EditProjectDialog
 					project={editingProject}
 					open={isEditDialogOpen}
 					onOpenChange={setIsEditDialogOpen}
 					onUpdate={updateProject}
-				/>
-			</div>
-		</div>
-	);
-}
-
-/* -------------------- Header -------------------- */
-interface HeaderProps {
-	searchTerm: string;
-	setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
-	isCreateDialogOpen: boolean;
-	setIsCreateDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
-	setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
-}
-
-function Header({
-	searchTerm,
-	setSearchTerm,
-	isCreateDialogOpen,
-	setIsCreateDialogOpen,
-	setProjects,
-}: HeaderProps) {
-	const createProject = (
-		project: Omit<Project, "id" | "createdAt" | "updatedAt">,
-	) => {
-		const newProject: Project = {
-			...project,
-			id: uid("prj_"),
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
-		};
-
-		setProjects((prev) => [newProject, ...prev]);
-		setIsCreateDialogOpen(false);
-	};
-
-	return (
-		<div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8'>
-			<div>
-				<h1 className='text-3xl font-bold text-gray-900'>مدیریت پروژه‌ها</h1>
-				<p className='text-gray-600 mt-2'>سیستم مدیریت پروژه‌های ساخت و ساز</p>
-			</div>
-
-			<div className='flex flex-col sm:flex-row gap-3 w-full sm:w-auto'>
-				<div className='relative'>
-					<Search
-						className='absolute right-9 top-1/2 transform translate-x-2 -translate-y-1/2 text-gray-400 '
-						size={20}
-					/>
-					<Input
-						placeholder='جستجو بر اساس نام یا فاز...'
-						value={searchTerm}
-						onChange={(e) => setSearchTerm(e.target.value)}
-						className='pr-10 w-full sm:w-64 active:border-blue-500'
-					/>
-				</div>
-
-				<CreateProjectDialog
-					open={isCreateDialogOpen}
-					onOpenChange={setIsCreateDialogOpen}
-					onCreate={createProject}
-				/>
+				/> */}
 			</div>
 		</div>
 	);
@@ -370,7 +356,31 @@ function CreateProjectDialog({
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+
+		// Validate required fields
+		if (!formData.name.trim()) {
+			alert("لطفاً نام پروژه را وارد کنید");
+			return;
+		}
+
+		if (formData.phases.some((phase) => !phase.trim())) {
+			alert("لطفاً تمام فازها را پر کنید");
+			return;
+		}
+
+		// Validate contractor shares don't exceed 100%
+		const totalShare = formData.contractors.reduce(
+			(sum, c) => sum + c.share,
+			0,
+		);
+		if (totalShare > 100) {
+			alert("مجموع سهم پیمانکاران نمی‌تواند بیش از ۱۰۰٪ باشد");
+			return;
+		}
+
 		onCreate(formData);
+
+		// Reset form
 		setFormData({
 			name: "",
 			phases: [""],
@@ -380,6 +390,8 @@ function CreateProjectDialog({
 			contractors: [],
 			turnover: 0,
 		});
+		setSelectedContractor("");
+		setContractorShare(0);
 	};
 
 	return (
@@ -387,13 +399,7 @@ function CreateProjectDialog({
 			open={open}
 			onOpenChange={onOpenChange}
 		>
-			<DialogTrigger asChild>
-				<Button className='gap-1 bg-blue-500 text-white'>
-					<Plus size={20} />
-					ایجاد پروژه جدید
-				</Button>
-			</DialogTrigger>
-			<DialogContent className='sm:max-w-[600px]'>
+			<DialogContent className='sm:max-w-[600px] z-50'>
 				<DialogHeader>
 					<DialogTitle>ایجاد پروژه جدید</DialogTitle>
 				</DialogHeader>
@@ -404,18 +410,17 @@ function CreateProjectDialog({
 				>
 					{/* Basic Info */}
 					<div className='space-y-4'>
-						<div className='grid grid-cols-1 gap-4'>
-							<div className='space-y-2'>
-								<Label htmlFor='name'>نام پروژه *</Label>
-								<Input
-									id='name'
-									value={formData.name}
-									onChange={(e) =>
-										setFormData((prev) => ({ ...prev, name: e.target.value }))
-									}
-									required
-								/>
-							</div>
+						<div className='space-y-2'>
+							<Label htmlFor='name'>نام پروژه *</Label>
+							<Input
+								id='name'
+								value={formData.name}
+								onChange={(e) =>
+									setFormData((prev) => ({ ...prev, name: e.target.value }))
+								}
+								required
+								placeholder='نام پروژه را وارد کنید'
+							/>
 						</div>
 
 						<div className='grid grid-cols-2 gap-4'>
@@ -462,6 +467,7 @@ function CreateProjectDialog({
 											budget: Number(e.target.value),
 										}))
 									}
+									min='0'
 								/>
 							</div>
 							<div className='space-y-2'>
@@ -476,6 +482,7 @@ function CreateProjectDialog({
 											turnover: Number(e.target.value),
 										}))
 									}
+									min='0'
 								/>
 							</div>
 						</div>
@@ -484,7 +491,7 @@ function CreateProjectDialog({
 					{/* Phases */}
 					<div className='space-y-3'>
 						<div className='flex justify-between items-center'>
-							<Label>فازهای پروژه</Label>
+							<Label>فازهای پروژه *</Label>
 							<Button
 								type='button'
 								variant='outline'
@@ -505,6 +512,7 @@ function CreateProjectDialog({
 										value={phase}
 										onChange={(e) => updatePhase(index, e.target.value)}
 										placeholder={`فاز ${index + 1}`}
+										required
 									/>
 									{formData.phases.length > 1 && (
 										<Button
@@ -551,6 +559,8 @@ function CreateProjectDialog({
 								value={contractorShare}
 								onChange={(e) => setContractorShare(Number(e.target.value))}
 								className='w-24'
+								min='1'
+								max='100'
 							/>
 
 							<Button
@@ -585,6 +595,13 @@ function CreateProjectDialog({
 								</div>
 							))}
 						</div>
+
+						{formData.contractors.length > 0 && (
+							<div className='text-sm text-gray-600'>
+								مجموع سهم‌ها:{" "}
+								{formData.contractors.reduce((sum, c) => sum + c.share, 0)}%
+							</div>
+						)}
 					</div>
 
 					{/* Submit */}
