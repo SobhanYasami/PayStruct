@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
+import { Contract, Section } from "@/types/contractors";
 import {
 	LayoutDashboard,
 	FileText,
@@ -16,14 +17,7 @@ import {
 	Edit,
 	Archive,
 } from "lucide-react";
-
-type Section =
-	| "dashboard"
-	| "create"
-	| "contracts"
-	| "wbs"
-	| "status"
-	| "compliance";
+import { Button } from "@/components/ui/button";
 
 export default function Contractors() {
 	const [activeSection, setActiveSection] = useState<Section>("dashboard");
@@ -72,7 +66,7 @@ export default function Contractors() {
 							icon: <ShieldCheck size={18} />,
 						},
 					].map((item) => (
-						<button
+						<Button
 							key={item.key}
 							onClick={() => setActiveSection(item.key as Section)}
 							className={`w-full flex items-center justify-between p-2 rounded-md transition-all ${
@@ -85,7 +79,7 @@ export default function Contractors() {
 								{item.icon}
 								<span className='text-sm font-medium'>{item.label}</span>
 							</div>
-						</button>
+						</Button>
 					))}
 				</nav>
 
@@ -244,12 +238,12 @@ function CreateContractForm() {
 					/>
 				</div>
 
-				<button
+				<Button
 					type='submit'
 					className='bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded-lg transition-all'
 				>
 					ثبت قرارداد
-				</button>
+				</Button>
 			</form>
 		</section>
 	);
@@ -258,17 +252,6 @@ function CreateContractForm() {
 //
 // ─── PLACEHOLDER SECTIONS FOR FUTURE EXPANSION ────────────────────────────────────
 //
-interface Contract {
-	id: number;
-	name: string;
-	customer: string;
-	contractor: string;
-	budget: number;
-	startDate: string;
-	endDate: string;
-	status: "فعال" | "در انتظار" | "منقضی" | "تکمیل‌شده";
-	priority: "کم" | "متوسط" | "بالا" | "بحرانی";
-}
 
 const initialContracts: Contract[] = [
 	{
