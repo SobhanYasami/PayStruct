@@ -126,9 +126,9 @@ export default function Projects() {
 	return (
 		<div
 			dir='rtl'
-			className='h-[100vh-52px] bg-blue-500'
+			className='min-h-screen bg-blue-500/20'
 		>
-			<div className='container h-full mx-auto px-4 py-8'>
+			<div className='container h-[calc(100vh-52px)] mx-auto px-4 py-8'>
 				{/* Header */}
 				<div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8'>
 					<div>

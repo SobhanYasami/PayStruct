@@ -3,5 +3,5 @@ export default function ProjectsLayout({
 }: {
 	children: React.ReactNode;
 }) {
-	return <>{children}</>;
+	return <section className='min-h-screen bg-white'>{children}</section>;
 }

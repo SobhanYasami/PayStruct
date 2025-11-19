@@ -1,5 +1,5 @@
 export default function Home() {
 	return (
-		<div className='flex min-h-screen items-center justify-center font-sans'></div>
+		<div className='flex main_height bg-amber-600 items-center justify-center'></div>
 	);
 }
