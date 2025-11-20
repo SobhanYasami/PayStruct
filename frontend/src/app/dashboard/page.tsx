@@ -30,11 +30,15 @@ Chart.register(
 );
 
 export default function Dashboard() {
-	const lineRef = useRef(null);
-	const pieRef = useRef(null);
+	const lineRef = useRef<HTMLCanvasElement | null>(null);
+	const pieRef = useRef<HTMLCanvasElement | null>(null);
 
 	useEffect(() => {
-		const lineCtx = lineRef.current.getContext("2d");
+		if (!lineRef.current || !pieRef.current) return; // null check
+
+		const lineCtx = lineRef.current.getContext("2d")!;
+		const pieCtx = pieRef.current.getContext("2d")!;
+
 		const lineChart = new Chart(lineCtx, {
 			type: "line",
 			data: {
@@ -52,7 +56,6 @@ export default function Dashboard() {
 			options: { responsive: true, plugins: { legend: { display: false } } },
 		});
 
-		const pieCtx = pieRef.current.getContext("2d");
 		const pieChart = new Chart(pieCtx, {
 			type: "pie",
 			data: {

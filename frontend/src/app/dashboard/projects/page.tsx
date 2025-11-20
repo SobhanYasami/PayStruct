@@ -58,6 +58,7 @@ export default function Projects() {
 	const [showCreate, setShowCreate] = useState(false);
 	const [showEdit, setShowEdit] = useState(false);
 	const [showDelete, setShowDelete] = useState(false);
+	const [search, setSearch] = useState("");
 
 	return (
 		<main
@@ -80,7 +81,8 @@ export default function Projects() {
 							/>
 							<input
 								placeholder='جستجو بر اساس نام یا فاز...'
-								value={""}
+								value={search} // controlled value
+								onChange={(e) => setSearch(e.target.value)}
 								className={styles.searchInput}
 							/>
 						</div>
@@ -106,11 +108,13 @@ export default function Projects() {
 							type='text'
 							placeholder='نام پروژه'
 							className={styles.dialogInput}
+							onChange={() => console.log("project name")}
 						/>
 						<input
 							type='number'
 							placeholder='فاز'
 							className={styles.dialogInput}
+							onChange={() => console.log("project phase")}
 						/>
 
 						<button className='bg-blue-600 text-white p-2 rounded mt-2'>
