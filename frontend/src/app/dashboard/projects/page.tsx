@@ -1,5 +1,162 @@
+"use client";
+
+import { useState } from "react";
+import { Plus, Search, X } from "lucide-react";
 import styles from "./page.module.css";
 
-export default function Projects() {
-	return <main className={styles.main}>Projects</main>;
+/* -------------------- Types -------------------- */
+interface Contractor {
+	id: string;
+	name: string;
+	share: number;
+	statusStatements: number;
 }
+
+interface Project {
+	id: string;
+	name: string;
+	phases: string[];
+	startDate: string;
+	endDate: string;
+	budget: number;
+	contractors: Contractor[];
+	turnover: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+/* -------- Dialog Component (Blur Overlay) -------- */
+function Dialog({ title, onClose, children }: any) {
+	return (
+		<div className={styles.dialogOverlay}>
+			{/* Blur overlay */}
+			<div
+				className='absolute inset-0 bg-black/40 backdrop-blur-sm'
+				onClick={onClose}
+			/>
+
+			{/* Modal Box */}
+			<div className='relative bg-white w-[90%] max-w-md p-6 rounded-xl shadow-lg z-10 animate-fadeIn'>
+				<div className='flex justify-between items-center mb-4'>
+					<h2 className='text-lg font-bold'>{title}</h2>
+					<button onClick={onClose}>
+						<X size={20} />
+					</button>
+				</div>
+
+				{children}
+			</div>
+		</div>
+	);
+}
+
+/* ----------   Main Component --------------   */
+export default function Projects() {
+	const [showCreate, setShowCreate] = useState(false);
+	const [showEdit, setShowEdit] = useState(false);
+	const [showDelete, setShowDelete] = useState(false);
+
+	return (
+		<main
+			className={styles.page}
+			dir='rtl'
+		>
+			<div className={styles.wrapper}>
+				{/* Header */}
+				<div className={styles.header}>
+					<div>
+						<h1 className={styles.title}>مدیریت پروژه‌ها</h1>
+						<p className={styles.subtitle}>سیستم مدیریت پروژه‌های ساخت و ساز</p>
+					</div>
+
+					<div className={styles.actions}>
+						<div className={styles.searchWrapper}>
+							<Search
+								className={styles.searchIcon}
+								size={20}
+							/>
+							<input
+								placeholder='جستجو بر اساس نام یا فاز...'
+								value={""}
+								className={styles.searchInput}
+							/>
+						</div>
+
+						<button
+							className={styles.createButton}
+							onClick={() => setShowCreate(true)}
+						>
+							<Plus size={20} /> ایجاد پروژه جدید
+						</button>
+					</div>
+				</div>
+			</div>
+
+			{/* Create Dialog */}
+			{showCreate && (
+				<Dialog
+					title='ایجاد پروژه جدید'
+					onClose={() => setShowCreate(false)}
+				>
+					<form className='flex flex-col gap-3'>
+						<input
+							type='text'
+							placeholder='نام پروژه'
+							className='border p-2 rounded'
+						/>
+						<input
+							type='number'
+							placeholder='بودجه'
+							className='border p-2 rounded'
+						/>
+
+						<button className='bg-blue-600 text-white p-2 rounded mt-2'>
+							ثبت پروژه
+						</button>
+					</form>
+				</Dialog>
+			)}
+
+			{/* Edit Dialog */}
+			{showEdit && (
+				<Dialog
+					title='ویرایش پروژه'
+					onClose={() => setShowEdit(false)}
+				>
+					<p>فرم ویرایش اینجا...</p>
+				</Dialog>
+			)}
+
+			{/* Delete Dialog */}
+			{showDelete && (
+				<Dialog
+					title='حذف پروژه'
+					onClose={() => setShowDelete(false)}
+				>
+					<p className='mb-4'>آیا از حذف این پروژه مطمئن هستید؟</p>
+					<div className='flex gap-3'>
+						<button className='bg-red-600 text-white p-2 rounded flex-1'>
+							حذف
+						</button>
+						<button
+							className='bg-gray-300 p-2 rounded flex-1'
+							onClick={() => setShowDelete(false)}
+						>
+							لغو
+						</button>
+					</div>
+				</Dialog>
+			)}
+		</main>
+	);
+}
+
+/* Small fade animation */
+// Add this to your global.css if needed:
+// .animate-fadeIn {
+//   animation: fadeIn 0.2s ease-out;
+// }
+// @keyframes fadeIn {
+//   from { opacity: 0; transform: scale(0.96); }
+//   to { opacity: 1; transform: scale(1); }
+// }

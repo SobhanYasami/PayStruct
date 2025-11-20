@@ -1,0 +1,234 @@
+.page {
+	min-height: calc(100vh - 73px);
+	background: #3b82f6; /* blue-500 */
+	position: relative;
+}
+
+.wrapper {
+	background: white;
+	border: 1px solid #e5e7eb;
+	padding: 32px 16px;
+}
+
+/* Header layout */
+.header {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin-bottom: 32px;
+}
+
+@media (min-width: 640px) {
+	.header {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+	}
+}
+
+/* Text */
+.title {
+	font-size: 1.8rem;
+	font-weight: bold;
+	color: #111827;
+}
+
+.subtitle {
+	color: #4b5563;
+	margin-top: 8px;
+}
+
+/* Action area */
+.actions {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 100%;
+}
+
+@media (min-width: 640px) {
+	.actions {
+		flex-direction: row;
+		width: auto;
+		align-items: center;
+	}
+}
+
+/* Search */
+.searchWrapper {
+	position: relative;
+}
+
+.searchIcon {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #9ca3af;
+}
+
+.searchInput {
+	padding-right: 40px;
+	width: 100%;
+	max-width: 260px;
+	height: 39px;
+	border: 1px solid #d1d5db;
+	border-radius: 8px;
+	outline: none;
+	font-size: 0.9rem;
+}
+
+.searchInput:focus {
+	border-color: #2563eb;
+}
+
+/* Create Button */
+.createButton {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: #2563eb;
+	color: white;
+	border: none;
+	padding: 4px 16px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	transition: background 0.2s;
+}
+
+.createButton:hover {
+	background: #1e40af;
+}
+
+/* ============================= */
+/*      Dialog Overlay (Blur)    */
+/* ============================= */
+.dialogOverlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(236, 236, 236, 0.35);
+	backdrop-filter: blur(6px);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1000;
+
+	opacity: 0;
+	animation: fadeIn 0.25s ease forwards;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+	100% {
+		opacity: 1;
+	}
+}
+
+/* ============================= */
+/*           Dialog Box          */
+/* ============================= */
+.dialogContent {
+	width: 90%;
+	max-width: 480px;
+	background: #ffffff;
+	border-radius: 14px;
+	padding: 24px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+	direction: rtl;
+
+	transform: translateY(20px);
+	opacity: 0;
+	animation: slideUp 0.25s ease forwards;
+}
+
+/* Slide-up animation */
+@keyframes slideUp {
+	100% {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+/* ============================= */
+/*           Header              */
+/* ============================= */
+.dialogHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16px;
+}
+
+.dialogTitle {
+	font-size: 1.3rem;
+	font-weight: 600;
+	color: #1f2937;
+}
+
+.dialogClose {
+	cursor: pointer;
+	border: none;
+	background: transparent;
+	font-size: 1.4rem;
+	color: #6b7280;
+	transition: 0.15s;
+}
+
+.dialogClose:hover {
+	color: #111827;
+}
+
+/* ============================= */
+/*          Input Fields         */
+/* ============================= */
+.dialogInput {
+	width: 100%;
+	padding: 10px 12px;
+	border-radius: 8px;
+	border: 1px solid #d1d5db;
+	outline: none;
+	margin-top: 4px;
+	font-size: 0.95rem;
+}
+
+.dialogInput:focus {
+	border-color: #2563eb;
+}
+
+/* ============================= */
+/*          Footer Buttons       */
+/* ============================= */
+.dialogFooter {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 20px;
+}
+
+.dialogButton {
+	padding: 8px 16px;
+	border-radius: 8px;
+	cursor: pointer;
+	border: none;
+	font-size: 0.9rem;
+	transition: 0.15s ease;
+}
+
+.dialogButtonPrimary {
+	background: #2563eb;
+	color: white;
+}
+
+.dialogButtonPrimary:hover {
+	background: #1e3a8a;
+}
+
+.dialogButtonSecondary {
+	background: #e5e7eb;
+	color: #111827;
+}
+
+.dialogButtonSecondary:hover {
+	background: #d1d5db;
+}
