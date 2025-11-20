@@ -4,7 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 
 export const metadata: Metadata = {
 	title: "PayStruct",
-	description: "نرم افزار مدیریت پیمانکارن،سرمایه گذاران و کارمندان ",
+	description: "Finance Manager for Companies",
 };
 
 export default function RootLayout({
@@ -13,14 +13,8 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html
-			lang='fa'
-			className='h-full'
-		>
-			<body
-				className={`h-full`}
-				dir='rtl'
-			>
+		<html lang='en'>
+			<body className={``}>
 				<Navbar />
 				{children}
 			</body>

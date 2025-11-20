@@ -1,0 +1,176 @@
+.navbar {
+	width: 100%;
+	background: white;
+	border-bottom: 1px solid #e5e7eb;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+	position: sticky;
+	top: 0;
+	z-index: 50;
+}
+
+.container {
+	max-width: 1280px;
+	margin: 0 auto;
+	padding: 8px 16px;
+}
+
+.navInner {
+	height: 56px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.logo {
+	font-size: 1.2rem;
+	font-weight: bold;
+	color: #333;
+	user-select: none;
+}
+
+/* Desktop Menu */
+.desktopMenu {
+	display: none;
+	gap: 24px;
+	align-items: center;
+}
+
+@media (min-width: 768px) {
+	.desktopMenu {
+		display: flex;
+	}
+}
+
+.navItem {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: #555;
+	font-size: 0.9rem;
+	font-weight: 600;
+	text-decoration: none;
+	transition: color 0.2s;
+}
+
+.navItem:hover {
+	color: #2563eb;
+}
+
+.active {
+	color: #2563eb;
+}
+
+/* Avatar */
+.avatarWrapper {
+	position: relative;
+}
+
+.avatarButton {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: none;
+	border: none;
+	cursor: pointer;
+}
+
+.avatarImage {
+	border-radius: 999px;
+	border: 1px solid #d1d5db;
+}
+
+.avatarName {
+	display: none;
+	font-size: 0.9rem;
+	color: #444;
+}
+
+@media (min-width: 640px) {
+	.avatarName {
+		display: block;
+	}
+}
+
+/* Dropdown */
+.dropdown {
+	position: absolute;
+	left: 0;
+	margin-top: 8px;
+	width: 170px;
+	background: white;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	padding: 6px 0;
+	z-index: 100;
+}
+
+.dropdownItem {
+	width: 100%;
+	padding: 8px 16px;
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	font-size: 0.9rem;
+	color: #444;
+	text-decoration: none;
+	border: none;
+	background: none;
+	cursor: pointer;
+}
+
+.dropdownItem:hover {
+	background: #f3f4f6;
+}
+
+.logout {
+	color: #dc2626;
+}
+
+/* Hamburger */
+.hamburger {
+	display: flex;
+	align-items: center;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: #444;
+}
+
+@media (min-width: 768px) {
+	.hamburger {
+		display: none;
+	}
+}
+
+/* Mobile Menu */
+.mobileMenu {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 16px 0;
+	margin-top: 8px;
+	border-top: 1px solid #f3f4f6;
+}
+
+.mobileItem {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 12px;
+	text-decoration: none;
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: #555;
+	border-radius: 6px;
+}
+
+.mobileItem:hover {
+	background: #f3f4f6;
+	color: #2563eb;
+}
+
+.mobileActive {
+	background: #e0e7ff;
+	color: #2563eb !important;
+}
