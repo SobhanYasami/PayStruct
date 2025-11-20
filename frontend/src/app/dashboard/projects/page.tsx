@@ -26,23 +26,26 @@ interface Project {
 }
 
 /* -------- Dialog Component (Blur Overlay) -------- */
-function Dialog({ title, onClose, children }: any) {
+function Dialog({
+	title,
+	onClose,
+	children,
+}: {
+	title: string;
+	onClose: any;
+	children: React.ReactNode;
+}) {
 	return (
 		<div className={styles.dialogOverlay}>
-			{/* Blur overlay */}
-			<div
-				className='absolute inset-0 bg-black/40 backdrop-blur-sm'
-				onClick={onClose}
-			/>
-
 			{/* Modal Box */}
-			<div className='relative bg-white w-[90%] max-w-md p-6 rounded-xl shadow-lg z-10 animate-fadeIn'>
-				<div className='flex justify-between items-center mb-4'>
-					<h2 className='text-lg font-bold'>{title}</h2>
-					<button onClick={onClose}>
-						<X size={20} />
-					</button>
-				</div>
+			<div className={styles.dialogContent}>
+				<button
+					className={styles.dialogClose}
+					onClick={onClose}
+				>
+					<X size={20} />
+				</button>
+				<h2 className={styles.dialogTitle}>{title}</h2>
 
 				{children}
 			</div>
@@ -102,12 +105,12 @@ export default function Projects() {
 						<input
 							type='text'
 							placeholder='نام پروژه'
-							className='border p-2 rounded'
+							className={styles.dialogInput}
 						/>
 						<input
 							type='number'
-							placeholder='بودجه'
-							className='border p-2 rounded'
+							placeholder='فاز'
+							className={styles.dialogInput}
 						/>
 
 						<button className='bg-blue-600 text-white p-2 rounded mt-2'>
