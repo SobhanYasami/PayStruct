@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, Search } from "lucide-react";
 import styles from "./page.module.css";
 import Dialog from "@/components/ui/Dialog";
+import Button from "@/components/ui/Button";
 
 /* -------------------- Types -------------------- */
 interface Contractor {
@@ -54,18 +55,6 @@ function SearchInput({
 	);
 }
 
-// Create Button Component
-function CreateButton({ onClick }: { onClick: () => void }) {
-	return (
-		<button
-			className={styles.createButton}
-			onClick={onClick}
-		>
-			<Plus size={20} /> ایجاد پروژه جدید
-		</button>
-	);
-}
-
 // Page Header Component
 function PageHeader({
 	title,
@@ -93,7 +82,14 @@ function PageHeader({
 					onChange={onSearchChange}
 					placeholder='جستجو بر اساس نام یا فاز...'
 				/>
-				<CreateButton onClick={onCreateClick} />
+				<Button
+					variant='primary'
+					size='medium'
+					onClick={onCreateClick}
+					className={styles.createButton}
+				>
+					<Plus size={20} /> ایجاد پروژه جدید
+				</Button>
 			</div>
 		</div>
 	);

@@ -10,9 +10,16 @@
 	justify-content: center;
 	align-items: center;
 	z-index: 1000;
-
 	opacity: 0;
 	animation: fadeIn 0.25s ease forwards;
+	padding: 16px;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+	100% {
+		opacity: 1;
+	}
 }
 
 /* ============================= */
@@ -26,10 +33,25 @@
 	padding: 24px;
 	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 	direction: rtl;
-
+	position: relative;
 	transform: translateY(20px);
 	opacity: 0;
 	animation: slideUp 0.25s ease forwards;
+	max-height: 90vh;
+	overflow-y: auto;
+}
+
+/* Size variants */
+.dialogContent--small {
+	max-width: 400px;
+}
+
+.dialogContent--medium {
+	max-width: 480px;
+}
+
+.dialogContent--large {
+	max-width: 600px;
 }
 
 /* Slide-up animation */
@@ -40,19 +62,171 @@
 	}
 }
 
-/* 
-buttons
+/* ============================= */
+/*        Dialog Header          */
+/* ============================= */
+.dialogTitle {
+	margin: 0 0 20px 0;
+	font-size: 1.5rem;
+	font-weight: 600;
+	color: #1f2937;
+	padding-right: 0;
+	margin-top: 8px;
+}
 
-*/
+/* ============================= */
+/*        Dialog Body            */
+/* ============================= */
+.dialogBody {
+	color: #374151;
+	line-height: 1.6;
+}
+
+/* ============================= */
+/*        Close Button           */
+/* ============================= */
 .dialogClose {
+	position: absolute;
+	top: 16px;
+	left: 16px;
 	cursor: pointer;
 	border: none;
 	background: transparent;
 	font-size: 1.4rem;
 	color: #6b7280;
 	transition: 0.15s;
+	padding: 4px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .dialogClose:hover {
 	color: #e20000;
+	background: rgba(0, 0, 0, 0.05);
+}
+
+.dialogClose:active {
+	transform: scale(0.95);
+}
+
+/* ============================= */
+/*       Responsive Design       */
+/* ============================= */
+@media (max-width: 640px) {
+	.dialogOverlay {
+		padding: 8px;
+	}
+
+	.dialogContent {
+		width: 95%;
+		padding: 20px;
+		border-radius: 12px;
+	}
+
+	.dialogContent--small,
+	.dialogContent--medium,
+	.dialogContent--large {
+		max-width: 100%;
+		width: 100%;
+	}
+
+	.dialogTitle {
+		font-size: 1.3rem;
+		margin-bottom: 16px;
+		padding-right: 0;
+	}
+
+	.dialogClose {
+		top: 12px;
+		left: 12px;
+	}
+}
+
+@media (max-width: 480px) {
+	.dialogContent {
+		padding: 16px;
+	}
+
+	.dialogTitle {
+		font-size: 1.2rem;
+		margin-bottom: 12px;
+	}
+}
+
+/* ============================= */
+/*     Scrollbar Styling         */
+/* ============================= */
+.dialogContent::-webkit-scrollbar {
+	width: 6px;
+}
+
+.dialogContent::-webkit-scrollbar-track {
+	background: #f1f1f1;
+	border-radius: 3px;
+}
+
+.dialogContent::-webkit-scrollbar-thumb {
+	background: #c1c1c1;
+	border-radius: 3px;
+}
+
+.dialogContent::-webkit-scrollbar-thumb:hover {
+	background: #a8a8a8;
+}
+
+/* ============================= */
+/*     Reduced Motion Support    */
+/* ============================= */
+@media (prefers-reduced-motion: reduce) {
+	.dialogOverlay {
+		animation: none;
+		opacity: 1;
+	}
+
+	.dialogContent {
+		animation: none;
+		transform: none;
+		opacity: 1;
+	}
+
+	.dialogClose {
+		transition: none;
+	}
+
+	.dialogClose:active {
+		transform: none;
+	}
+}
+
+/* ============================= */
+/*     Dark Mode Support         */
+/* ============================= */
+@media (prefers-color-scheme: dark) {
+	.dialogOverlay {
+		background: rgba(0, 0, 0, 0.5);
+	}
+
+	.dialogContent {
+		background: #1f2937;
+		color: #f9fafb;
+	}
+
+	.dialogTitle {
+		color: #f9fafb;
+	}
+
+	.dialogBody {
+		color: #e5e7eb;
+	}
+
+	.dialogClose {
+		color: #9ca3af;
+	}
+
+	.dialogClose:hover {
+		color: #ef4444;
+		background: rgba(255, 255, 255, 0.1);
+	}
 }
