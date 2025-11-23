@@ -117,9 +117,7 @@ export default function Projects() {
 							onChange={() => console.log("project phase")}
 						/>
 
-						<button className='bg-blue-600 text-white p-2 rounded mt-2'>
-							ثبت پروژه
-						</button>
+						<button className={styles.submitBtn}>ثبت پروژه</button>
 					</form>
 				</Dialog>
 			)}
@@ -157,13 +155,3 @@ export default function Projects() {
 		</main>
 	);
 }
-
-/* Small fade animation */
-// Add this to your global.css if needed:
-// .animate-fadeIn {
-//   animation: fadeIn 0.2s ease-out;
-// }
-// @keyframes fadeIn {
-//   from { opacity: 0; transform: scale(0.96); }
-//   to { opacity: 1; transform: scale(1); }
-// }

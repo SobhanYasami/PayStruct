@@ -98,7 +98,7 @@
 }
 
 .createButton:hover {
-	background: #1e40af;
+	background: #0d3ee2;
 }
 
 /* ============================= */
@@ -177,7 +177,7 @@
 }
 
 .dialogClose:hover {
-	color: #111827;
+	color: #e20000;
 }
 
 /* ============================= */
@@ -195,6 +195,20 @@
 
 .dialogInput:focus {
 	border-color: #2563eb;
+}
+
+.submitBtn {
+	background-color: #2563eb;
+	color: white;
+	padding: 2px 12px;
+	border-radius: 6px;
+	border: none;
+	font-weight: 500;
+	margin-top: 30px;
+	cursor: pointer;
+}
+.submitBt:hover {
+	background-color: #047cc2;
 }
 
 /* ============================= */
