@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/sobhan-yasami/docs-db-panel/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/models"
 )
 
 func ParseToken(c *fiber.Ctx) (uuid.UUID, error) {

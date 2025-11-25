@@ -2,8 +2,7 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/sobhan-yasami/docs-db-panel/controllers"
-	"github.com/sobhan-yasami/docs-db-panel/middlewares"
+	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"
 )
 
 func SetupContractorRoutes(router fiber.Router, contractorController *controllers.ContractorController) {

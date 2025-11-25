@@ -1,4 +1,4 @@
-package controllers
+package handlers
 
 import (
 	"errors"
@@ -11,9 +11,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/sobhan-yasami/docs-db-panel/database"
-	"github.com/sobhan-yasami/docs-db-panel/models"
-	"github.com/sobhan-yasami/docs-db-panel/utils"
+	"github.com/sobhan-yasami/docs-db-panel/internal/database"
+	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/utils"
 
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"

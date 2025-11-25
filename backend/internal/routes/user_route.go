@@ -2,7 +2,6 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/sobhan-yasami/docs-db-panel/controllers"
 )
 
 func SetupUserRoutes(router fiber.Router, userController *controllers.UserController) {

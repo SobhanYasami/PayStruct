@@ -1,4 +1,4 @@
-package controllers_test
+package handlers
 
 import (
 	"encoding/json"
@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/sobhan-yasami/docs-db-panel/controllers"
-	"github.com/sobhan-yasami/docs-db-panel/database"
-	"github.com/sobhan-yasami/docs-db-panel/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/database"
+	controllers "github.com/sobhan-yasami/docs-db-panel/internal/handlers"
+	"github.com/sobhan-yasami/docs-db-panel/internal/models"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"

@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/sobhan-yasami/docs-db-panel/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

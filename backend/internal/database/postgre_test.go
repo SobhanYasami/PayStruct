@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/sobhan-yasami/docs-db-panel/database"
-	"github.com/sobhan-yasami/docs-db-panel/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/database"
+	"github.com/sobhan-yasami/docs-db-panel/internal/models"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
