@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -27,7 +28,7 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 
 // ------------------------------------------------------------------------
 
-// ! @post /users
+// ! @post /users ----
 func (ctrl *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 	type Submission struct {
 		FirstName string `json:"first_name"`
@@ -84,8 +85,8 @@ func (ctrl *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 	})
 }
 
-// ! @put /users/:id
-func (ctrl *UserHandler) UpdateUser(c *fiber.Ctx) error {
+// ! @put /users/:id ----
+func (ctrl *UserHandler) UpdateEmployee(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var user models.User
@@ -118,8 +119,8 @@ func (ctrl *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-// ! @get /users/:id
-func (ctrl *UserHandler) GetUser(c *fiber.Ctx) error {
+// ! @get /users/:id ----
+func (ctrl *UserHandler) GetEmployee(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var user models.User
@@ -138,8 +139,8 @@ func (ctrl *UserHandler) GetUser(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-// ! @get /users
-func (ctrl *UserHandler) GetAllUsers(c *fiber.Ctx) error {
+// ! @get /users ----
+func (ctrl *UserHandler) GetAllEmployee(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)
 	offset := (page - 1) * limit
@@ -158,8 +159,8 @@ func (ctrl *UserHandler) GetAllUsers(c *fiber.Ctx) error {
 	})
 }
 
-// ! @delete /users/:id
-func (ctrl *UserHandler) DeleteUser(c *fiber.Ctx) error {
+// ! @delete /users/:id ----
+func (ctrl *UserHandler) DeleteEmployee(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	if err := ctrl.db.Delete(&models.User{}, id).Error; err != nil {
@@ -177,8 +178,8 @@ func (ctrl *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-// ! @post /users/login
-func (ctrl *UserHandler) LoginUser(c *fiber.Ctx) error {
+// ! @post /users/login ----
+func (ctrl *UserHandler) LoginEmployee(c *fiber.Ctx) error {
 	type LoginRequest struct {
 		UserName string `json:"user_name" validate:"required,email"`
 		Password string `json:"password" validate:"required,min=6"`
@@ -209,7 +210,7 @@ func (ctrl *UserHandler) LoginUser(c *fiber.Ctx) error {
 	}
 
 	//? 4. Create JWT token
-	claims := models.JWTClaims{
+	claims := schemas.JWTClaims{
 		UserID:   user.ID.String(),
 		UserName: user.UserName,
 		Role:     user.Role,

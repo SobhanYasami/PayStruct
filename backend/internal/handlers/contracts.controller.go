@@ -11,21 +11,23 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/sobhan-yasami/docs-db-panel/internal/database"
 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/services"
 	"github.com/sobhan-yasami/docs-db-panel/internal/utils"
 
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
 
-type ContractorController struct {
-	db *gorm.DB
+type ContractHandler struct {
+	db          *gorm.DB
+	userService *services.UserService
 }
 
-func NewContractorController() *ContractorController {
-	return &ContractorController{
-		db: database.DB,
+func NewContractHandler(db *gorm.DB) *UserHandler {
+	return &UserHandler{
+		db:          db,
+		userService: services.NewUserService(db),
 	}
 }
 
@@ -49,7 +51,7 @@ type CtrlResponse struct {
 // @Failure 401 {object} ProjectResponse
 // @Failure 500 {object} ProjectResponse
 // @Router /contractors/new-project [post]
-func (ctrl *ContractorController) CreateProject(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) CreateProject(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
@@ -147,7 +149,7 @@ type ProjectSummary struct {
 // @Success 200 {object} ProjectResponse
 // @Failure 500 {object} ProjectResponse
 // @Router /contractors/projects [get]
-func (ctrl *ContractorController) GetAllProject(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetAllProject(c *fiber.Ctx) error {
 	ctx := c.Context()
 	//? 1) Fetch projects with context and limit
 	var projects []models.Project
@@ -185,7 +187,7 @@ func (ctrl *ContractorController) GetAllProject(c *fiber.Ctx) error {
 }
 
 // ! @post /contractors/new-contract
-func (ctrl *ContractorController) CreateContractor(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) CreateContractor(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
@@ -497,7 +499,7 @@ func (ctrl *ContractorController) CreateContractor(c *fiber.Ctx) error {
 // @Param contract_number query int true "Contract number to search"
 // @Success 200 {object} ContractResponse
 // @Router /contractors/search-by-id [get]
-func (ctrl *ContractorController) GetContractorByID(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetContractorByID(c *fiber.Ctx) error {
 	//? 1) Parse query parameters
 	contractNumber := c.Query("contract_number")
 	if contractNumber == "" {
@@ -558,7 +560,7 @@ func (ctrl *ContractorController) GetContractorByID(c *fiber.Ctx) error {
 // Todo: ! @get /contractors/contracts/:[name, limit, page]
 
 // ! @get /contractors/contractor-projects
-func (ctrl *ContractorController) GetContractorProjects(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetContractorProjects(c *fiber.Ctx) error {
 	//? 1. Parse query parameter
 	contractNumber := c.Query("contract_number")
 	if contractNumber == "" {
@@ -643,7 +645,7 @@ func (ctrl *ContractorController) GetContractorProjects(c *fiber.Ctx) error {
 }
 
 // ! @get /contractors/get-last-status-statement
-func (ctrl *ContractorController) GetLastStatusStatement(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetLastStatusStatement(c *fiber.Ctx) error {
 	//? 1) Parse query parameters
 	contractNumber := c.Query("contract_number")
 	if contractNumber == "" {
@@ -702,7 +704,7 @@ func (ctrl *ContractorController) GetLastStatusStatement(c *fiber.Ctx) error {
 }
 
 // ! @post /contractors/new-status-statement
-func (ctrl *ContractorController) CreateNewStatusStatement(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) CreateNewStatusStatement(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
@@ -827,7 +829,7 @@ func (ctrl *ContractorController) CreateNewStatusStatement(c *fiber.Ctx) error {
 }
 
 // ! @get /contractors/get-status-statement
-func (ctrl *ContractorController) GetStatusStatement(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetStatusStatement(c *fiber.Ctx) error {
 	//? 1) Parse query parameters
 	status_statement_id := c.Query("status_statement_id")
 	if status_statement_id == "" {
@@ -907,7 +909,7 @@ func (ctrl *ContractorController) GetStatusStatement(c *fiber.Ctx) error {
 }
 
 // ! @post /contractors/new-task-performed
-func (ctrl *ContractorController) CreateNewTaskPerformed(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) CreateNewTaskPerformed(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
@@ -1052,7 +1054,7 @@ func (ctrl *ContractorController) CreateNewTaskPerformed(c *fiber.Ctx) error {
 }
 
 // ! @get /contractors/new-task-performed
-func (ctrl *ContractorController) GetSttsTaskPerformed(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetSttsTaskPerformed(c *fiber.Ctx) error {
 	//? 1) Parse query parameters
 	status_statement_id := c.Query("status_statement_id")
 	if status_statement_id == "" {
@@ -1092,7 +1094,7 @@ func (ctrl *ContractorController) GetSttsTaskPerformed(c *fiber.Ctx) error {
 }
 
 // ! @post /contractors/new-extra-work
-func (ctrl *ContractorController) CreateNewExtraWorks(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) CreateNewExtraWorks(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
@@ -1237,7 +1239,7 @@ func (ctrl *ContractorController) CreateNewExtraWorks(c *fiber.Ctx) error {
 }
 
 // ! @get /contractors/new-extra-work
-func (ctrl *ContractorController) GetSttsExtraWorks(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetSttsExtraWorks(c *fiber.Ctx) error {
 	//? 1) Parse query parameters
 	status_statement_id := c.Query("status_statement_id")
 	if status_statement_id == "" {
@@ -1277,7 +1279,7 @@ func (ctrl *ContractorController) GetSttsExtraWorks(c *fiber.Ctx) error {
 }
 
 // ! @post /contractors/new-deduction
-func (ctrl *ContractorController) CreateNewDeductions(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) CreateNewDeductions(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
@@ -1422,7 +1424,7 @@ func (ctrl *ContractorController) CreateNewDeductions(c *fiber.Ctx) error {
 }
 
 // ! @get /contractors/new-deduction
-func (ctrl *ContractorController) GetSttsDeductions(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetSttsDeductions(c *fiber.Ctx) error {
 	//? 1) Parse query parameters
 	status_statement_id := c.Query("status_statement_id")
 	if status_statement_id == "" {
@@ -1462,7 +1464,7 @@ func (ctrl *ContractorController) GetSttsDeductions(c *fiber.Ctx) error {
 }
 
 // ! @get /contractors/finance-summary
-func (ctrl *ContractorController) GetSttsFinanceSummary(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetSttsFinanceSummary(c *fiber.Ctx) error {
 	//? 1) Parse query parameters
 	status_statement_id := c.Query("status_statement_id")
 	if status_statement_id == "" {
@@ -1587,7 +1589,7 @@ func (ctrl *ContractorController) GetSttsFinanceSummary(c *fiber.Ctx) error {
 }
 
 // ! @get /contractors/legal-reductions
-func (ctrl *ContractorController) GetSttsLegalReductions(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetSttsLegalReductions(c *fiber.Ctx) error {
 	//? 1) Parse query parameters
 	status_statement_id := c.Query("status_statement_id")
 	if status_statement_id == "" {
@@ -1650,7 +1652,7 @@ func (ctrl *ContractorController) GetSttsLegalReductions(c *fiber.Ctx) error {
 }
 
 // ! @get /contractors/other-reductions
-func (ctrl *ContractorController) GetSttsOtherReductions(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetSttsOtherReductions(c *fiber.Ctx) error {
 	//? 1) Parse query parameters
 	status_statement_id := c.Query("status_statement_id")
 	if status_statement_id == "" {
@@ -1719,7 +1721,7 @@ func (ctrl *ContractorController) GetSttsOtherReductions(c *fiber.Ctx) error {
 
 // Todo:
 // ! @post /contractors/tasks-final-subs
-func (ctrl *ContractorController) TasksFinalSubmition(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) TasksFinalSubmition(c *fiber.Ctx) error {
 	//? 1. Get authenticated user ID from token
 	userID, err := utils.ParseToken(c)
 	if userID == uuid.Nil || err != nil {
@@ -1802,7 +1804,7 @@ func (ctrl *ContractorController) TasksFinalSubmition(c *fiber.Ctx) error {
 }
 
 // ! @post /contractors/other-reductions
-func (ctrl *ContractorController) GetOtherDeductions(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetOtherDeductions(c *fiber.Ctx) error {
 	//? 1. Get authenticated user ID from token
 	userID, err := utils.ParseToken(c)
 	if userID == uuid.Nil || err != nil {
@@ -1891,147 +1893,3 @@ func (ctrl *ContractorController) GetOtherDeductions(c *fiber.Ctx) error {
 }
 
 // ! @post /contractors/print-status
-// func (ctrl *ContractorController) PrintStatusSttmnt(c *fiber.Ctx) error {
-// 	//? 1. Get authenticated user ID from token
-// 	userID, err := utils.ParseToken(c)
-// 	if userID == uuid.Nil || err != nil {
-// 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-// 			"status":  "failure",
-// 			"message": "شما هنوز وارد حساب کاربری خود نشدید",
-// 		})
-// 	}
-
-// 	//? 2. Parse Body Request
-// 	type FinanceSummaryReq struct {
-// 		StatusStatementID string `json:"statusStatmntId" validate:"required"`
-// 		ContractorID      string `json:"contractor_id" validate:"required"`
-// 		ProjectID         string `json:"project_id" validate:"required"`
-// 	}
-// 	var req FinanceSummaryReq
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-// 			"error": "ورودی‌های نامعتبر",
-// 		})
-// 	}
-
-// 	//? 3. Validate and parse UUID
-// 	if req.StatusStatementID == "" {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-// 			"error": "شما هنوز صورت وضعیت جدیدی ایجاد نکردید",
-// 		})
-// 	}
-
-// 	// ? 4. Create New Document
-// 	stat_doc := document.New()
-
-// 	// * 4.1 Header desctiptions
-// 	//** line one
-// 	para1 := stat_doc.AddParagraph()
-// 	para1.Properties().SetAlignment(wml.ST_JcCenter) // ✅ Center aligned
-// 	run1 := para1.AddRun()
-// 	run1.AddText("صورت وضعیت و خلاصه مالی پیمانکاران پروژه های شرکت خانه سازی رزمندگان استان گیلان")
-// 	run1.Properties().SetBold(true)
-// 	run1.Properties().SetSize(12)
-// 	// ** line two
-// 	para2 := stat_doc.AddParagraph()
-// 	para2.Properties().SetAlignment(wml.ST_JcCenter) // ✅ Center aligned
-// 	run2 := para2.AddRun()
-// 	run2.AddText("»ملاک انجام تکالیف قانونی مودیان در سامانه های مالیاتی، تامین اجتماعی و ... برگه حاضر پس از امضاء دارندگان حق امضاء مجاز می باشد «")
-// 	run2.Properties().SetBold(true)
-// 	run2.Properties().SetSize(12)
-
-// 	//* Create table
-// 	table1 := stat_doc.AddTable()
-// 	table1.Properties().SetWidthPercent(100)
-
-// 	//**  Add header row
-// 	header1 := table1.AddRow()
-// 	const number_of_columns int = 5
-
-// 	// Helper function to create a cell with text
-// 	// createCell := func(row wml.Row, text string, columnSpan int, isBold bool) wml.Cell {
-// 	// 	cell := row.AddCell()
-// 	// 	cell.Properties().Borders() // Add borders to all cells
-// 	// 	if columnSpan > 1 {
-// 	// 		cell.Properties().SetColumnSpan(columnSpan)
-// 	// 	}
-
-// 	// 	paragraph := cell.AddParagraph()
-// 	// 	paragraph.Properties().SetAlignment(wml.ST_JcCenter) // Center align cell content
-// 	// 	run := paragraph.AddRun()
-// 	// 	run.AddText(text)
-// 	// 	if isBold {
-// 	// 		run.Properties().SetBold(true)
-// 	// 	}
-// 	// 	return cell
-// 	// }
-
-// 	contractor_type_cell := header1.AddCell()
-// 	contractor_type_cell.Properties().Borders()
-// 	contractor_type_cell.Properties().SetColumnSpan(1)
-// 	cntr_p := contractor_type_cell.AddParagraph()
-// 	cntr_p_run := cntr_p.AddRun()
-// 	cntr_p_run.AddText("نوع پیمانکار")
-// 	cntr_p_run.Properties().SetBold(true)
-
-// 	contractor_type_cell_value := header1.AddCell()
-// 	contractor_type_cell_value.Properties().Borders()
-// 	contractor_type_cell_value.Properties().SetColumnSpan(1)
-// 	cntr_pv := contractor_type_cell_value.AddParagraph()
-// 	cntr_pv_run := cntr_pv.AddRun()
-// 	cntr_pv_run.AddText("حقوقی")
-// 	cntr_pv_run.Properties().SetBold(true)
-
-// 	name_text := "شرکت"
-// 	contractor_name_cell := header1.AddCell()
-// 	contractor_name_cell.Properties().Borders()
-// 	contractor_name_cell.Properties().SetColumnSpan(1)
-// 	cntr_pn := contractor_name_cell.AddParagraph()
-// 	cntr_pn_run := cntr_pn.AddRun()
-// 	cntr_pn_run.AddText(name_text)
-// 	cntr_pn_run.Properties().SetBold(true)
-
-// 	contractor_name_cellv := header1.AddCell()
-// 	contractor_name_cellv.Properties().Borders()
-// 	contractor_name_cellv.Properties().SetColumnSpan(2)
-// 	cntr_pnv := contractor_name_cellv.AddParagraph()
-// 	cntr_pnv_run := cntr_pnv.AddRun()
-// 	cntr_pnv_run.AddText("بتن ایران")
-// 	cntr_pnv_run.Properties().SetBold(true)
-
-// 	// headers := []string{"ID", "Name", "Description", "Price"}
-// 	// for _, h := range headers {
-// 	// 	cell := header.AddCell()
-// 	// 	cell.Properties().Borders()
-// 	// 	p := cell.AddParagraph()
-// 	// 	r := p.AddRun()
-// 	// 	r.AddText(h)
-// 	// 	r.Properties().SetBold(true)
-// 	// 	cell.Properties().SetShading(wml.ST_ShdSolid, color.LightGray, color.Auto)
-// 	// }
-
-// 	//* Create directory if doesn't exist
-// 	uploadDir := fmt.Sprintf("../storage/%s/%s", req.ContractorID, req.ProjectID)
-// 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"status":  "fail",
-// 			"message": "خطا در ایجاد پوشه",
-// 		})
-// 	}
-
-// 	//* save scaned file
-// 	file_name := fmt.Sprintf("%s.docx", req.StatusStatementID)
-// 	filePath := filepath.Join(uploadDir, file_name)
-
-// 	if err := stat_doc.SaveToFile(filePath); err != nil {
-// 		return c.Status(500).SendString(fmt.Sprintf("خطا در ذخیره فایل: %v", err))
-// 	}
-
-// 	//? 7. Send response
-// 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-// 		"status":  "success",
-// 		"message": "ضورت وضعیت با موفقیت صادر شد",
-// 		"data":    filePath,
-// 	})
-
-// }

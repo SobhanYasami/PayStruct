@@ -9,12 +9,12 @@ func SetupUserRoutes(router fiber.Router, userHandler *handlers.UserHandler) {
 	router.Post("/users", userHandler.CreateEmployee)
 
 	// todo
-	router.Put("/users/:id", userHandler.UpdateUser)
+	router.Put("/users/:id", userHandler.UpdateEmployee)
 
-	router.Get("/users/:id", userHandler.GetUser)
-	router.Get("/users", userHandler.GetAllUsers)
+	router.Get("/users/:id", userHandler.GetEmployee)
+	router.Get("/users", userHandler.GetAllEmployee)
 
-	router.Delete("/users/:id", userHandler.DeleteUser)
+	router.Delete("/users/:id", userHandler.DeleteEmployee)
 
-	router.Post("/users/login", userHandler.LoginUser)
+	router.Post("/users/login", userHandler.LoginEmployee)
 }
