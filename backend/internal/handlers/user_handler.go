@@ -6,76 +6,86 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-	"github.com/sobhan-yasami/docs-db-panel/internal/database"
 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/services"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-type UserController struct {
-	db *gorm.DB
+// -----------------------------------------------------------------------
+type UserHandler struct {
+	db          *gorm.DB
+	userService *services.UserService
 }
 
-func NewUserController() *UserController {
-	return &UserController{
-		db: database.DB,
+func NewUserHandler(db *gorm.DB) *UserHandler {
+	return &UserHandler{
+		db:          db,
+		userService: services.NewUserService(db),
 	}
 }
 
+// ------------------------------------------------------------------------
+
 // ! @post /users
-func (ctrl *UserController) CreateUser(c *fiber.Ctx) error {
-	var input models.User
+func (ctrl *UserHandler) CreateEmployee(c *fiber.Ctx) error {
+	type Submission struct {
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		UserName  string `json:"user_name"`
+		Password  string `json:"password"`
+		Phone     string `json:"phone,omitempty"`
+		Role      string `json:"role"`
+	}
+
+	var submission Submission
+
 	//* 1) Parse and validate input
-	if err := c.BodyParser(&input); err != nil {
+	if err := c.BodyParser(&submission); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 	}
-	if input.UserName == "" || input.Password == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Username and password are required",
-		})
+
+	//* 2) Call service layer
+	req := services.CreateEmployeeRequest{
+		FirstName: submission.FirstName,
+		LastName:  submission.LastName,
+		UserName:  submission.UserName,
+		Password:  submission.Password,
+		Phone:     submission.Phone,
+		Role:      submission.Role,
 	}
 
-	//* 2) Hash the password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	result, err := ctrl.userService.CreateEmployee(req)
 	if err != nil {
+		serviceErr, ok := err.(*services.ServiceError)
+		if ok {
+			return c.Status(serviceErr.Code).JSON(fiber.Map{
+				"error":   serviceErr.Message,
+				"details": serviceErr.Details,
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to hash password",
+			"error":   "Internal server error",
 			"details": err.Error(),
 		})
 	}
 
-	//* 3) Create user model
-	user := models.User{
-		ID:        uuid.New(),
-		FirstName: input.FirstName,
-		LastName:  input.LastName,
-		UserName:  input.UserName,
-		Password:  string(hashedPassword),
-		Role:      input.Role,
-	}
-
-	//* 4) Save to DB
-	if err := ctrl.db.Create(&user).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to create user",
-			"details": err.Error(),
-		})
-	}
-
-	//* 5) Return sanitized response
+	//* 3) Return success response
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status":    "success",
-		"user_name": user.UserName,
-		"message":   "User created successfully",
+		"id":        result.ID,
+		"user_name": result.UserName,
+		"full_name": result.FullName,
+		"role":      result.Role,
+		"message":   "Employee created successfully",
 	})
 }
 
 // ! @put /users/:id
-func (ctrl *UserController) UpdateUser(c *fiber.Ctx) error {
+func (ctrl *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var user models.User
@@ -109,7 +119,7 @@ func (ctrl *UserController) UpdateUser(c *fiber.Ctx) error {
 }
 
 // ! @get /users/:id
-func (ctrl *UserController) GetUser(c *fiber.Ctx) error {
+func (ctrl *UserHandler) GetUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var user models.User
@@ -129,7 +139,7 @@ func (ctrl *UserController) GetUser(c *fiber.Ctx) error {
 }
 
 // ! @get /users
-func (ctrl *UserController) GetAllUsers(c *fiber.Ctx) error {
+func (ctrl *UserHandler) GetAllUsers(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)
 	offset := (page - 1) * limit
@@ -149,7 +159,7 @@ func (ctrl *UserController) GetAllUsers(c *fiber.Ctx) error {
 }
 
 // ! @delete /users/:id
-func (ctrl *UserController) DeleteUser(c *fiber.Ctx) error {
+func (ctrl *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	if err := ctrl.db.Delete(&models.User{}, id).Error; err != nil {
@@ -168,7 +178,7 @@ func (ctrl *UserController) DeleteUser(c *fiber.Ctx) error {
 }
 
 // ! @post /users/login
-func (ctrl *UserController) LoginUser(c *fiber.Ctx) error {
+func (ctrl *UserHandler) LoginUser(c *fiber.Ctx) error {
 	type LoginRequest struct {
 		UserName string `json:"user_name" validate:"required,email"`
 		Password string `json:"password" validate:"required,min=6"`

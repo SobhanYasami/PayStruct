@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
 )
 
 func ParseToken(c *fiber.Ctx) (uuid.UUID, error) {
@@ -33,7 +33,7 @@ func ParseToken(c *fiber.Ctx) (uuid.UUID, error) {
 	tokenString := parts[1]
 
 	//! 3. Parse the JWT token
-	token, err := jwt.ParseWithClaims(tokenString, &models.JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &schemas.JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		//? Check that the signing method is HMAC (HS256)
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok || token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -45,7 +45,7 @@ func ParseToken(c *fiber.Ctx) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("token parse error: %w", err)
 	}
 
-	claims, ok := token.Claims.(*models.JWTClaims)
+	claims, ok := token.Claims.(*schemas.JWTClaims)
 	if !ok || !token.Valid {
 		return uuid.Nil, errors.New("invalid token claims")
 	}

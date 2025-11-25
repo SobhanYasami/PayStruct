@@ -3,7 +3,7 @@ package middlewares
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/sobhan-yasami/docs-db-panel/utils"
+	"github.com/sobhan-yasami/docs-db-panel/internal/utils"
 )
 
 type CtrlResponse struct {
