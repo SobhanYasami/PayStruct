@@ -7,16 +7,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// ! BaseModel contains common fields for all models
 type BaseModel struct {
-	ID        uuid.UUID      `json:"id" gorm:"type:char(36);primary_key"`
+	ID        uuid.UUID `json:"id" gorm:"type:char(36);primary_key"`
+	CreatedBy uuid.UUID `json:"created_by,omitempty" gorm:"type:char(36);index"`
+	UpdatedBy uuid.UUID `json:"updated_by,omitempty" gorm:"type:char(36)"`
+	DeletedBy uuid.UUID `json:"deleted_by,omitempty" gorm:"type:char(36)"`
+
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
-	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
-	CreatedBy uuid.UUID      `json:"created_by,omitempty" gorm:"type:char(36);index"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:""`
 }
 
-// ! BeforeCreate hook for BaseModel
 func (b *BaseModel) BeforeCreate(tx *gorm.DB) error {
 	if b.ID == uuid.Nil {
 		b.ID = uuid.New()
@@ -24,14 +25,17 @@ func (b *BaseModel) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// ! Primary Models
+// ######################################### -------------------------------------------  //
 type Project struct {
 	BaseModel
 	Name  string `json:"name" gorm:"size:100;not null;index:idx_project_name"`
 	Phase uint8  `json:"phase" gorm:"not null;default:0"`
 }
 
-type Contractor struct {
+// **
+// *
+// todo  ########################  |>
+type Contract struct {
 	BaseModel
 	//* Basic Information
 	FullName       string `json:"full_name" gorm:"size:100;not null"`
