@@ -1,0 +1,196 @@
+.skeletonGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: 1.5rem;
+	padding: 1rem 0;
+}
+
+.skeletonCard {
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 1.5rem;
+	height: fit-content;
+}
+
+.skeletonHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
+.skeletonTitleSection {
+	flex: 1;
+	min-width: 0;
+}
+
+.skeletonTitle {
+	width: 70%;
+	height: 1.5rem;
+	margin-bottom: 0.5rem;
+	border-radius: 0.375rem;
+}
+
+.skeletonBadge {
+	width: 4rem;
+	height: 1.25rem;
+	border-radius: 1rem;
+}
+
+.skeletonMenu {
+	width: 2rem;
+	height: 2rem;
+	border-radius: 0.375rem;
+	flex-shrink: 0;
+}
+
+.skeletonDescription {
+	margin-bottom: 1.25rem;
+}
+
+.skeletonLine {
+	width: 100%;
+	height: 0.875rem;
+	margin-bottom: 0.5rem;
+	border-radius: 0.25rem;
+}
+
+.skeletonLineShort {
+	width: 60%;
+	height: 0.875rem;
+	border-radius: 0.25rem;
+}
+
+.skeletonProgress {
+	margin-bottom: 1.25rem;
+}
+
+.skeletonProgressHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.5rem;
+}
+
+.skeletonProgressLabel {
+	width: 6rem;
+	height: 0.875rem;
+	border-radius: 0.25rem;
+}
+
+.skeletonProgressValue {
+	width: 2rem;
+	height: 0.875rem;
+	border-radius: 0.25rem;
+}
+
+.skeletonProgressBar {
+	width: 100%;
+	height: 6px;
+	border-radius: 3px;
+	background: #e2e8f0;
+	overflow: hidden;
+}
+
+.skeletonProgressBar::after {
+	content: "";
+	display: block;
+	width: 60%;
+	height: 100%;
+	background: #f1f5f9;
+	animation: shimmer 2s infinite;
+}
+
+.skeletonMetadata {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+}
+
+.skeletonMetaItem {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.skeletonIcon {
+	width: 1rem;
+	height: 1rem;
+	border-radius: 0.25rem;
+	flex-shrink: 0;
+}
+
+.skeletonMetaText {
+	width: 8rem;
+	height: 0.875rem;
+	border-radius: 0.25rem;
+}
+
+.skeletonTags {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.skeletonTag {
+	width: 3rem;
+	height: 1.25rem;
+	border-radius: 0.375rem;
+}
+
+.skeletonText {
+	background: #f1f5f9;
+	animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+	0% {
+		opacity: 0.6;
+	}
+	50% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0.6;
+	}
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.skeletonGrid {
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		gap: 1rem;
+	}
+
+	.skeletonCard {
+		padding: 1.25rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.skeletonGrid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+	.skeletonCard {
+		background: #1e293b;
+		border-color: #334155;
+	}
+
+	.skeletonText {
+		background: #334155;
+	}
+
+	.skeletonProgressBar {
+		background: #334155;
+	}
+
+	.skeletonProgressBar::after {
+		background: #475569;
+	}
+}

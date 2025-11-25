@@ -1,33 +1,8 @@
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import styles from "./ProjectPageHeader.module.css";
 import Button from "../ui/Button";
-
-// Search Input Component
-function SearchInput({
-	value,
-	onChange,
-	placeholder = "جستجو...",
-}: {
-	value: string;
-	onChange: (value: string) => void;
-	placeholder?: string;
-}) {
-	return (
-		<div className={styles.searchWrapper}>
-			<Search
-				className={styles.searchIcon}
-				size={20}
-			/>
-			<input
-				placeholder={placeholder}
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
-				className={styles.searchInput}
-			/>
-		</div>
-	);
-}
+import SearchInput from "../ui/SearchInput";
 
 export default function PageHeader({
 	title,

@@ -1,0 +1,162 @@
+.dropdown {
+	position: relative;
+	display: inline-block;
+}
+
+.trigger {
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.menu {
+	position: absolute;
+	top: 100%;
+	z-index: 50;
+	min-width: 160px;
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+	padding: 0.5rem;
+	margin-top: 0.5rem;
+	animation: slideDown 0.1s ease-out;
+}
+
+.menu.left {
+	left: 0;
+}
+
+.menu.right {
+	right: 0;
+}
+
+.menuItem {
+	width: 100%;
+	text-align: right;
+	padding: 0.75rem 1rem;
+	border: none;
+	background: none;
+	color: #374151;
+	font-size: 0.875rem;
+	font-family: inherit;
+	cursor: pointer;
+	border-radius: 6px;
+	transition: all 0.15s ease;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.menuItem:hover {
+	background: #f8fafc;
+	color: #1e293b;
+}
+
+.menuItem:focus {
+	outline: none;
+	background: #f1f5f9;
+}
+
+.menuItem.disabled {
+	color: #94a3b8;
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+.menuItem.disabled:hover {
+	background: transparent;
+	color: #94a3b8;
+}
+
+/* Danger item variant */
+.menuItem.danger {
+	color: #dc2626;
+}
+
+.menuItem.danger:hover {
+	background: #fef2f2;
+	color: #b91c1c;
+}
+
+@keyframes slideDown {
+	from {
+		opacity: 0;
+		transform: translateY(-8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.menu {
+		min-width: 140px;
+		position: fixed;
+		top: auto;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		margin: 0;
+		border-radius: 12px 12px 0 0;
+		animation: slideUp 0.2s ease-out;
+	}
+
+	.menu.left,
+	.menu.right {
+		left: 1rem;
+		right: 1rem;
+		width: auto;
+	}
+
+	.menuItem {
+		padding: 1rem 1.25rem;
+		font-size: 1rem;
+		justify-content: center;
+	}
+}
+
+@keyframes slideUp {
+	from {
+		opacity: 0;
+		transform: translateY(100%);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+	.menu {
+		background: #1e293b;
+		border-color: #334155;
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+	}
+
+	.menuItem {
+		color: #cbd5e1;
+	}
+
+	.menuItem:hover {
+		background: #334155;
+		color: #f1f5f9;
+	}
+
+	.menuItem:focus {
+		background: #475569;
+	}
+
+	.menuItem.danger {
+		color: #f87171;
+	}
+
+	.menuItem.danger:hover {
+		background: #7f1d1d;
+		color: #fca5a5;
+	}
+}

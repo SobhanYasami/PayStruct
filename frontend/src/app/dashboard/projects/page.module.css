@@ -101,51 +101,9 @@
 	background: #0d3ee2;
 }
 
-/* ============================= */
-/*      Dialog Overlay (Blur)    */
-/* ============================= */
-.dialogOverlay {
-	position: fixed;
-	inset: 0;
-	background: rgba(236, 236, 236, 0.35);
-	backdrop-filter: blur(6px);
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	z-index: 1000;
-
-	opacity: 0;
-	animation: fadeIn 0.25s ease forwards;
-}
-
 /* Fade-in animation */
 @keyframes fadeIn {
 	100% {
-		opacity: 1;
-	}
-}
-
-/* ============================= */
-/*           Dialog Box          */
-/* ============================= */
-.dialogContent {
-	width: 90%;
-	max-width: 480px;
-	background: #ffffff;
-	border-radius: 14px;
-	padding: 24px;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-	direction: rtl;
-
-	transform: translateY(20px);
-	opacity: 0;
-	animation: slideUp 0.25s ease forwards;
-}
-
-/* Slide-up animation */
-@keyframes slideUp {
-	100% {
-		transform: translateY(0);
 		opacity: 1;
 	}
 }

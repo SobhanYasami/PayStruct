@@ -1,0 +1,138 @@
+.container {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 2rem;
+	padding: 1rem 0;
+	min-height: 0; /* Important for flex children */
+}
+
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.sectionTitle {
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: #1e293b;
+	margin: 0;
+	padding-bottom: 0.5rem;
+	border-bottom: 2px solid #3b82f6;
+}
+
+.searchResultsHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.resultsCount {
+	font-size: 0.875rem;
+	color: #64748b;
+	background: #f1f5f9;
+	padding: 0.25rem 0.75rem;
+	border-radius: 1rem;
+}
+
+.projectsGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: 1.5rem;
+	align-content: flex-start;
+}
+
+.emptyStateWrapper {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 400px;
+	padding: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+	.projectsGrid {
+		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		gap: 1.25rem;
+	}
+}
+
+@media (max-width: 768px) {
+	.container {
+		gap: 1.5rem;
+		padding: 0.5rem 0;
+	}
+
+	.section {
+		gap: 1rem;
+	}
+
+	.sectionTitle {
+		font-size: 1.25rem;
+	}
+
+	.projectsGrid {
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		gap: 1rem;
+	}
+
+	.searchResultsHeader {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.projectsGrid {
+		grid-template-columns: 1fr;
+		gap: 0.75rem;
+	}
+
+	.emptyStateWrapper {
+		min-height: 300px;
+		padding: 1rem;
+	}
+
+	.sectionTitle {
+		font-size: 1.125rem;
+	}
+}
+
+/* Loading state adjustments */
+.loading {
+	opacity: 0.7;
+	pointer-events: none;
+}
+
+/* Empty state when no sections have projects */
+.noProjects {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 200px;
+	color: #64748b;
+	font-size: 1.125rem;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+	.sectionTitle {
+		color: #f1f5f9;
+		border-bottom-color: #60a5fa;
+	}
+
+	.resultsCount {
+		color: #cbd5e1;
+		background: #334155;
+	}
+
+	.noProjects {
+		color: #94a3b8;
+	}
+}
