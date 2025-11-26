@@ -26,6 +26,12 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 	}
 }
 
+type Response struct {
+	Status  string
+	Message string
+	Data    interface{}
+}
+
 // ------------------------------------------------------------------------
 
 // ! @post /users ----
@@ -186,7 +192,7 @@ func (ctrl *UserHandler) LoginEmployee(c *fiber.Ctx) error {
 	}
 
 	var req LoginRequest
-	var user models.User
+	var user models.Employee
 
 	//? 1. Parse and validate request
 	if err := c.BodyParser(&req); err != nil {
