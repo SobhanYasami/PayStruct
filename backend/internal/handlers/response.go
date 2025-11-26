@@ -46,7 +46,6 @@ type ResponseMeta struct {
 }
 
 // Helper constructor functions (highly recommended!)
-
 func SuccessResponse(data any, message ...string) APIResponse {
 	msg := "Operation completed successfully"
 	if len(message) > 0 {

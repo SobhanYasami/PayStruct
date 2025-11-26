@@ -26,12 +26,6 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 	}
 }
 
-type Response struct {
-	Status  string
-	Message string
-	Data    interface{}
-}
-
 // ------------------------------------------------------------------------
 
 // ! @post /users ----
@@ -49,10 +43,7 @@ func (ctrl *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 
 	//* 1) Parse and validate input
 	if err := c.BodyParser(&submission); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "Invalid request body",
-			"details": err.Error(),
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
 	}
 
 	//* 2) Call service layer
