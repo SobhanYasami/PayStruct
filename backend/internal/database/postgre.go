@@ -57,7 +57,7 @@ func (c Config) DSN() string {
 		c.TimeZone)
 }
 
-func Connect() error {
+func Connect() (*gorm.DB, error) {
 	config := NewConfig()
 	dsn := config.DSN()
 
@@ -81,12 +81,12 @@ func Connect() error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to connect to database after %d attempts: %w", defaultMaxRetries, err)
+		return nil, fmt.Errorf("failed to connect to database after %d attempts: %w", defaultMaxRetries, err)
 	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		return fmt.Errorf("failed to get underlying DB connection: %w", err)
+		return nil, fmt.Errorf("failed to get underlying DB connection: %w", err)
 	}
 
 	sqlDB.SetMaxIdleConns(defaultMaxIdleConns)
@@ -96,11 +96,11 @@ func Connect() error {
 	DB = db
 
 	if err := migrate(); err != nil {
-		return fmt.Errorf("migration failed: %w", err)
+		return nil, fmt.Errorf("migration failed: %w", err)
 	}
 
 	log.Println("Database connection established and models migrated successfully")
-	return nil
+	return DB, nil
 }
 
 func migrate() error {

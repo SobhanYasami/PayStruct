@@ -12,9 +12,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
-	"github.com/sobhan-yasami/docs-db-panel/controllers"
-	"github.com/sobhan-yasami/docs-db-panel/database"
-	"github.com/sobhan-yasami/docs-db-panel/routes"
+	"github.com/sobhan-yasami/docs-db-panel/internal/database"
+	"github.com/sobhan-yasami/docs-db-panel/internal/handlers"
+	"github.com/sobhan-yasami/docs-db-panel/internal/routes"
 )
 
 // --------------------
@@ -57,7 +57,8 @@ func main() {
 	debugMode := os.Getenv("DEBUG") == "true"
 
 	//! 1. Initialize database
-	if err := database.Connect(); err != nil {
+	db, err := database.Connect()
+	if err != nil {
 		log.Fatalf("%s❌ Database connection failed:%s %v", colorRed, colorReset, err)
 	}
 
@@ -117,12 +118,12 @@ func main() {
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
 	//? User routes
-	userController := controllers.NewUserController()
-	routes.SetupUserRoutes(v1, userController)
+	userHandler := handlers.NewUserHandler(db)
+	routes.SetupUserRoutes(v1, userHandler)
 
 	//? Contractor routes
-	contractorController := controllers.NewContractorController()
-	routes.SetupContractorRoutes(v1, contractorController)
+	contractorHandler := handlers.NewContractHandler(db)
+	routes.SetupContractsRoutes(v1, contractorHandler)
 
 	//! 6. Get port from environment
 	port := os.Getenv("SERVER_PORT")

@@ -25,7 +25,7 @@ func (b *BaseModel) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// ######################################### -------------------------------------------  //
+// > ----------------------    ###############################    -----------------------------------  //>
 type Project struct {
 	BaseModel
 	Name  string `json:"name" gorm:"size:100;not null;index:idx_project_name"`
@@ -34,6 +34,8 @@ type Project struct {
 
 type Contract struct {
 	BaseModel
+	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
+	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 
 	ContractNo      string    `json:"contract_no" gorm:"size:100;not null;uniqueIndex"`
 	GrossBudget     float32   `json:"gross_budget" gorm:"type:decimal(18,2);not null"`
@@ -44,14 +46,7 @@ type Contract struct {
 	PerformanceBond float32   `json:"performance_bond" gorm:"type:decimal(4,2)"`
 	AddedValueTax   float32   `json:"added_value_tax" gorm:"type:decimal(4,2)"`
 	ScanedFileUrl   string    `json:"scanfile_url"`
-
-	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
-	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 }
-
-// **
-// *
-// todo  ########################  |>
 
 type ContractWBS struct {
 	BaseModel
@@ -64,6 +59,10 @@ type ContractWBS struct {
 	UnitPrice   float64 `json:"unit_price" gorm:"type:decimal(30,2);not null"`
 	TotalPrice  float64 `json:"total_price" gorm:"type:decimal(40,2);not null"`
 }
+
+// **
+// *
+// todo  /> ######################## |>
 
 // ! Many-to-Many Relationships
 type ContractorProject struct {

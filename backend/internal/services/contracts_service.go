@@ -8,6 +8,6 @@ type ContractService struct {
 	db *gorm.DB
 }
 
-func NewContractService(db *gorm.DB) *UserService {
-	return &UserService{db: db}
+func NewContractService(db *gorm.DB) *ContractService {
+	return &ContractService{db: db}
 }
