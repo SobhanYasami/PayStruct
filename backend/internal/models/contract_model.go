@@ -32,18 +32,9 @@ type Project struct {
 	Phase uint8  `json:"phase" gorm:"not null;default:0"`
 }
 
-// **
-// *
-// todo  ########################  |>
 type Contract struct {
 	BaseModel
-	//* Basic Information
-	FullName       string `json:"full_name" gorm:"size:100;not null"`
-	LegalEntity    bool   `json:"legal_entity" gorm:"default:false;not null"`
-	PreferentialID string `json:"preferential_id,omitempty" gorm:"size:100"`
-	NationalID     string `json:"national_id,omitempty" gorm:"size:100"`
 
-	//* Contract Details
 	ContractNo      string    `json:"contract_no" gorm:"size:100;not null;uniqueIndex"`
 	GrossBudget     float32   `json:"gross_budget" gorm:"type:decimal(18,2);not null"`
 	StartDate       time.Time `json:"start_date" gorm:"not null;index"`
@@ -53,7 +44,14 @@ type Contract struct {
 	PerformanceBond float32   `json:"performance_bond" gorm:"type:decimal(4,2)"`
 	AddedValueTax   float32   `json:"added_value_tax" gorm:"type:decimal(4,2)"`
 	ScanedFileUrl   string    `json:"scanfile_url"`
+
+	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
+	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 }
+
+// **
+// *
+// todo  ########################  |>
 
 type ContractWBS struct {
 	BaseModel
