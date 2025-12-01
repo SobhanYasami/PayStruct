@@ -9,7 +9,7 @@ import (
 
 // ! BaseModel contains common fields for all models
 type User struct {
-	ID        uuid.UUID      `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey"` // Changed this
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index"`

@@ -8,7 +8,7 @@ import (
 )
 
 type BaseModel struct {
-	ID        uuid.UUID `json:"id" gorm:"type:char(36);primary_key"`
+	ID        uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	CreatedBy uuid.UUID `json:"created_by,omitempty" gorm:"type:char(36);index"`
 	UpdatedBy uuid.UUID `json:"updated_by,omitempty" gorm:"type:char(36)"`
 	DeletedBy uuid.UUID `json:"deleted_by,omitempty" gorm:"type:char(36)"`
