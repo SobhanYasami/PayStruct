@@ -7,9 +7,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// ! BaseModel contains common fields for all models
+// ----------------------------
+// User Model is Base for all users
+// ----------------------------
 type User struct {
-	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey"` // Changed this
+	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index"`
@@ -18,7 +20,7 @@ type User struct {
 	LastName  string `json:"last_name" gorm:"type:varchar(100)"`
 }
 
-// ! BeforeCreate hook for BaseModel
+// BeforeCreate hook for User model
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	if u.ID == uuid.Nil {
 		u.ID = uuid.New()
@@ -26,7 +28,9 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// !
+// ----------------------------
+// Employee Model - extends User
+// ----------------------------
 type Employee struct {
 	User
 	UserName string `json:"user_name" gorm:"type:varchar(50);not null;uniqueIndex"`
@@ -36,7 +40,9 @@ type Employee struct {
 	IsActive bool   `json:"is_active" gorm:"default:true"`
 }
 
-// !
+// ----------------------------
+// Contractor Model - extends User
+// ----------------------------
 type Contractor struct {
 	User
 	LegalEntity    bool   `json:"legal_entity" gorm:"default:false;not null"`
@@ -48,7 +54,10 @@ type Contractor struct {
 	DeletedBy uuid.UUID `json:"deleted_by,omitempty" gorm:"type:char(36)"`
 }
 
+// ----------------------------
 // Todo: --------------------------------
+// Customer Model - extends User
+// ----------------------------
 type Customer struct {
 	User
 }

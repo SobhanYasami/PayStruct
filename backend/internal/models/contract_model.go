@@ -7,6 +7,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// ----------------------------
+// BaseModel contains common fields for all models
+// ----------------------------
 type BaseModel struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	CreatedBy uuid.UUID `json:"created_by,omitempty" gorm:"type:char(36);index"`
@@ -18,6 +21,7 @@ type BaseModel struct {
 	DeletedAt gorm.DeletedAt `json:"-" gorm:""`
 }
 
+// BeforeCreate hook for BaseModel
 func (b *BaseModel) BeforeCreate(tx *gorm.DB) error {
 	if b.ID == uuid.Nil {
 		b.ID = uuid.New()
@@ -25,13 +29,18 @@ func (b *BaseModel) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// > ----------------------    ###############################    -----------------------------------  //>
+// ----------------------------
+// Project Model
+// ----------------------------
 type Project struct {
 	BaseModel
 	Name  string `json:"name" gorm:"size:100;not null;index:idx_project_name"`
 	Phase uint8  `json:"phase" gorm:"not null;default:0"`
 }
 
+// ----------------------------
+// Contract Model
+// ----------------------------
 type Contract struct {
 	BaseModel
 	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
@@ -48,6 +57,9 @@ type Contract struct {
 	ScanedFileUrl   string    `json:"scanfile_url"`
 }
 
+// ----------------------------
+// ContractWBS Model - represents Work Breakdown Structure
+// ----------------------------
 type ContractWBS struct {
 	BaseModel
 	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
@@ -60,16 +72,18 @@ type ContractWBS struct {
 	TotalPrice  float64 `json:"total_price" gorm:"type:decimal(40,2);not null"`
 }
 
-// **
-// *
-// todo  /> ######################## |>
-
-// ! Many-to-Many Relationships
+// ----------------------------
+// ContractorProject Model - represents Projects assigned to Contractors
+// ----------------------------
 type ContractorProject struct {
 	BaseModel
 	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
 	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 }
+
+// **
+// *
+// todo  /> ######################## |>
 
 // ! Many-to-One Relationships
 type StatusStatement struct {
