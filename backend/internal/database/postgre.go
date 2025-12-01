@@ -107,14 +107,9 @@ func migrate() error {
 	models := []interface{}{
 		&models.User{},
 		&models.Project{},
+		&models.Employee{},
 		&models.Contractor{},
-		&models.ContractorProject{},
-		&models.StatusStatement{},
-		&models.TasksPerformed{},
-		&models.AdditionalWorks{},
-		&models.Deductions{},
-		&models.StatusStatmentComm{},
-		&models.CumulativeTasksPerformed{},
+		&models.Customer{},
 	}
 
 	for _, model := range models {

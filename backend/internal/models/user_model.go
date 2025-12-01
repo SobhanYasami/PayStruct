@@ -9,13 +9,13 @@ import (
 
 // ! BaseModel contains common fields for all models
 type User struct {
-	ID        uuid.UUID `json:"id" gorm:"type:char(36);primary_key"`
-	FirstName string    `json:"first_name" gorm:"type:varchar(100);not null"`
-	LastName  string    `json:"last_name" gorm:"type:varchar(100)"`
+	ID        uuid.UUID      `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 
-	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
-	DeletedAt gorm.DeletedAt `json:"-" gorm:""`
+	FirstName string `json:"first_name" gorm:"type:varchar(100);not null"`
+	LastName  string `json:"last_name" gorm:"type:varchar(100)"`
 }
 
 // ! BeforeCreate hook for BaseModel
