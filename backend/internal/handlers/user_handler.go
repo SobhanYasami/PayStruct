@@ -28,7 +28,7 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 
 // ------------------------------------------------------------------------
 
-// ! @post /users ----
+// ! @post /users/signup ----
 func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 	type Submission struct {
 		FirstName string `json:"first_name"`

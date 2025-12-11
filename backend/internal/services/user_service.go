@@ -39,10 +39,20 @@ type CreateEmployeeResponse struct {
 
 func (s *UserService) CreateEmployee(req CreateEmployeeRequest) (*CreateEmployeeResponse, error) {
 	//1. Validate required fields
-	if req.FirstName == "" || req.LastName == "" ||
-		req.UserName == "" || req.Password == "" ||
-		req.Role == "" {
-		return nil, &ServiceError{Message: "First name, last name, username, password, and role are required", Code: 400}
+	if req.FirstName == "" {
+		return nil, &ServiceError{Message: "First name is required", Code: 400}
+	}
+	if req.LastName == "" {
+		return nil, &ServiceError{Message: "Last name is required", Code: 400}
+	}
+	if req.UserName == "" {
+		return nil, &ServiceError{Message: "username is required", Code: 400}
+	}
+	if req.Password == "" {
+		return nil, &ServiceError{Message: "password is required", Code: 400}
+	}
+	if req.Role == "" {
+		return nil, &ServiceError{Message: "role is required", Code: 400}
 	}
 
 	//2. Hash the password
