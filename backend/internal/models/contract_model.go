@@ -81,11 +81,7 @@ type ContractorProject struct {
 	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 }
 
-// **
-// *
 // todo  /> ######################## |>
-
-// ! Many-to-One Relationships
 type StatusStatement struct {
 	BaseModel
 	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`

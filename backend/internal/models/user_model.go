@@ -55,9 +55,14 @@ type Contractor struct {
 }
 
 // ----------------------------
-// Todo: --------------------------------
 // Customer Model - extends User
 // ----------------------------
 type Customer struct {
 	User
+	NationalID string `json:"national_id,omitempty" gorm:"size:100"`
+	PersonalID string `json:"personal_id,omitempty" gorm:"size:100"`
+
+	CreatedBy uuid.UUID `json:"created_by,omitempty" gorm:"type:char(36);index"`
+	UpdatedBy uuid.UUID `json:"updated_by,omitempty" gorm:"type:char(36)"`
+	DeletedBy uuid.UUID `json:"deleted_by,omitempty" gorm:"type:char(36)"`
 }

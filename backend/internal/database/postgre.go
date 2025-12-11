@@ -54,7 +54,8 @@ func (c Config) DSN() string {
 		c.Name,
 		c.Port,
 		c.SSLMode,
-		c.TimeZone)
+		c.TimeZone,
+	)
 }
 
 func Connect() (*gorm.DB, error) {
@@ -106,10 +107,14 @@ func Connect() (*gorm.DB, error) {
 func migrate() error {
 	models := []interface{}{
 		&models.User{},
-		&models.Project{},
 		&models.Employee{},
 		&models.Contractor{},
 		&models.Customer{},
+
+		&models.Project{},
+		&models.Contract{},
+		&models.ContractorProject{},
+		&models.ContractWBS{},
 	}
 
 	for _, model := range models {
