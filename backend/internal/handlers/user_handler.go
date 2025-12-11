@@ -60,16 +60,13 @@ func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 	if err != nil {
 		serviceErr, ok := err.(*services.ServiceError)
 		if ok {
-			resp := ErrorResponse(InternalError, serviceErr.Message, serviceErr.Details)
-			return c.Status(serviceErr.Code).JSON(resp)
+			return c.Status(serviceErr.Code).JSON(ErrorResponse(InternalError, serviceErr.Message, serviceErr.Details))
 		}
-		resp := ErrorResponse(InternalError, "Failed to create employee")
-		return c.Status(fiber.StatusInternalServerError).JSON(resp)
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to create employee"))
 	}
 
 	//* 3) Return success response
-	resp := SuccessResponse(Created, "Employee created successfully")
-	return c.Status(fiber.StatusCreated).JSON(resp)
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(Created, "Employee created successfully"))
 }
 
 // ! @post /users/signin ----
@@ -82,24 +79,18 @@ func (handler *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 	var req LoginRequest
 	//? 1. Parse and validate request
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "درخواست نامعتبر است",
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
 	}
 
 	//? 2. Fetch user by email
 	var user models.Employee
 	if err := handler.db.Where("user_name = ?", req.UserName).First(&user).Error; err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "نام کاربری یا رمز عبور نامعتبر است",
-		})
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "نام کاربری یا رمز عبور نامعتبر است"))
 	}
 
 	//? 3. Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "نام کاربری یا رمز عبور نامعتبر است",
-		})
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "نام کاربری یا رمز عبور نامعتبر است"))
 	}
 
 	//? 4. Create JWT token
@@ -115,25 +106,20 @@ func (handler *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "توکن مخفی تنظیم نشده است",
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "token secret not configured"))
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "خطا در تولید توکن",
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "error generating token"))
 	}
 
 	//? 5. Return the signed token
-	return c.JSON(fiber.Map{
-		"status": "success",
-		"token":  signed,
-		"role":   user.Role,
-	})
+	return c.JSON(SuccessResponse(fiber.Map{
+		"token": signed,
+		"role":  user.Role,
+	}, "Login successful"))
 }
 
 // ! @put /users/:id ----
