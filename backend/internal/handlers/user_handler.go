@@ -146,17 +146,13 @@ func (handler *UserHandler) GetEmployee(c *fiber.Ctx) error {
 	var user models.User
 	if err := handler.db.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "User not found",
-			})
+			return c.Status(fiber.StatusNotFound).JSON(
+				ErrorResponse(NotFound, "User not found!"))
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to fetch user",
-			"details": err.Error(),
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to fetch user", err.Error()))
 	}
 
-	return c.JSON(user)
+	return c.JSON(SuccessResponse(user, "User successfully retrieved"))
 }
 
 // ! @get /users ----
@@ -167,16 +163,11 @@ func (handler *UserHandler) GetAllEmployee(c *fiber.Ctx) error {
 
 	var users []models.User
 	if err := handler.db.Offset(offset).Limit(limit).Find(&users).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to fetch users",
-			"details": err.Error(),
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(
+			ErrorResponse(InternalError, "Failed to fetch users", err.Error()))
 	}
 
-	return c.JSON(fiber.Map{
-		"status": "success",
-		"data":   users,
-	})
+	return c.JSON(SuccessResponse(users, "users successfully retrieved"))
 }
 
 // ! @delete /users/:id ----
@@ -185,14 +176,9 @@ func (handler *UserHandler) DeleteEmployee(c *fiber.Ctx) error {
 
 	if err := handler.db.Delete(&models.User{}, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "User not found",
-			})
+			return c.Status(fiber.StatusNotFound).JSON(ErrorResponse(NotFound, "User not found!"))
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to delete user",
-			"details": err.Error(),
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to delete user", err.Error()))
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
