@@ -8,7 +8,7 @@ import (
 
 func SetupContractsRoutes(router fiber.Router, contractHandler *handlers.ContractHandler) {
 	//! Contract and Project Registration Routes
-	router.Post("/contractors/new-project", middlewares.AuthMiddleware(), contractHandler.CreateProject)
+	router.Post("/contractors/new-project", middlewares.Authenticate(), contractHandler.CreateProject)
 	// router.Get("/contractors/projects", middlewares.AuthMiddleware(), contractorHandler.GetAllProject)
 
 	// router.Post("/contractors/new-contract", middlewares.AuthMiddleware(), contractorHandler.CreateContractor)

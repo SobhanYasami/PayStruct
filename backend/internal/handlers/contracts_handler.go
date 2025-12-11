@@ -34,14 +34,7 @@ func NewContractHandler(db *gorm.DB) *ContractHandler {
 // -----------------------------------------------------
 var validate = validator.New()
 
-// todo: remove this and use standard response structure
-type CtrlResponse struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-}
-
-// @Router /contractors/new-project [post]
+// ! @post /contractors/new-project
 func (handler *ContractHandler) CreateProject(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userID, ok := c.Locals("userID").(uuid.UUID)
