@@ -98,6 +98,17 @@ func (s *UserService) CreateEmployee(req CreateEmployeeRequest) (*CreateEmployee
 }
 
 // --------------------------
+// User Signin
+// --------------------------
+type SigninRequest struct {
+	UserName string `json:"user_name"`
+	Password string `json:"password"`
+}
+
+type SigninResponse struct {
+}
+
+// --------------------------
 // ServiceError for business logic errors
 // --------------------------
 type ServiceError struct {
