@@ -9,7 +9,6 @@ import (
 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
 	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -82,18 +81,13 @@ func (handler *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
 	}
 
-	//? 2. Fetch user by email
-	var user models.Employee
-	if err := handler.db.Where("user_name = ?", req.UserName).First(&user).Error; err != nil {
+	//? 2. Authorize user
+	user, err := handler.userService.SigninEmployee(req.UserName, req.Password)
+	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "نام کاربری یا رمز عبور نامعتبر است"))
 	}
 
-	//? 3. Verify password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "نام کاربری یا رمز عبور نامعتبر است"))
-	}
-
-	//? 4. Create JWT token
+	//? 3. Create JWT token
 	claims := schemas.JWTClaims{
 		UserID:   user.ID.String(),
 		UserName: user.UserName,
@@ -115,7 +109,7 @@ func (handler *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "error generating token"))
 	}
 
-	//? 5. Return the signed token
+	//? 4. Return the signed token
 	return c.JSON(SuccessResponse(fiber.Map{
 		"token": signed,
 		"role":  user.Role,
@@ -129,31 +123,20 @@ func (handler *UserHandler) UpdateEmployee(c *fiber.Ctx) error {
 	var user models.User
 	if err := handler.db.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "User not found",
-			})
+			return c.Status(fiber.StatusNotFound).JSON(ErrorResponse(NotFound, "User not found!"))
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to fetch user",
-			"details": err.Error(),
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to retrieve users", err.Error()))
 	}
 
 	if err := c.BodyParser(&user); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "Invalid request body",
-			"details": err.Error(),
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
 	}
 
 	if err := handler.db.Save(&user).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to update user",
-			"details": err.Error(),
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to update user", err.Error()))
 	}
 
-	return c.JSON(user)
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(user, "User successfully updated"))
 }
 
 // ! @get /users/:id ----

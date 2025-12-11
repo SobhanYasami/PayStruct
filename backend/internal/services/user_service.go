@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	// "github.com/sobhan-yasami/docs-db-panel/internal/handlers"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -100,6 +102,20 @@ func (s *UserService) CreateEmployee(req CreateEmployeeRequest) (*CreateEmployee
 // --------------------------
 // User Signin
 // --------------------------
+func (s *UserService) SigninEmployee(userName, password string) (*models.Employee, error) {
+	var employee models.Employee
+	if err := s.db.Where("user_name = ?", userName).First(&employee).Error; err != nil {
+		return nil, &ServiceError{Message: "Invalid username or password", Code: 401}
+	}
+
+	// Verify password
+	if err := bcrypt.CompareHashAndPassword([]byte(employee.Password), []byte(password)); err != nil {
+		return nil, &ServiceError{Message: "Invalid username or password", Code: 401}
+	}
+
+	return &employee, nil
+}
+
 type SigninRequest struct {
 	UserName string `json:"user_name"`
 	Password string `json:"password"`
