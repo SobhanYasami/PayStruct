@@ -14,12 +14,11 @@ import (
 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
 
-	// "github.com/sobhan-yasami/docs-db-panel/internal/utils"
-
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
 
+// ContractHandler handles contractor-related endpoints
 type ContractHandler struct {
 	db              *gorm.DB
 	contractService *services.ContractService
@@ -32,34 +31,22 @@ func NewContractHandler(db *gorm.DB) *ContractHandler {
 	}
 }
 
+// -----------------------------------------------------
 var validate = validator.New()
 
+// todo: remove this and use standard response structure
 type CtrlResponse struct {
 	Status  string      `json:"status"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// ! CreateProject creates a new project
-// @Summary Create a new project
-// @Description Creates a new project with the given name and phase
-// @Tags Projects
-// @Accept json
-// @Produce json
-// @Param input body ProjectRequest true "Project creation details"
-// @Success 201 {object} ProjectResponse
-// @Failure 400 {object} ProjectResponse
-// @Failure 401 {object} ProjectResponse
-// @Failure 500 {object} ProjectResponse
 // @Router /contractors/new-project [post]
-func (ctrl *ContractHandler) CreateProject(c *fiber.Ctx) error {
+func (handler *ContractHandler) CreateProject(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-			Status:  "error",
-			Message: "خطای سرور",
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
 	}
 	//? 2-1) request struct
 	type RequestBody struct {
@@ -70,40 +57,28 @@ func (ctrl *ContractHandler) CreateProject(c *fiber.Ctx) error {
 	//? 2-2) Parse Body request
 	var req RequestBody
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-			Status:  "failure",
-			Message: "ورودی های نا معتبر",
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
 	}
 	//? 2-3) Validate using struct tags
 	if err := validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-			Status:  "failure",
-			Message: "ورودی های نا معتبر: " + err.Error(),
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
 	}
 
 	//? 3) Validate and parse Project Phase
 	phase, err := strconv.ParseUint(req.Phase, 10, 8)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-			Status:  "failure",
-			Message: "فاز پروژه باید عددی باشد",
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Project phase must be a number"))
 	}
 
 	//? 4) Check if project exist
 	ctx := c.Context()
 	var existingCount int64
-	if err := ctrl.db.WithContext(ctx).
+	if err := handler.db.WithContext(ctx).
 		Model(&models.Project{}).
 		Where("name = ? AND phase = ?", req.ProjectName, uint8(phase)).
 		Count(&existingCount).Error; err != nil {
 
-		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-			Status:  "error",
-			Message: "خطا در بررسی پروژه های موجود",
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error checking existing projects"))
 	}
 	//? 5) Create project if it doesn't exist
 	if existingCount == 0 {
@@ -116,23 +91,17 @@ func (ctrl *ContractHandler) CreateProject(c *fiber.Ctx) error {
 			Phase: uint8(phase),
 		}
 
-		if err := ctrl.db.WithContext(ctx).Create(&project).Error; err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-				Status:  "error",
-				Message: "خطا در ایجاد فاز پروژه",
-			})
+		if err := handler.db.WithContext(ctx).Create(&project).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error creating project"))
+
 		}
 	}
 
 	//? 6) Return success response
-	return c.Status(fiber.StatusCreated).JSON(CtrlResponse{
-		Status:  "success",
-		Message: "پروژه با موفقیت ایجاد شد",
-		Data: fiber.Map{
-			"Project_Name": req.ProjectName,
-			"Phase":        phase,
-		},
-	})
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(fiber.Map{
+		"Project_Name": req.ProjectName,
+		"Phase":        phase,
+	}, "Project created successfully"))
 
 }
 
