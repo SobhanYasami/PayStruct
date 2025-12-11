@@ -16,6 +16,11 @@ func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{db: db}
 }
 
+//	--------------------------
+//
+// CreateEmployee creates a new employee in the database
+//
+//	--------------------------
 type CreateEmployeeRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
@@ -33,20 +38,20 @@ type CreateEmployeeResponse struct {
 }
 
 func (s *UserService) CreateEmployee(req CreateEmployeeRequest) (*CreateEmployeeResponse, error) {
-	// Validate required fields
+	//1. Validate required fields
 	if req.FirstName == "" || req.LastName == "" ||
 		req.UserName == "" || req.Password == "" ||
 		req.Role == "" {
 		return nil, &ServiceError{Message: "First name, last name, username, password, and role are required", Code: 400}
 	}
 
-	// Hash the password
+	//2. Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, &ServiceError{Message: "Failed to hash password", Code: 500, Details: err.Error()}
 	}
 
-	// Create employee model
+	//3. Create employee model
 	employee := models.Employee{
 		User: models.User{
 			FirstName: req.FirstName,
@@ -59,7 +64,7 @@ func (s *UserService) CreateEmployee(req CreateEmployeeRequest) (*CreateEmployee
 		IsActive: true,
 	}
 
-	// Save to DB
+	//4. Save to DB
 	if err := s.db.Create(&employee).Error; err != nil {
 		// Handle duplicate key errors
 		if strings.Contains(err.Error(), "Duplicate entry") {
@@ -73,7 +78,7 @@ func (s *UserService) CreateEmployee(req CreateEmployeeRequest) (*CreateEmployee
 		return nil, &ServiceError{Message: "Failed to create employee", Code: 500, Details: err.Error()}
 	}
 
-	// Return response
+	//5. Return response
 	return &CreateEmployeeResponse{
 		ID:       employee.ID.String(),
 		UserName: employee.UserName,
@@ -82,7 +87,9 @@ func (s *UserService) CreateEmployee(req CreateEmployeeRequest) (*CreateEmployee
 	}, nil
 }
 
+// --------------------------
 // ServiceError for business logic errors
+// --------------------------
 type ServiceError struct {
 	Message string
 	Code    int

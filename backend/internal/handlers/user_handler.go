@@ -29,7 +29,7 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 // ------------------------------------------------------------------------
 
 // ! @post /users ----
-func (ctrl *UserHandler) CreateEmployee(c *fiber.Ctx) error {
+func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 	type Submission struct {
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
@@ -56,7 +56,7 @@ func (ctrl *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 		Role:      submission.Role,
 	}
 
-	result, err := ctrl.userService.CreateEmployee(req)
+	result, err := handler.userService.CreateEmployee(req)
 	if err != nil {
 		serviceErr, ok := err.(*services.ServiceError)
 		if ok {
@@ -83,11 +83,11 @@ func (ctrl *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 }
 
 // ! @put /users/:id ----
-func (ctrl *UserHandler) UpdateEmployee(c *fiber.Ctx) error {
+func (handler *UserHandler) UpdateEmployee(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var user models.User
-	if err := ctrl.db.First(&user, id).Error; err != nil {
+	if err := handler.db.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
@@ -106,7 +106,7 @@ func (ctrl *UserHandler) UpdateEmployee(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := ctrl.db.Save(&user).Error; err != nil {
+	if err := handler.db.Save(&user).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to update user",
 			"details": err.Error(),
@@ -117,11 +117,11 @@ func (ctrl *UserHandler) UpdateEmployee(c *fiber.Ctx) error {
 }
 
 // ! @get /users/:id ----
-func (ctrl *UserHandler) GetEmployee(c *fiber.Ctx) error {
+func (handler *UserHandler) GetEmployee(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var user models.User
-	if err := ctrl.db.First(&user, id).Error; err != nil {
+	if err := handler.db.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
@@ -137,13 +137,13 @@ func (ctrl *UserHandler) GetEmployee(c *fiber.Ctx) error {
 }
 
 // ! @get /users ----
-func (ctrl *UserHandler) GetAllEmployee(c *fiber.Ctx) error {
+func (handler *UserHandler) GetAllEmployee(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)
 	offset := (page - 1) * limit
 
 	var users []models.User
-	if err := ctrl.db.Offset(offset).Limit(limit).Find(&users).Error; err != nil {
+	if err := handler.db.Offset(offset).Limit(limit).Find(&users).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to fetch users",
 			"details": err.Error(),
@@ -157,10 +157,10 @@ func (ctrl *UserHandler) GetAllEmployee(c *fiber.Ctx) error {
 }
 
 // ! @delete /users/:id ----
-func (ctrl *UserHandler) DeleteEmployee(c *fiber.Ctx) error {
+func (handler *UserHandler) DeleteEmployee(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	if err := ctrl.db.Delete(&models.User{}, id).Error; err != nil {
+	if err := handler.db.Delete(&models.User{}, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
@@ -175,8 +175,8 @@ func (ctrl *UserHandler) DeleteEmployee(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-// ! @post /users/login ----
-func (ctrl *UserHandler) LoginEmployee(c *fiber.Ctx) error {
+// ! @post /users/signin ----
+func (handler *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 	type LoginRequest struct {
 		UserName string `json:"user_name" validate:"required,email"`
 		Password string `json:"password" validate:"required,min=6"`
@@ -193,7 +193,7 @@ func (ctrl *UserHandler) LoginEmployee(c *fiber.Ctx) error {
 	}
 
 	//? 2. Fetch user by email
-	if err := ctrl.db.Where("user_name = ?", req.UserName).First(&user).Error; err != nil {
+	if err := handler.db.Where("user_name = ?", req.UserName).First(&user).Error; err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"message": "نام کاربری یا رمز عبور نامعتبر است",
 		})
