@@ -3,6 +3,7 @@ package jwt
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,6 +18,14 @@ var (
 
 // ValidateClaims performs checks on exp, iat, nbf, issuer, audience, and user id formatting.
 func ValidateClaims(claims *schemas.JWTClaims) error {
+	ExpectedIssuer := os.Getenv("JWT_ISSUER")
+	if ExpectedIssuer == "" {
+		return errors.New("token issuer not configured")
+	}
+	ExpectedAudience := os.Getenv("JWT_AUDIENCE")
+	if ExpectedAudience == "" {
+		return errors.New("token audience not configured")
+	}
 	now := time.Now().UTC()
 
 	// Expiration (required)

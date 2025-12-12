@@ -40,7 +40,7 @@ func Authenticate() fiber.Handler {
 		// Parse and validate the token
 		userID, err := jwtUtil.ValidateToken(tokenString, jwtSecret)
 		if err != nil || userID == uuid.Nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(handlers.ErrorResponse(handlers.Unauthorized, "Unauthorized access! Invalid or missing token"))
+			return c.Status(fiber.StatusUnauthorized).JSON(handlers.ErrorResponse(handlers.Unauthorized, err.Error()))
 		}
 
 		//* Store the userID in the context for downstream handlers
