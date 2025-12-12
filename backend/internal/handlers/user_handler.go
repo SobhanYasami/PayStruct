@@ -6,9 +6,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	jwtUtils "github.com/sobhan-yasami/docs-db-panel/internal/middlewares/jwt"
 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
-	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
+
 	"gorm.io/gorm"
 )
 
@@ -72,6 +73,20 @@ func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 
 // ! @post /users/signin ----
 func (handler *UserHandler) SigninEmployee(c *fiber.Ctx) error {
+	// 0. Get JWT secret from environment
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "token secret not configured"))
+	}
+	jwtIssuer := os.Getenv("JWT_ISSUER")
+	if jwtIssuer == "" {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "token issuer not configured"))
+	}
+	jwtAudience := os.Getenv("JWT_AUDIENCE")
+	if jwtAudience == "" {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "token audience not configured"))
+	}
+	// Define request structure
 	type LoginRequest struct {
 		UserName string `json:"user_name" validate:"required,email"`
 		Password string `json:"password" validate:"required,min=6"`
@@ -90,25 +105,13 @@ func (handler *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 	}
 
 	//? 3. Create JWT token
-	claims := schemas.JWTClaims{
-		UserID:   user.ID.String(),
-		UserName: user.UserName,
-		Role:     user.Role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(12 * time.Hour)),
-			Issuer:    "Null-Co",
-		},
-	}
-
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "token secret not configured"))
-	}
+	claims := jwtUtils.BuildJWTClaims(user, jwtIssuer, jwtAudience, time.Hour*24)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "error generating token"))
+
 	}
 
 	//? 4. Return the signed token
