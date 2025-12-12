@@ -10,14 +10,9 @@ import (
 	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
 )
 
-// Expected issuer & audience — configure these for your environment.
-var (
-	ExpectedIssuer   = "Null-Co"
-	ExpectedAudience = "Null-Co-clients"
-)
-
 // ValidateClaims performs checks on exp, iat, nbf, issuer, audience, and user id formatting.
 func ValidateClaims(claims *schemas.JWTClaims) error {
+	// Expected issuer & audience — configure these for your environment
 	ExpectedIssuer := os.Getenv("JWT_ISSUER")
 	if ExpectedIssuer == "" {
 		return errors.New("token issuer not configured")
