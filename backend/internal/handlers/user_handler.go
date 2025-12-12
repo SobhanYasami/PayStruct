@@ -30,12 +30,13 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 // ! @post /users/signup ----
 func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 	type Submission struct {
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		UserName  string `json:"user_name"`
-		Password  string `json:"password"`
-		Phone     string `json:"phone,omitempty"`
-		Role      string `json:"role"`
+		FirstName   string   `json:"first_name"`
+		LastName    string   `json:"last_name"`
+		UserName    string   `json:"user_name"`
+		Password    string   `json:"password"`
+		Phone       string   `json:"phone,omitempty"`
+		Role        string   `json:"role"`
+		Permissions []string `json:"permissions,omitempty"`
 	}
 
 	var submission Submission
@@ -47,12 +48,13 @@ func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 
 	//* 2) Call service layer
 	req := services.CreateEmployeeRequest{
-		FirstName: submission.FirstName,
-		LastName:  submission.LastName,
-		UserName:  submission.UserName,
-		Password:  submission.Password,
-		Phone:     submission.Phone,
-		Role:      submission.Role,
+		FirstName:   submission.FirstName,
+		LastName:    submission.LastName,
+		UserName:    submission.UserName,
+		Password:    submission.Password,
+		Phone:       submission.Phone,
+		Role:        submission.Role,
+		Permissions: submission.Permissions,
 	}
 
 	_, err := handler.userService.CreateEmployee(req)
@@ -94,7 +96,7 @@ func (handler *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 		Role:     user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(12 * time.Hour)),
-			Issuer:    "JKR-Co",
+			Issuer:    "Null-Co",
 		},
 	}
 

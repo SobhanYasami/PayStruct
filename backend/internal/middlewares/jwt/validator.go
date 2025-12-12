@@ -11,8 +11,8 @@ import (
 
 // Expected issuer & audience — configure these for your environment.
 var (
-	ExpectedIssuer   = "docs-db-panel"
-	ExpectedAudience = "docs-db-clients"
+	ExpectedIssuer   = "Null-Co"
+	ExpectedAudience = "Null-Co-clients"
 )
 
 // ValidateClaims performs checks on exp, iat, nbf, issuer, audience, and user id formatting.

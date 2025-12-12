@@ -24,12 +24,13 @@ func NewUserService(db *gorm.DB) *UserService {
 //
 //	--------------------------
 type CreateEmployeeRequest struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	UserName  string `json:"user_name"`
-	Password  string `json:"password"`
-	Phone     string `json:"phone,omitempty"`
-	Role      string `json:"role"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	UserName    string   `json:"user_name"`
+	Password    string   `json:"password"`
+	Phone       string   `json:"phone,omitempty"`
+	Role        string   `json:"role"`
+	Permissions []string `json:"permissions,omitempty"`
 }
 
 type CreateEmployeeResponse struct {
@@ -66,8 +67,9 @@ func (s *UserService) CreateEmployee(req CreateEmployeeRequest) (*CreateEmployee
 	//3. Create employee model
 	employee := models.Employee{
 		User: models.User{
-			FirstName: req.FirstName,
-			LastName:  req.LastName,
+			FirstName:   req.FirstName,
+			LastName:    req.LastName,
+			Permissions: strings.Join(req.Permissions, ","),
 		},
 		UserName: req.UserName,
 		Password: string(hashedPassword),

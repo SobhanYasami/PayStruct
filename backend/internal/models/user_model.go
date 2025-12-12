@@ -16,8 +16,9 @@ type User struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 
-	FirstName string `json:"first_name" gorm:"type:varchar(100);not null"`
-	LastName  string `json:"last_name" gorm:"type:varchar(100)"`
+	FirstName   string `json:"first_name" gorm:"type:varchar(100);not null"`
+	LastName    string `json:"last_name" gorm:"type:varchar(100)"`
+	Permissions string `json:"permissions" gorm:"type:text"` // JSON array stored as string, e.g. '["read","write"]'
 }
 
 // BeforeCreate hook for User model
