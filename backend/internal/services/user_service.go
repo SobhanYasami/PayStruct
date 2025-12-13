@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
-	// "github.com/sobhan-yasami/docs-db-panel/internal/handlers"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"

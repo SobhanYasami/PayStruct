@@ -9,34 +9,32 @@ import (
 func SetupContractsRoutes(router fiber.Router, contractHandler *handlers.ContractHandler) {
 	//! Contract and Project Registration Routes
 	router.Post("/contractors/new-project", middlewares.Authenticate(), contractHandler.CreateProject)
-	// router.Get("/contractors/projects", middlewares.AuthMiddleware(), contractorHandler.GetAllProject)
+	router.Get("/contractors/projects", middlewares.Authenticate(), contractHandler.GetAllProject)
 
-	// router.Post("/contractors/new-contract", middlewares.AuthMiddleware(), contractorHandler.CreateContractor)
+	// router.Post("/contractors/new-contract", middlewares.Authenticate(), contractHandler.CreateContractor)
 
-	// router.Get("/contractors/search-by-id", middlewares.AuthMiddleware(), contractorHandler.GetContractorByID)
+	// router.Get("/contractors/search-by-id", middlewares.Authenticate(), contractHandler.GetContractorByID)
 	//! Trading System Routes
-	// router.Get("/contractors/contractor-projects", middlewares.AuthMiddleware(), contractorHandler.GetContractorProjects)
-	// router.Get("/contractors/get-last-status-statement", middlewares.AuthMiddleware(), contractorHandler.GetLastStatusStatement)
-	// router.Post("/contractors/new-status-statement", middlewares.AuthMiddleware(), contractorHandler.CreateNewStatusStatement)
-	// router.Get("/contractors/get-status-statement", middlewares.AuthMiddleware(), contractorHandler.GetStatusStatement)
+	// router.Get("/contractors/contractor-projects", middlewares.Authenticate(), contractHandler.GetContractorProjects)
+	// router.Get("/contractors/get-last-status-statement", middlewares.Authenticate(), contractHandler.GetLastStatusStatement)
+	// router.Post("/contractors/new-status-statement", middlewares.Authenticate(), contractHandler.CreateNewStatusStatement)
+	// router.Get("/contractors/get-status-statement", middlewares.Authenticate(), contractHandler.Get
 
 	//! Tax System Routes
-	// router.Post("/contractors/new-task-performed", middlewares.AuthMiddleware(), contractorHandler.CreateNewTaskPerformed)
-	// router.Get("/contractors/new-task-performed", middlewares.AuthMiddleware(), contractorHandler.GetSttsTaskPerformed)
+	// router.Post("/contractors/new-task-performed", middlewares.Authenticate(), contractorHandler.CreateNewTaskPerformed)
+	// router.Get("/contractors/new-task-performed", middlewares.Authenticate(), contractorHandler.GetSttsTaskPerformed)
+	// router.Post("/contractors/new-extra-works", middlewares.Authenticate(), contractorHandler.CreateNewExtraWorks)
+	// router.Get("/contractors/new-extra-works", middlewares.Authenticate(), contractorHandler.GetSttsExtraWorks)
 
-	// router.Post("/contractors/new-extra-works", middlewares.AuthMiddleware(), contractorHandler.CreateNewExtraWorks)
-	// router.Get("/contractors/new-extra-works", middlewares.AuthMiddleware(), contractorHandler.GetSttsExtraWorks)
+	// router.Post("/contractors/new-deductions", middlewares.Authenticate(), contractorHandler.CreateNewDeductions)
+	// router.Get("/contractors/new-deductions", middlewares.Authenticate(), contractorHandler.GetSttsDeductions)
 
-	// router.Post("/contractors/new-deductions", middlewares.AuthMiddleware(), contractorHandler.CreateNewDeductions)
-	// router.Get("/contractors/new-deductions", middlewares.AuthMiddleware(), contractorHandler.GetSttsDeductions)
-
-	// router.Get("/contractors/finance-summary", middlewares.AuthMiddleware(), contractorHandler.GetSttsFinanceSummary)
-	// router.Get("/contractors/legal-reductions", middlewares.AuthMiddleware(), contractorHandler.GetSttsLegalReductions)
-	// router.Get("/contractors/other-reductions", middlewares.AuthMiddleware(), contractorHandler.GetSttsOtherReductions)
-
+	// router.Get("/contractors/finance-summary", middlewares.Authenticate(), contractorHandler.GetSttsFinanceSummary)
+	// router.Get("/contractors/legal-reductions", middlewares.Authenticate(), contractorHandler.GetSttsLegalReductions)
+	// router.Get("/contractors/other-reductions", middlewares.Authenticate(), contractorHandler.GetSttsOtherReductions)
 	//! Internal Routes
 	// Todo: Remaining files
-	// router.Post("/contractors/tasks-final-subs", middlewares.AuthMiddleware(), contractorHandler.TasksFinalSubmition)
-	// router.Post("/contractors/print-status", middlewares.AuthMiddleware(), contractorController.PrintStatusSttmnt)
+	// router.Post("/contractors/tasks-final-subs", middlewares.Authenticate(), contractorHandler.TasksFinalSubmition)
+	// router.Post("/contractors/print-status", middlewares.Authenticate(), contractorController.PrintStatusSttmnt)
 
 }
