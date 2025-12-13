@@ -104,50 +104,36 @@ type ProjectSummary struct {
 	Phases []int  `json:"phases"`
 }
 
-// ! GetAllProject retrieves all projects grouped by name with their phases
-// @Summary Get all projects
-// @Description Retrieves all projects grouped by name with their phases
-// @Tags Projects
-// @Produce json
-// @Success 200 {object} ProjectResponse
-// @Failure 500 {object} ProjectResponse
-// @Router /contractors/projects [get]
-// func (ctrl *ContractHandler) GetAllProject(c *fiber.Ctx) error {
-// 	ctx := c.Context()
-// 	//? 1) Fetch projects with context and limit
-// 	var projects []models.Project
-// 	if err := ctrl.db.WithContext(ctx).
-// 		Limit(50).
-// 		Order("name ASC").
-// 		Find(&projects).Error; err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// 			Status:  "error",
-// 			Message: "خطا در دریافت پروژه ها",
-// 		})
-// 	}
+// ! @Router /contractors/projects [get]
+func (handler *ContractHandler) GetAllProject(c *fiber.Ctx) error {
+	ctx := c.Context()
+	//? 1) Fetch projects with context and limit
+	var projects []models.Project
+	if err := handler.db.WithContext(ctx).
+		Limit(50).
+		Order("name ASC").
+		Find(&projects).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error fetching projects"))
+	}
 
-// 	//? 2) Group projects by name and collect phases
-// 	projectsMap := make(map[string][]int)
-// 	for _, project := range projects {
-// 		projectsMap[project.Name] = append(projectsMap[project.Name], int(project.Phase))
-// 	}
+	//? 2) Group projects by name and collect phases
+	projectsMap := make(map[string][]int)
+	for _, project := range projects {
+		projectsMap[project.Name] = append(projectsMap[project.Name], int(project.Phase))
+	}
 
-// 	//? 3) Build response
-// 	responseProjects := make([]ProjectSummary, 0, len(projectsMap))
-// 	for name, phases := range projectsMap {
-// 		responseProjects = append(responseProjects, ProjectSummary{
-// 			Name:   name,
-// 			Phases: phases,
-// 		})
-// 	}
+	//? 3) Build response
+	responseProjects := make([]ProjectSummary, 0, len(projectsMap))
+	for name, phases := range projectsMap {
+		responseProjects = append(responseProjects, ProjectSummary{
+			Name:   name,
+			Phases: phases,
+		})
+	}
 
-// 	//? 4) Return response
-// 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// 		Status:  "success",
-// 		Message: "پروژه\u200cها با موفقیت دریافت شدند",
-// 		Data:    responseProjects,
-// 	})
-// }
+	//? 4) Return response
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(responseProjects, "Project Retrieved Successfully"))
+}
 
 // ! @post /contractors/new-contract
 // func (ctrl *ContractHandler) CreateContractor(c *fiber.Ctx) error {
