@@ -92,6 +92,30 @@ func (s *ContractService) GetAllProjects(ctx context.Context) ([]ProjectSummary,
 	return responseProjects, nil
 }
 
+// get project by ID
+func (s *ContractService) GetProjectByID(ctx context.Context, projectID uuid.UUID) (*models.Project, error) {
+	var project models.Project
+	if err := s.db.WithContext(ctx).First(&project, "id = ?", projectID).Error; err != nil {
+		return nil, err
+	}
+	return &project, nil
+}
+
+// UpdateProject updates project details.
+func (s *ContractService) UpdateProject(ctx context.Context, projectID uuid.UUID, name string, phase uint8) error {
+	// Update the project fields
+	updates := map[string]interface{}{
+		"name":  name,
+		"phase": phase,
+	}
+
+	if err := s.db.WithContext(ctx).Model(&models.Project{}).Where("id = ?", projectID).Updates(updates).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// Delete Project deletes a project by its ID.
 func (s *ContractService) DeleteProject(ctx context.Context, projectID uuid.UUID) error {
 	// Delete the project by ID
 	if err := s.db.WithContext(ctx).Delete(&models.Project{}, "id = ?", projectID).Error; err != nil {

@@ -100,6 +100,52 @@ func (handler *ContractHandler) GetAllProject(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(responseProjects, "Project Retrieved Successfully"))
 }
 
+// ! @Router /contractors/projects/:id [get]
+func (handler *ContractHandler) GetProjectByID(c *fiber.Ctx) error {
+	//? 1) Get project ID from URL parameters
+	projectID := c.Params("id")
+	uuidProjectID, err := uuid.Parse(projectID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
+	}
+
+	//? 2) Call the service
+	project, err := handler.contractService.GetProjectByID(c.Context(), uuidProjectID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, err.Error()))
+	}
+	//? 3) Return success response
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(project, "Project Retrieved Successfully"))
+
+}
+
+// ! @Router /contractors/projects/:id [put]
+func (handler *ContractHandler) UpdateProject(c *fiber.Ctx) error {
+	//? 1) Get project ID from URL parameters
+	projectID := c.Params("id")
+	uuidProjectID, err := uuid.Parse(projectID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
+	}
+
+	//? 2) Parse Body request
+	var req struct {
+		Name  string `json:"name"`
+		Phase uint8  `json:"phase"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+
+	//? 3) Call the service
+	err = handler.contractService.UpdateProject(c.Context(), uuidProjectID, req.Name, req.Phase)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, err.Error()))
+	}
+
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Project Updated Successfully"))
+}
+
 // ! @Router /contractors/projects/:id [delete]
 func (handler *ContractHandler) DeleteProject(c *fiber.Ctx) error {
 	//? 1) Get project ID from URL parameters
