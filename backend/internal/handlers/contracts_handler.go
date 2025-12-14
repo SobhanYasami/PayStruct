@@ -11,7 +11,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/sobhan-yasami/docs-db-panel/internal/models"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
 
 	// "github.com/sobhan-yasami/docs-db-panel/internal/services"
@@ -22,13 +21,13 @@ import (
 
 // ContractHandler handles contractor-related endpoints
 type ContractHandler struct {
-	db              *gorm.DB
+	// db              *gorm.DB
 	contractService *services.ContractService
 }
 
 func NewContractHandler(db *gorm.DB) *ContractHandler {
 	return &ContractHandler{
-		db:              db,
+		// db:              db,
 		contractService: services.NewContractService(db),
 	}
 }
@@ -65,31 +64,11 @@ func (handler *ContractHandler) CreateProject(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Project phase must be a number"))
 	}
 
-	//? 4) Check if project exist
-	ctx := c.Context()
-	var existingCount int64
-	if err := handler.db.WithContext(ctx).
-		Model(&models.Project{}).
-		Where("name = ? AND phase = ?", req.ProjectName, uint8(phase)).
-		Count(&existingCount).Error; err != nil {
-
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error checking existing projects"))
-	}
-	//? 5) Create project if it doesn't exist
-	if existingCount == 0 {
-		project := models.Project{
-			BaseModel: models.BaseModel{
-				ID:        uuid.New(),
-				CreatedBy: userID,
-			},
-			Name:  req.ProjectName,
-			Phase: uint8(phase),
-		}
-
-		if err := handler.db.WithContext(ctx).Create(&project).Error; err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error creating project"))
-
-		}
+	//? 4) CALL THE SERVICE
+	// pass c.Context() so the DB knows if the user disconnects
+	err = handler.contractService.CreateProject(c.Context(), userID, req.ProjectName, uint8(phase))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error creating project"))
 	}
 
 	//? 6) Return success response
@@ -108,32 +87,17 @@ type ProjectSummary struct {
 
 // ! @Router /contractors/projects [get]
 func (handler *ContractHandler) GetAllProject(c *fiber.Ctx) error {
-	ctx := c.Context()
-	//? 1) Fetch projects with context and limit
-	var projects []models.Project
-	if err := handler.db.WithContext(ctx).
-		Limit(50).
-		Order("name ASC").
-		Find(&projects).Error; err != nil {
+	//? 1) Call the service (The Waiter asks the Chef for the prepared summary)
+	// Pass c.Context() to maintain the timeout/cancellation.
+	responseProjects, err := handler.contractService.GetAllProjects(c.Context())
+
+	//? 2) Handle errors from the service
+	if err != nil {
+		// We assume any error returned is a database/internal error
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error fetching projects"))
 	}
 
-	//? 2) Group projects by name and collect phases
-	projectsMap := make(map[string][]int)
-	for _, project := range projects {
-		projectsMap[project.Name] = append(projectsMap[project.Name], int(project.Phase))
-	}
-
-	//? 3) Build response
-	responseProjects := make([]ProjectSummary, 0, len(projectsMap))
-	for name, phases := range projectsMap {
-		responseProjects = append(responseProjects, ProjectSummary{
-			Name:   name,
-			Phases: phases,
-		})
-	}
-
-	//? 4) Return response
+	//? 3) Return success response
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(responseProjects, "Project Retrieved Successfully"))
 }
 
