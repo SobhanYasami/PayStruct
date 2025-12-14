@@ -91,3 +91,11 @@ func (s *ContractService) GetAllProjects(ctx context.Context) ([]ProjectSummary,
 
 	return responseProjects, nil
 }
+
+func (s *ContractService) DeleteProject(ctx context.Context, projectID uuid.UUID) error {
+	// Delete the project by ID
+	if err := s.db.WithContext(ctx).Delete(&models.Project{}, "id = ?", projectID).Error; err != nil {
+		return err
+	}
+	return nil
+}

@@ -87,18 +87,36 @@ type ProjectSummary struct {
 
 // ! @Router /contractors/projects [get]
 func (handler *ContractHandler) GetAllProject(c *fiber.Ctx) error {
-	//? 1) Call the service (The Waiter asks the Chef for the prepared summary)
+	//? 1) Call the service
 	// Pass c.Context() to maintain the timeout/cancellation.
 	responseProjects, err := handler.contractService.GetAllProjects(c.Context())
 
 	//? 2) Handle errors from the service
 	if err != nil {
-		// We assume any error returned is a database/internal error
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error fetching projects"))
 	}
 
 	//? 3) Return success response
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(responseProjects, "Project Retrieved Successfully"))
+}
+
+// ! @Router /contractors/projects/:id [delete]
+func (handler *ContractHandler) DeleteProject(c *fiber.Ctx) error {
+	//? 1) Get project ID from URL parameters
+	projectID := c.Params("id")
+	uuidProjectID, err := uuid.Parse(projectID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
+	}
+
+	//? 2) Call the service
+	err = handler.contractService.DeleteProject(c.Context(), uuidProjectID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, err.Error()))
+	}
+
+	//? 3) Return success response
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Project deleted successfully"))
 }
 
 // ! @post /contractors/new-contract
