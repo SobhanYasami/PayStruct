@@ -298,7 +298,7 @@ func (ctrl *ContractHandler) GetAllContracts(c *fiber.Ctx) error {
 }
 
 // ! @Router /contractors/contracts/:id [get]
-func (ctrl *ContractHandler) GetContract(c *fiber.Ctx) error {
+func (ctrl *ContractHandler) GetContractByID(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
 }
 

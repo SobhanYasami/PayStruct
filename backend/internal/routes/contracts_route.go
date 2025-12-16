@@ -7,12 +7,26 @@ import (
 )
 
 func SetupContractsRoutes(router fiber.Router, contractHandler *handlers.ContractHandler) {
-	//! Contract and Project Registration Routes
-	router.Post("/contractors/new-project", middlewares.Authenticate(), contractHandler.CreateProject)
-	router.Get("/contractors/projects", middlewares.Authenticate(), contractHandler.GetAllProject)
-	router.Get("/contractors/projects/:id", middlewares.Authenticate(), contractHandler.GetProjectByID)
-	router.Put("/contractors/projects/:id", middlewares.Authenticate(), contractHandler.UpdateProject)
-	router.Delete("/contractors/projects/:id", middlewares.Authenticate(), contractHandler.DeleteProject)
+	//! Project Management Routes
+	router.Post("/management/new-project", middlewares.Authenticate(), contractHandler.CreateProject)
+	router.Get("/management/projects", middlewares.Authenticate(), contractHandler.GetAllProject)
+	router.Get("/management/projects/:id", middlewares.Authenticate(), contractHandler.GetProjectByID)
+	router.Put("/management/projects/:id", middlewares.Authenticate(), contractHandler.UpdateProject)
+	router.Delete("/management/projects/:id", middlewares.Authenticate(), contractHandler.DeleteProject)
+
+	//! Contractor Management Routes
+	router.Post("/management/new-contractor", middlewares.Authenticate(), contractHandler.CreateContractor)
+	router.Get("/management/contractors", middlewares.Authenticate(), contractHandler.GetAllContractor)
+	router.Get("/management/contractors/:id", middlewares.Authenticate(), contractHandler.GetContractorByID)
+	router.Put("/management/contractors/:id", middlewares.Authenticate(), contractHandler.UpdateContractor)
+	router.Delete("/management/contractors/:id", middlewares.Authenticate(), contractHandler.DeleteContractor)
+
+	//! Contract Management Routes
+	router.Post("/management/new-contract", middlewares.Authenticate(), contractHandler.CreateContract)
+	router.Get("/management/contracts", middlewares.Authenticate(), contractHandler.GetAllContracts)
+	router.Get("/management/contracts/:id", middlewares.Authenticate(), contractHandler.GetContractByID)
+	router.Put("/management/contracts/:id", middlewares.Authenticate(), contractHandler.UpdateContract)
+	router.Delete("/management/contracts/:id", middlewares.Authenticate(), contractHandler.DeleteContract)
 
 	// router.Post("/contractors/new-contract", middlewares.Authenticate(), contractHandler.CreateContractor)
 
