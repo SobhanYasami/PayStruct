@@ -21,13 +21,11 @@ import (
 
 // ContractHandler handles contractor-related endpoints
 type ContractHandler struct {
-	// db              *gorm.DB
 	contractService *services.ContractService
 }
 
 func NewContractHandler(db *gorm.DB) *ContractHandler {
 	return &ContractHandler{
-		// db:              db,
 		contractService: services.NewContractService(db),
 	}
 }
@@ -283,6 +281,35 @@ func (handler *ContractHandler) DeleteContractor(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error deleting contractor"))
 	}
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Contractor Deleted Successfully"))
+}
+
+// --------------------------
+// Contract Handlers
+// --------------------------
+
+// ! @Router /contractors/new-contract [post]
+func (ctrl *ContractHandler) CreateContract(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+}
+
+// ! @Router /contractors/contracts [get]
+func (ctrl *ContractHandler) GetAllContracts(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+}
+
+// ! @Router /contractors/contracts/:id [get]
+func (ctrl *ContractHandler) GetContract(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+}
+
+// ! @Router /contractors/contracts/:id [put]
+func (ctrl *ContractHandler) UpdateContract(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+}
+
+// ! @Router /contractors/contracts/:id [delete]
+func (ctrl *ContractHandler) DeleteContract(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
 }
 
 // ! @Router /contractors/new-contract [post]
