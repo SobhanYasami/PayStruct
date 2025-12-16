@@ -173,6 +173,35 @@ func (handler *ContractHandler) DeleteProject(c *fiber.Ctx) error {
 // ----------------------------
 // ! @Router /contractors/new-contractor [post]
 func (handler *ContractHandler) CreateContractor(c *fiber.Ctx) error {
+	//? 1) Get user ID from context (set by middleware)
+	userID, ok := c.Locals("userID").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+	}
+
+	//? 2) Parse Body request
+	type RequestBody struct {
+		LegalEntity    bool   `json:"legal_entity" gorm:"default:false;not null"`
+		FirstName      string `json:"first_name" gorm:"type:varchar(100);not null"`
+		LastName       string `json:"last_name" gorm:"type:varchar(100)"`
+		PreferentialID string `json:"preferential_id,omitempty" gorm:"size:100"`
+		NationalID     string `json:"national_id,omitempty" gorm:"size:100"`
+	}
+	//? 2-2) Parse Body request
+	var req RequestBody
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+	//? 2-3) Validate using struct tags
+	if err := validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+
+	err := handler.contractService.CreateContractor(c.Context(), userID, req.LegalEntity, req.FirstName, req.LastName, req.PreferentialID, req.NationalID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error creating contractor"))
+	}
+
 	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
 }
 
