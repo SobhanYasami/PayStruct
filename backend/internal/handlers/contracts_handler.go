@@ -230,12 +230,59 @@ func (handler *ContractHandler) GetContractorByID(c *fiber.Ctx) error {
 
 // ! @Router /contractors/contractors/:id [put]
 func (handler *ContractHandler) UpdateContractor(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+	//? 1) Get user ID from context (set by middleware)
+	userID, ok := c.Locals("userID").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+	}
+	//? 2) Get contractor ID from URL parameters
+	contractorID := c.Params("id")
+	uuidContractorID, err := uuid.Parse(contractorID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
+	}
+	//? 3) Parse Body request
+	var req struct {
+		FirstName      string `json:"first_name"`
+		LastName       string `json:"last_name"`
+		LegalEntity    bool   `json:"legal_entity"`
+		PreferentialID string `json:"preferential_id,omitempty"`
+		NationalID     string `json:"national_id,omitempty"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+	if err := validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+
+	err = handler.contractService.UpdateContractor(c.Context(), userID, uuidContractorID, req.LegalEntity, req.FirstName, req.LastName, req.PreferentialID, req.NationalID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error updating contractor"))
+	}
+
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Contractor Updated Successfully"))
 }
 
 // ! @Router /contractors/contractors/:id [delete]
 func (handler *ContractHandler) DeleteContractor(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+	//? 1) Get user ID from context (set by middleware)
+	userID, ok := c.Locals("userID").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+	}
+	//? 2) Get contractor ID from URL parameters
+	contractorID := c.Params("id")
+	uuidContractorID, err := uuid.Parse(contractorID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
+	}
+
+	err = handler.contractService.DeleteContractor(c.Context(), uuidContractorID, userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error deleting contractor"))
+	}
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Contractor Deleted Successfully"))
 }
 
 // ! @Router /contractors/new-contract [post]

@@ -201,10 +201,23 @@ func (s *ContractService) UpdateContractor(ctx context.Context, employeeID uuid.
 }
 
 // DeleteContractor deletes a contractor by its ID.
-func (s *ContractService) DeleteContractor(ctx context.Context, contractorID uuid.UUID) error {
-	// Delete the contractor by ID
-	if err := s.db.WithContext(ctx).Delete(&models.Contractor{}, "id = ?", contractorID).Error; err != nil {
-		return err
-	}
-	return nil
+func (s *ContractService) DeleteContractor(ctx context.Context, contractorID uuid.UUID, adminID uuid.UUID) error {
+	// 1. We use a transaction to ensure both the 'DeletedBy' update
+	// and the Soft Delete happen together.
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		// 2. Update the DeletedBy field first
+		if err := tx.Model(&models.Contractor{}).
+			Where("id = ?", contractorID).
+			Update("deleted_by", adminID).Error; err != nil {
+			return err
+		}
+
+		// 3. Perform the standard GORM Soft Delete
+		if err := tx.Delete(&models.Contractor{}, "id = ?", contractorID).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
