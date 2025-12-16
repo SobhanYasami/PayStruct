@@ -207,12 +207,25 @@ func (handler *ContractHandler) CreateContractor(c *fiber.Ctx) error {
 
 // ! @Router /contractors/contractors [get]
 func (handler *ContractHandler) GetAllContractor(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+	contractors, err := handler.contractService.GetAllContractors(c.Context())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error fetching contractors"))
+	}
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contractors, "Contractors Retrieved Successfully"))
 }
 
 // ! @Router /contractors/contractors/:id [get]
 func (handler *ContractHandler) GetContractorByID(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+	contractorID := c.Params("id")
+	uuidContractorID, err := uuid.Parse(contractorID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
+	}
+	contractor, err := handler.contractService.GetContractorByID(c.Context(), uuidContractorID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error fetching contractor"))
+	}
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contractor, "Contractor Retrieved Successfully"))
 }
 
 // ! @Router /contractors/contractors/:id [put]
