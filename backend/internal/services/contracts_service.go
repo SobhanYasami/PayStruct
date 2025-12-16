@@ -20,6 +20,17 @@ func NewContractService(db *gorm.DB) *ContractService {
 }
 
 // ------------------------------------------------------------------------
+
+// --------------------
+// Project Management
+// --------------------
+
+// ProjectSummary is the clean output format for the client
+type ProjectSummary struct {
+	Name   string `json:"name"`
+	Phases []int  `json:"phases"`
+}
+
 // CreateProject ensures a project exists. If it doesn't, it creates one.
 func (s *ContractService) CreateProject(ctx context.Context, userID uuid.UUID, name string, phase uint8) error {
 	// 1. Check if it already exists (Logic moved from Handler)
@@ -49,15 +60,6 @@ func (s *ContractService) CreateProject(ctx context.Context, userID uuid.UUID, n
 
 	// If it already existed, we just return nil (success) because the goal "Project exists" is met.
 	return nil
-}
-
-// --------------------
-// GetProjects retrieves all projects from the database.
-// --------------------
-// ProjectSummary is the clean output format for the client
-type ProjectSummary struct {
-	Name   string `json:"name"`
-	Phases []int  `json:"phases"`
 }
 
 // GetAllProjects fetches projects, groups them by name, and returns a summary.
@@ -123,3 +125,7 @@ func (s *ContractService) DeleteProject(ctx context.Context, projectID uuid.UUID
 	}
 	return nil
 }
+
+// ---------------------------
+// Contractor Management
+// ---------------------------

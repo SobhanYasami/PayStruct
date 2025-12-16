@@ -10,6 +10,9 @@ func SetupContractsRoutes(router fiber.Router, contractHandler *handlers.Contrac
 	//! Contract and Project Registration Routes
 	router.Post("/contractors/new-project", middlewares.Authenticate(), contractHandler.CreateProject)
 	router.Get("/contractors/projects", middlewares.Authenticate(), contractHandler.GetAllProject)
+	router.Get("/contractors/projects/:id", middlewares.Authenticate(), contractHandler.GetProjectByID)
+	router.Put("/contractors/projects/:id", middlewares.Authenticate(), contractHandler.UpdateProject)
+	router.Delete("/contractors/projects/:id", middlewares.Authenticate(), contractHandler.DeleteProject)
 
 	// router.Post("/contractors/new-contract", middlewares.Authenticate(), contractHandler.CreateContractor)
 

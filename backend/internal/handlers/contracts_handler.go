@@ -35,7 +35,16 @@ func NewContractHandler(db *gorm.DB) *ContractHandler {
 // -----------------------------------------------------
 var validate = validator.New()
 
-// ! @post /contractors/new-project
+// --------------------------
+// Project Handlers
+// --------------------------
+// ProjectSummary represents the grouped project data for response
+type ProjectSummary struct {
+	Name   string `json:"name"`
+	Phases []int  `json:"phases"`
+}
+
+// ! @Router /contractors/new-project [post]
 func (handler *ContractHandler) CreateProject(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userID, ok := c.Locals("userID").(uuid.UUID)
@@ -77,12 +86,6 @@ func (handler *ContractHandler) CreateProject(c *fiber.Ctx) error {
 		"Phase":        phase,
 	}, "Project created successfully"))
 
-}
-
-// ProjectSummary represents the grouped project data for response
-type ProjectSummary struct {
-	Name   string `json:"name"`
-	Phases []int  `json:"phases"`
 }
 
 // ! @Router /contractors/projects [get]
@@ -165,7 +168,35 @@ func (handler *ContractHandler) DeleteProject(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Project deleted successfully"))
 }
 
-// ! @post /contractors/new-contract
+// ----------------------------
+// Contractor Handlers
+// ----------------------------
+// ! @Router /contractors/new-contractor [post]
+func (handler *ContractHandler) CreateContractor(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+}
+
+// ! @Router /contractors/contractors [get]
+func (handler *ContractHandler) GetAllContractor(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+}
+
+// ! @Router /contractors/contractors/:id [get]
+func (handler *ContractHandler) GetContractorByID(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+}
+
+// ! @Router /contractors/contractors/:id [put]
+func (handler *ContractHandler) UpdateContractor(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+}
+
+// ! @Router /contractors/contractors/:id [delete]
+func (handler *ContractHandler) DeleteContractor(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+}
+
+// ! @Router /contractors/new-contract [post]
 // func (ctrl *ContractHandler) CreateContractor(c *fiber.Ctx) error {
 // 	//? 1) Get user ID from context (set by middleware)
 // 	userID, ok := c.Locals("userID").(uuid.UUID)
