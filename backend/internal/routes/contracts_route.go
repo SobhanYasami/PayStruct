@@ -6,27 +6,36 @@ import (
 	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"
 )
 
-func SetupContractsRoutes(router fiber.Router, contractHandler *handlers.ContractHandler) {
-	//! Project Management Routes
-	router.Post("/management/new-project", middlewares.Authenticate(), contractHandler.CreateProject)
-	router.Get("/management/projects", middlewares.Authenticate(), contractHandler.GetAllProject)
-	router.Get("/management/projects/:id", middlewares.Authenticate(), contractHandler.GetProjectByID)
-	router.Put("/management/projects/:id", middlewares.Authenticate(), contractHandler.UpdateProject)
-	router.Delete("/management/projects/:id", middlewares.Authenticate(), contractHandler.DeleteProject)
+func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler) {
+	//! Base management group with authentication
+	management := router.Group(
+		"/management",
+		middlewares.Authenticate(),
+	)
+
+	//! ---- Project Routes ----
+	projects := management.Group("/projects")
+	projects.Post("/", h.CreateProject)
+	projects.Get("/", h.GetAllProject)
+	projects.Get("/:id", h.GetProjectByID)
+	projects.Put("/:id", h.UpdateProject)
+	projects.Delete("/:id", h.DeleteProject)
 
 	//! Contractor Management Routes
-	router.Post("/management/new-contractor", middlewares.Authenticate(), contractHandler.CreateContractor)
-	router.Get("/management/contractors", middlewares.Authenticate(), contractHandler.GetAllContractor)
-	router.Get("/management/contractors/:id", middlewares.Authenticate(), contractHandler.GetContractorByID)
-	router.Put("/management/contractors/:id", middlewares.Authenticate(), contractHandler.UpdateContractor)
-	router.Delete("/management/contractors/:id", middlewares.Authenticate(), contractHandler.DeleteContractor)
+	contractors := management.Group("/contractors")
+	contractors.Post("/", h.CreateContractor)
+	contractors.Get("/", h.GetAllContractor)
+	contractors.Get("/:id", h.GetContractorByID)
+	contractors.Put("/:id", h.UpdateContractor)
+	contractors.Delete("/:id", h.DeleteContractor)
 
 	//! Contract Management Routes
-	router.Post("/management/new-contract", middlewares.Authenticate(), contractHandler.CreateContract)
-	router.Get("/management/contracts", middlewares.Authenticate(), contractHandler.GetAllContracts)
-	router.Get("/management/contracts/:id", middlewares.Authenticate(), contractHandler.GetContractByID)
-	router.Put("/management/contracts/:id", middlewares.Authenticate(), contractHandler.UpdateContract)
-	router.Delete("/management/contracts/:id", middlewares.Authenticate(), contractHandler.DeleteContract)
+	contracts := management.Group("/contracts")
+	contracts.Post("/", h.CreateContract)
+	contracts.Get("/", h.GetAllContracts)
+	contracts.Get("/:id", h.GetContractByID)
+	contracts.Put("/:id", h.UpdateContract)
+	contracts.Delete("/:id", h.DeleteContract)
 
 	// router.Post("/contractors/new-contract", middlewares.Authenticate(), contractHandler.CreateContractor)
 

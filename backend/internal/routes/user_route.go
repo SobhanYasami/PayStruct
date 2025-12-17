@@ -3,15 +3,24 @@ package routes
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/sobhan-yasami/docs-db-panel/internal/handlers"
+	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"
 )
 
-func SetupUserRoutes(router fiber.Router, userHandler *handlers.UserHandler) {
-	router.Post("/users/signup", userHandler.CreateEmployee)
-	router.Post("/users/signin", userHandler.SigninEmployee)
+func SetupUserRoutes(router fiber.Router, h *handlers.UserHandler) {
 
-	//todo: Authenticated middleware can be applied here for the following routes
-	router.Get("/users", userHandler.GetAllEmployee)
-	router.Get("/users/:id", userHandler.GetEmployee)
-	router.Put("/users/:id", userHandler.UpdateEmployee)
-	router.Delete("/users/:id", userHandler.DeleteEmployee)
+	// ---- Public User Routes ----
+	auth := router.Group("/users")
+	auth.Post("/signup", h.CreateEmployee)
+	auth.Post("/signin", h.SigninEmployee)
+
+	// ---- Protected User Routes ----
+	users := router.Group(
+		"/users",
+		middlewares.Authenticate(),
+	)
+
+	users.Get("/", h.GetAllEmployee)
+	users.Get("/:id", h.GetEmployee)
+	users.Put("/:id", h.UpdateEmployee)
+	users.Delete("/:id", h.DeleteEmployee)
 }

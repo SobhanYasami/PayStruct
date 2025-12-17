@@ -221,3 +221,16 @@ func (s *ContractService) DeleteContractor(ctx context.Context, contractorID uui
 		return nil
 	})
 }
+
+// ---------------------------
+// Contract Management
+// ---------------------------
+// CreateContract
+
+// GetContractByID
+
+// GetAllContracts
+
+// UpdateContract
+
+// DeleteContract
