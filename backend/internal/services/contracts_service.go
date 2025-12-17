@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
@@ -226,6 +227,29 @@ func (s *ContractService) DeleteContractor(ctx context.Context, contractorID uui
 // Contract Management
 // ---------------------------
 // CreateContract
+func (s *ContractService) CreateContract(ctx context.Context, userID, contractorID, projectID uuid.UUID, contractNumber string, GrossBudget float64, insuranceRate, performanceBond, addedValueTax float32, startDate, endDate time.Time, ScanedFileUrl string) error {
+	contract := models.Contract{
+		BaseModel: models.BaseModel{
+			ID:        uuid.New(),
+			CreatedBy: userID,
+		},
+		ContractorID:    contractorID,
+		ProjectID:       projectID,
+		ContractNumber:  contractNumber,
+		GrossBudget:     GrossBudget,
+		InsuranceRate:   insuranceRate,
+		PerformanceBond: performanceBond,
+		AddedValueTax:   addedValueTax,
+		StartDate:       startDate,
+		EndDate:         endDate,
+		ScanedFileUrl:   ScanedFileUrl,
+	}
+
+	if err := s.db.WithContext(ctx).Create(&contract).Error; err != nil {
+		return err
+	}
+	return nil
+}
 
 // GetContractByID
 

@@ -7,6 +7,8 @@ import (
 	// "os"
 	// "path/filepath"
 	"strconv"
+	"time"
+
 	// "time"
 
 	"github.com/gofiber/fiber/v2"
@@ -200,7 +202,8 @@ func (handler *ContractHandler) CreateContractor(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error creating contractor"))
 	}
 
-	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+	//? 6) Return success response
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(nil, "Contractor created successfully"))
 }
 
 // ! @Router /management/contractors [get]
@@ -288,27 +291,77 @@ func (handler *ContractHandler) DeleteContractor(c *fiber.Ctx) error {
 // --------------------------
 
 // ! @Router /management/new-contract [post]
-func (ctrl *ContractHandler) CreateContract(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
+	//? 1) Get user ID from context (set by middleware)
+	userID, ok := c.Locals("userID").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+	}
+
+	//? 2) Parse Body request
+	type RequestBody struct {
+		ContractorID string `json:"contractor_id" validate:"required"`
+		ProjectID    string `json:"project_id" validate:"required"`
+
+		ContractNumber string  `json:"contract_number" validate:"required"`
+		GrossBudget    float64 `json:"gross_budget" validate:"required"`
+
+		StartDate time.Time `json:"start_date" validate:"required"`
+		EndDate   time.Time `json:"end_date" validate:"required"`
+
+		InsuranceRate   float32 `json:"insurance_rate"`
+		PerformanceBond float32 `json:"performance_bond"`
+		AddedValueTax   float32 `json:"added_value_tax"`
+	}
+	//? 2-2) Parse Body request
+	var req RequestBody
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+	//? 2-3) Validate using struct tags
+	if err := validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+	//? 3) Validate and parse Contractor ID
+	contractorUUID, err := uuid.Parse(req.ContractorID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
+	}
+
+	projectUUID, err := uuid.Parse(req.ProjectID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
+	}
+	// 	uploaded file url
+	uploadedFileUrl := ""
+
+	//? 4) CALL THE SERVICE
+	err = handler.contractService.CreateContract(c.Context(), userID, contractorUUID, projectUUID, req.ContractNumber, req.GrossBudget, req.InsuranceRate, req.PerformanceBond, req.AddedValueTax, req.StartDate, req.EndDate, uploadedFileUrl)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error creating contract"))
+	}
+
+	//? 6) Return success response
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(nil, "Contract created successfully"))
 }
 
 // ! @Router /management/contracts [get]
-func (ctrl *ContractHandler) GetAllContracts(c *fiber.Ctx) error {
+func (handler *ContractHandler) GetAllContracts(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
 }
 
 // ! @Router /management/contracts/:id [get]
-func (ctrl *ContractHandler) GetContractByID(c *fiber.Ctx) error {
+func (handler *ContractHandler) GetContractByID(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
 }
 
 // ! @Router /management/contracts/:id [put]
-func (ctrl *ContractHandler) UpdateContract(c *fiber.Ctx) error {
+func (handler *ContractHandler) UpdateContract(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
 }
 
 // ! @Router /management/contracts/:id [delete]
-func (ctrl *ContractHandler) DeleteContract(c *fiber.Ctx) error {
+func (handler *ContractHandler) DeleteContract(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
 }
 

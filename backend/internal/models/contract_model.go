@@ -46,8 +46,8 @@ type Contract struct {
 	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
 	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 
-	ContractNo      string    `json:"contract_no" gorm:"size:100;not null;uniqueIndex"`
-	GrossBudget     float32   `json:"gross_budget" gorm:"type:decimal(18,2);not null"`
+	ContractNumber  string    `json:"contract_number" gorm:"size:100;not null;uniqueIndex"`
+	GrossBudget     float64   `json:"gross_budget" gorm:"type:decimal(18,2);not null"`
 	StartDate       time.Time `json:"start_date" gorm:"not null;index"`
 	Duration        uint16    `json:"duration" gorm:"not null;comment:Duration in days"`
 	EndDate         time.Time `json:"end_date" gorm:"not null;index"`
