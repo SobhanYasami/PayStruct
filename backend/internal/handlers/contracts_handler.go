@@ -6,7 +6,11 @@ import (
 	// "mime/multipart"
 	// "os"
 	// "path/filepath"
+
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	// "time"
@@ -297,52 +301,97 @@ func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 	if !ok {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
 	}
+	// 2. Enforce multipart
+	if !strings.HasPrefix(c.Get("Content-Type"), "multipart/form-data") {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "multipart/form-data required"))
+	}
 
-	//? 2) Parse Body request
 	type RequestBody struct {
-		ContractorID string `json:"contractor_id" validate:"required"`
-		ProjectID    string `json:"project_id" validate:"required"`
-
-		ContractNumber string  `json:"contract_number" validate:"required"`
-		GrossBudget    float64 `json:"gross_budget" validate:"required"`
-
-		StartDate time.Time `json:"start_date" validate:"required"`
-		EndDate   time.Time `json:"end_date" validate:"required"`
-
-		InsuranceRate   float32 `json:"insurance_rate"`
-		PerformanceBond float32 `json:"performance_bond"`
-		AddedValueTax   float32 `json:"added_value_tax"`
+		ContractorID    string
+		ProjectID       string
+		ContractNumber  string
+		GrossBudget     float64
+		InsuranceRate   float32
+		PerformanceBond float32
+		AddedValueTax   float32
+		StartDate       time.Time
+		EndDate         time.Time
 	}
-	//? 2-2) Parse Body request
-	var req RequestBody
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+
+	// 3. Parse fields
+	req := RequestBody{
+		ContractorID:   c.FormValue("contractor_id"),
+		ProjectID:      c.FormValue("project_id"),
+		ContractNumber: c.FormValue("contract_number"),
 	}
-	//? 2-3) Validate using struct tags
+
+	req.GrossBudget, _ = strconv.ParseFloat(c.FormValue("gross_budget"), 64)
+	req.StartDate, _ = time.Parse(time.RFC3339, c.FormValue("start_date"))
+	req.EndDate, _ = time.Parse(time.RFC3339, c.FormValue("end_date"))
+
 	if err := validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request Fields!"))
 	}
-	//? 3) Validate and parse Contractor ID
+
+	// 4. UUID parsing
 	contractorUUID, err := uuid.Parse(req.ContractorID)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid contractor_id"))
 	}
 
 	projectUUID, err := uuid.Parse(req.ProjectID)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid project_id"))
 	}
-	// 	uploaded file url
-	uploadedFileUrl := ""
 
-	//? 4) CALL THE SERVICE
-	err = handler.contractService.CreateContract(c.Context(), userID, contractorUUID, projectUUID, req.ContractNumber, req.GrossBudget, req.InsuranceRate, req.PerformanceBond, req.AddedValueTax, req.StartDate, req.EndDate, uploadedFileUrl)
+	// 5. File handling
+	file, err := c.FormFile("scanned_file")
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error creating contract"))
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "scanned_file required"))
 	}
 
-	//? 6) Return success response
-	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(nil, "Contract created successfully"))
+	if file.Size > 50<<20 {
+		return c.Status(fiber.StatusRequestEntityTooLarge).JSON(ErrorResponse(Failure, "file too large"))
+	}
+
+	ext := filepath.Ext(file.Filename)
+	filename := uuid.New().String() + ext
+
+	baseDir := "../../../storage/contracts"
+	uploadDir := filepath.Join(baseDir, contractorUUID.String())
+
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "could not create upload directory"))
+	}
+
+	dst := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveFile(file, dst); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "could not save uploaded file"))
+	}
+
+	// 6. Service call
+	err = handler.contractService.CreateContract(
+		c.Context(),
+		userID,
+		contractorUUID,
+		projectUUID,
+		req.ContractNumber,
+		req.GrossBudget,
+		req.InsuranceRate,
+		req.PerformanceBond,
+		req.AddedValueTax,
+		req.StartDate,
+		req.EndDate,
+		dst,
+	)
+
+	if err != nil {
+		return fiber.ErrInternalServerError
+	}
+
+	return c.Status(fiber.StatusCreated).
+		JSON(SuccessResponse(nil, "Contract created successfully"))
 }
 
 // ! @Router /management/contracts [get]
