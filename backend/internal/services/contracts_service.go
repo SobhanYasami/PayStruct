@@ -251,9 +251,23 @@ func (s *ContractService) CreateContract(ctx context.Context, userID, contractor
 	return nil
 }
 
-// GetContractByID
-
 // GetAllContracts
+func (s *ContractService) GetAllContracts(ctx context.Context) ([]models.Contract, error) {
+	var contracts []models.Contract
+	if err := s.db.WithContext(ctx).Find(&contracts).Error; err != nil {
+		return nil, err
+	}
+	return contracts, nil
+}
+
+// GetContractByID
+func (s *ContractService) GetContractByID(ctx context.Context, contractID uuid.UUID) (*models.Contract, error) {
+	var contract models.Contract
+	if err := s.db.WithContext(ctx).First(&contract, "id = ?", contractID).Error; err != nil {
+		return nil, err
+	}
+	return &contract, nil
+}
 
 // UpdateContract
 

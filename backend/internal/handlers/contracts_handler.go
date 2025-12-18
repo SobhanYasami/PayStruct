@@ -51,7 +51,7 @@ type ProjectSummary struct {
 // ! @Router /management/new-project [post]
 func (handler *ContractHandler) CreateProject(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
-	userID, ok := c.Locals("userID").(uuid.UUID)
+	userUUID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
 	}
@@ -79,7 +79,7 @@ func (handler *ContractHandler) CreateProject(c *fiber.Ctx) error {
 
 	//? 4) CALL THE SERVICE
 	// pass c.Context() so the DB knows if the user disconnects
-	err = handler.contractService.CreateProject(c.Context(), userID, req.ProjectName, uint8(phase))
+	err = handler.contractService.CreateProject(c.Context(), userUUID, req.ProjectName, uint8(phase))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error creating project"))
 	}
@@ -111,13 +111,13 @@ func (handler *ContractHandler) GetAllProject(c *fiber.Ctx) error {
 func (handler *ContractHandler) GetProjectByID(c *fiber.Ctx) error {
 	//? 1) Get project ID from URL parameters
 	projectID := c.Params("id")
-	uuidProjectID, err := uuid.Parse(projectID)
+	ProjectUUID, err := uuid.Parse(projectID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
 	}
 
 	//? 2) Call the service
-	project, err := handler.contractService.GetProjectByID(c.Context(), uuidProjectID)
+	project, err := handler.contractService.GetProjectByID(c.Context(), ProjectUUID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, err.Error()))
 	}
@@ -130,7 +130,7 @@ func (handler *ContractHandler) GetProjectByID(c *fiber.Ctx) error {
 func (handler *ContractHandler) UpdateProject(c *fiber.Ctx) error {
 	//? 1) Get project ID from URL parameters
 	projectID := c.Params("id")
-	uuidProjectID, err := uuid.Parse(projectID)
+	ProjectUUID, err := uuid.Parse(projectID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
 	}
@@ -145,7 +145,7 @@ func (handler *ContractHandler) UpdateProject(c *fiber.Ctx) error {
 	}
 
 	//? 3) Call the service
-	err = handler.contractService.UpdateProject(c.Context(), uuidProjectID, req.Name, req.Phase)
+	err = handler.contractService.UpdateProject(c.Context(), ProjectUUID, req.Name, req.Phase)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, err.Error()))
 	}
@@ -157,13 +157,13 @@ func (handler *ContractHandler) UpdateProject(c *fiber.Ctx) error {
 func (handler *ContractHandler) DeleteProject(c *fiber.Ctx) error {
 	//? 1) Get project ID from URL parameters
 	projectID := c.Params("id")
-	uuidProjectID, err := uuid.Parse(projectID)
+	ProjectUUID, err := uuid.Parse(projectID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
 	}
 
 	//? 2) Call the service
-	err = handler.contractService.DeleteProject(c.Context(), uuidProjectID)
+	err = handler.contractService.DeleteProject(c.Context(), ProjectUUID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, err.Error()))
 	}
@@ -178,7 +178,7 @@ func (handler *ContractHandler) DeleteProject(c *fiber.Ctx) error {
 // ! @Router /management/new-contractor [post]
 func (handler *ContractHandler) CreateContractor(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
-	userID, ok := c.Locals("userID").(uuid.UUID)
+	userUUID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
 	}
@@ -201,7 +201,7 @@ func (handler *ContractHandler) CreateContractor(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
 	}
 
-	err := handler.contractService.CreateContractor(c.Context(), userID, req.LegalEntity, req.FirstName, req.LastName, req.PreferentialID, req.NationalID)
+	err := handler.contractService.CreateContractor(c.Context(), userUUID, req.LegalEntity, req.FirstName, req.LastName, req.PreferentialID, req.NationalID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error creating contractor"))
 	}
@@ -222,11 +222,11 @@ func (handler *ContractHandler) GetAllContractor(c *fiber.Ctx) error {
 // ! @Router /management/contractors/:id [get]
 func (handler *ContractHandler) GetContractorByID(c *fiber.Ctx) error {
 	contractorID := c.Params("id")
-	uuidContractorID, err := uuid.Parse(contractorID)
+	ContractorUUID, err := uuid.Parse(contractorID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
 	}
-	contractor, err := handler.contractService.GetContractorByID(c.Context(), uuidContractorID)
+	contractor, err := handler.contractService.GetContractorByID(c.Context(), ContractorUUID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error fetching contractor"))
 	}
@@ -236,13 +236,13 @@ func (handler *ContractHandler) GetContractorByID(c *fiber.Ctx) error {
 // ! @Router /management/contractors/:id [put]
 func (handler *ContractHandler) UpdateContractor(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
-	userID, ok := c.Locals("userID").(uuid.UUID)
+	userUUID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
 	}
 	//? 2) Get contractor ID from URL parameters
 	contractorID := c.Params("id")
-	uuidContractorID, err := uuid.Parse(contractorID)
+	ContractorUUID, err := uuid.Parse(contractorID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
 	}
@@ -261,7 +261,7 @@ func (handler *ContractHandler) UpdateContractor(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
 	}
 
-	err = handler.contractService.UpdateContractor(c.Context(), userID, uuidContractorID, req.LegalEntity, req.FirstName, req.LastName, req.PreferentialID, req.NationalID)
+	err = handler.contractService.UpdateContractor(c.Context(), userUUID, ContractorUUID, req.LegalEntity, req.FirstName, req.LastName, req.PreferentialID, req.NationalID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error updating contractor"))
 	}
@@ -272,18 +272,18 @@ func (handler *ContractHandler) UpdateContractor(c *fiber.Ctx) error {
 // ! @Router /management/contractors/:id [delete]
 func (handler *ContractHandler) DeleteContractor(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
-	userID, ok := c.Locals("userID").(uuid.UUID)
+	userUUID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
 	}
 	//? 2) Get contractor ID from URL parameters
 	contractorID := c.Params("id")
-	uuidContractorID, err := uuid.Parse(contractorID)
+	ContractorUUID, err := uuid.Parse(contractorID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
 	}
 
-	err = handler.contractService.DeleteContractor(c.Context(), uuidContractorID, userID)
+	err = handler.contractService.DeleteContractor(c.Context(), ContractorUUID, userUUID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error deleting contractor"))
 	}
@@ -297,7 +297,7 @@ func (handler *ContractHandler) DeleteContractor(c *fiber.Ctx) error {
 // ! @Router /management/new-contract [post]
 func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
-	userID, ok := c.Locals("userID").(uuid.UUID)
+	userUUID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
 	}
@@ -373,7 +373,7 @@ func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 	// 6. Service call
 	err = handler.contractService.CreateContract(
 		c.Context(),
-		userID,
+		userUUID,
 		contractorUUID,
 		projectUUID,
 		req.ContractNumber,
@@ -396,12 +396,29 @@ func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 
 // ! @Router /management/contracts [get]
 func (handler *ContractHandler) GetAllContracts(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+	//? 2) Call the service
+	contracts, err := handler.contractService.GetAllContracts(c.Context())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to retrieve contracts"))
+	}
+
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contracts, "Contracts retrieved successfully"))
 }
 
 // ! @Router /management/contracts/:id [get]
 func (handler *ContractHandler) GetContractByID(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+	//? 1) Get contract ID from URL parameters
+	contractID := c.Params("id")
+	ContractUUID, err := uuid.Parse(contractID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contract ID"))
+	}
+	//? 2) Call the service
+	contract, err := handler.contractService.GetContractByID(c.Context(), ContractUUID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to retrieve contract"))
+	}
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contract, "Contract retrieved successfully"))
 }
 
 // ! @Router /management/contracts/:id [put]
