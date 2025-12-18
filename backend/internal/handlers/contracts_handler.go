@@ -423,7 +423,89 @@ func (handler *ContractHandler) GetContractByID(c *fiber.Ctx) error {
 
 // ! @Router /management/contracts/:id [put]
 func (handler *ContractHandler) UpdateContract(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+	//? 1) Get user ID from context (set by middleware)
+	userUUID, ok := c.Locals("userID").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+	}
+	//? 2) Get contract ID from URL parameters
+	contractID := c.Params("id")
+	ContractUUID, err := uuid.Parse(contractID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contract ID"))
+	}
+	//? 3) Parse Body request
+	var req struct {
+		ContractorID    string    `json:"contractor_id"`
+		ProjectID       string    `json:"project_id"`
+		ContractNumber  string    `json:"contract_number"`
+		GrossBudget     float64   `json:"gross_budget"`
+		InsuranceRate   float32   `json:"insurance_rate"`
+		PerformanceBond float32   `json:"performance_bond"`
+		AddedValueTax   float32   `json:"added_value_tax"`
+		StartDate       time.Time `json:"start_date"`
+		EndDate         time.Time `json:"end_date"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+
+	//? 4) UUID parsing
+	contractorUUID, err := uuid.Parse(req.ContractorID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid contractor_id"))
+	}
+
+	projectUUID, err := uuid.Parse(req.ProjectID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid project_id"))
+	}
+	// 5. File handling
+	file, err := c.FormFile("scanned_file")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "scanned_file required"))
+	}
+
+	if file.Size > 50<<20 {
+		return c.Status(fiber.StatusRequestEntityTooLarge).JSON(ErrorResponse(Failure, "file too large"))
+	}
+
+	ext := filepath.Ext(file.Filename)
+	filename := uuid.New().String() + ext
+
+	baseDir := "../../../storage/contracts"
+	uploadDir := filepath.Join(baseDir, contractorUUID.String())
+
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "could not create upload directory"))
+	}
+
+	dst := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveFile(file, dst); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "could not save uploaded file"))
+	}
+
+	//? 5) Call the service
+	err = handler.contractService.UpdateContract(
+		c.Context(),
+		ContractUUID,
+		userUUID,
+		contractorUUID,
+		projectUUID,
+		req.ContractNumber,
+		req.GrossBudget,
+		req.InsuranceRate,
+		req.PerformanceBond,
+		req.AddedValueTax,
+		req.StartDate,
+		req.EndDate,
+		dst,
+	)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to update contract"))
+	}
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Contract updated successfully"))
 }
 
 // ! @Router /management/contracts/:id [delete]

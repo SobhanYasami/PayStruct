@@ -270,5 +270,26 @@ func (s *ContractService) GetContractByID(ctx context.Context, contractID uuid.U
 }
 
 // UpdateContract
+func (s *ContractService) UpdateContract(ctx context.Context, contractID, userID, contractorID, projectID uuid.UUID, contractNumber string, GrossBudget float64, insuranceRate, performanceBond, addedValueTax float32, startDate, endDate time.Time, ScanedFileUrl string) error {
+	// Update the contract fields
+	updates := map[string]interface{}{
+		"contractor_id":    contractorID,
+		"project_id":       projectID,
+		"contract_number":  contractNumber,
+		"gross_budget":     GrossBudget,
+		"insurance_rate":   insuranceRate,
+		"performance_bond": performanceBond,
+		"added_value_tax":  addedValueTax,
+		"start_date":       startDate,
+		"end_date":         endDate,
+		"scaned_file_url":  ScanedFileUrl,
+		"updated_by":       userID,
+	}
+
+	if err := s.db.WithContext(ctx).Model(&models.Contract{}).Where("id = ?", contractID).Updates(updates).Error; err != nil {
+		return err
+	}
+	return nil
+}
 
 // DeleteContract
