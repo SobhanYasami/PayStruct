@@ -510,7 +510,23 @@ func (handler *ContractHandler) UpdateContract(c *fiber.Ctx) error {
 
 // ! @Router /management/contracts/:id [delete]
 func (handler *ContractHandler) DeleteContract(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusNotImplemented).JSON(ErrorResponse(NotImplemented, "Not implemented yet"))
+	//? 1) Get user ID from context (set by middleware)
+	userUUID, ok := c.Locals("userID").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+	}
+	//? 2) Get contract ID from URL parameters
+	contractID := c.Params("id")
+	ContractUUID, err := uuid.Parse(contractID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contract ID"))
+	}
+
+	err = handler.contractService.DeleteContract(c.Context(), ContractUUID, userUUID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to delete contract"))
+	}
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Contract deleted successfully"))
 }
 
 // ! @Router /management/new-contract [post]

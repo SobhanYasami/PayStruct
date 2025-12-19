@@ -293,3 +293,23 @@ func (s *ContractService) UpdateContract(ctx context.Context, contractID, userID
 }
 
 // DeleteContract
+func (s *ContractService) DeleteContract(ctx context.Context, contractID, userID uuid.UUID) error {
+	// 1. We use a transaction to ensure both the 'DeletedBy' update
+	// and the Soft Delete happen together.
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		// 2. Update the DeletedBy field first
+		if err := tx.Model(&models.Contract{}).
+			Where("id = ?", contractID).
+			Update("deleted_by", userID).Error; err != nil {
+			return err
+		}
+
+		// 3. Perform the standard GORM Soft Delete
+		if err := tx.Delete(&models.Contract{}, "id = ?", contractID).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
