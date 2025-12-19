@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import styles from "./page.module.css";
 
 // -----------------------------
@@ -9,7 +10,20 @@ import styles from "./page.module.css";
 // -----------------------------
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const User_URL = `${API_URL}/users`;
-async function signInRequest(payload) {
+
+type SignInPayload = {
+	user_name: string;
+	password: string;
+};
+
+type SignUpPayload = {
+	first_name: string;
+	last_name: string;
+	user_name: string;
+	password: string;
+};
+
+async function signInRequest(payload: SignInPayload) {
 	const res = await fetch(`${User_URL}/signin`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -24,7 +38,7 @@ async function signInRequest(payload) {
 	return res.json();
 }
 
-async function signUpRequest(payload) {
+async function signUpRequest(payload: SignUpPayload) {
 	const res = await fetch(`${User_URL}/signup`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -46,20 +60,23 @@ export default function SignIn() {
 	const [activeTab, setActiveTab] = useState("signin");
 
 	return (
-		<div className={styles.container}>
+		<div
+			className={styles.container}
+			dir='rtl'
+		>
 			<div className={styles.card}>
 				<div className={styles.tabs}>
 					<button
 						className={activeTab === "signin" ? styles.activeTab : styles.tab}
 						onClick={() => setActiveTab("signin")}
 					>
-						Sign In
+						ورود
 					</button>
 					<button
 						className={activeTab === "signup" ? styles.activeTab : styles.tab}
 						onClick={() => setActiveTab("signup")}
 					>
-						Sign Up
+						ثبت نام
 					</button>
 				</div>
 
@@ -73,7 +90,7 @@ export default function SignIn() {
 // Sign In Form
 // -----------------------------
 function SignInForm() {
-	const [email, setEmail] = useState("");
+	const [userName, setUserName] = useState("");
 	const [password, setPassword] = useState("");
 
 	const mutation = useMutation({
@@ -84,9 +101,9 @@ function SignInForm() {
 		},
 	});
 
-	const onSubmit = (e) => {
+	const onSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-		mutation.mutate({ email, password });
+		mutation.mutate({ user_name: userName, password });
 	};
 
 	return (
@@ -94,18 +111,18 @@ function SignInForm() {
 			className={styles.form}
 			onSubmit={onSubmit}
 		>
-			<h2 className={styles.title}>Welcome back</h2>
+			<h2 className={styles.title}>خوش آمدید</h2>
 
-			<label className={styles.label}>Email</label>
+			<label className={styles.label}>نام کاربری</label>
 			<input
-				type='email'
-				value={email}
-				onChange={(e) => setEmail(e.target.value)}
+				type='text'
+				value={userName}
+				onChange={(e) => setUserName(e.target.value)}
 				required
 				className={styles.input}
 			/>
 
-			<label className={styles.label}>Password</label>
+			<label className={styles.label}>رمز عبور</label>
 			<input
 				type='password'
 				value={password}
@@ -123,7 +140,7 @@ function SignInForm() {
 				disabled={mutation.isPending}
 				className={styles.primaryButton}
 			>
-				{mutation.isPending ? "Signing in..." : "Sign In"}
+				{mutation.isPending ? "در حال ورود..." : "ورود"}
 			</button>
 		</form>
 	);
@@ -133,9 +150,11 @@ function SignInForm() {
 // Sign Up Form
 // -----------------------------
 function SignUpForm() {
-	const [email, setEmail] = useState("");
+	const [userName, setUserName] = useState("");
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
+	const [firstName, setFirstName] = useState("");
+	const [lastName, setLastName] = useState("");
 
 	const mutation = useMutation({
 		mutationFn: signUpRequest,
@@ -144,15 +163,20 @@ function SignUpForm() {
 		},
 	});
 
-	const onSubmit = (e) => {
+	const onSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 
 		if (password !== confirmPassword) {
-			alert("Passwords do not match");
+			toast.error("Passwords do not match");
 			return;
 		}
 
-		mutation.mutate({ email, password });
+		mutation.mutate({
+			user_name: userName,
+			password,
+			first_name: firstName,
+			last_name: lastName,
+		});
 	};
 
 	return (
@@ -160,18 +184,35 @@ function SignUpForm() {
 			className={styles.form}
 			onSubmit={onSubmit}
 		>
-			<h2 className={styles.title}>Create an account</h2>
-
-			<label className={styles.label}>Email</label>
+			<h2 className={styles.title}>ایجاد حساب کاربری</h2>
+			<label className={styles.label}>نام</label>
 			<input
-				type='email'
-				value={email}
-				onChange={(e) => setEmail(e.target.value)}
+				type='text'
+				value={firstName}
+				onChange={(e) => setFirstName(e.target.value)}
 				required
 				className={styles.input}
 			/>
 
-			<label className={styles.label}>Password</label>
+			<label className={styles.label}>نام خانوادگی</label>
+			<input
+				type='text'
+				value={lastName}
+				onChange={(e) => setLastName(e.target.value)}
+				required
+				className={styles.input}
+			/>
+
+			<label className={styles.label}>نام کاربری</label>
+			<input
+				type='text'
+				value={userName}
+				onChange={(e) => setUserName(e.target.value)}
+				required
+				className={styles.input}
+			/>
+
+			<label className={styles.label}>رمز عبور</label>
 			<input
 				type='password'
 				value={password}
@@ -180,7 +221,7 @@ function SignUpForm() {
 				className={styles.input}
 			/>
 
-			<label className={styles.label}>Confirm Password</label>
+			<label className={styles.label}>تایید رمز عبور</label>
 			<input
 				type='password'
 				value={confirmPassword}
@@ -198,7 +239,7 @@ function SignUpForm() {
 				disabled={mutation.isPending}
 				className={styles.primaryButton}
 			>
-				{mutation.isPending ? "Creating account..." : "Sign Up"}
+				{mutation.isPending ? "در حال ایجاد حساب..." : "ثبت نام"}
 			</button>
 		</form>
 	);
