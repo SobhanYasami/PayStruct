@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
+import TanstakProvider from "@/providers/TanstakProvider";
 
 export const metadata: Metadata = {
 	title: "PayStruct",
@@ -15,8 +16,10 @@ export default function RootLayout({
 	return (
 		<html lang='en'>
 			<body className={``}>
-				<Navbar />
-				{children}
+				<TanstakProvider>
+					<Navbar />
+					{children}
+				</TanstakProvider>
 			</body>
 		</html>
 	);
