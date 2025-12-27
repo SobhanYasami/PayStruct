@@ -148,6 +148,10 @@ export default function Navbar() {
 						</AnimatePresence>
 					</div>
 
+					<div className={styles.SignIn}>
+						<Link href='/sign-in'>ورود | ثبت نام</Link>
+					</div>
+
 					{/* Mobile Hamburger */}
 					<button
 						className={styles.hamburger}
