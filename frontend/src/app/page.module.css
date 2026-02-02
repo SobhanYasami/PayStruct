@@ -9,8 +9,9 @@
 	--button-secondary-hover: #f2f2f2;
 	--button-secondary-border: #ebebeb;
 
-	/* display: flex; */
-	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	min-height: 90vh;
 	align-items: center;
 	justify-content: center;
 	font-family: var(--font-geist-sans);
@@ -19,7 +20,7 @@
 
 .main {
 	display: flex;
-	min-height: 100vh;
+	min-height: 90vh;
 	width: 100%;
 	max-width: 800px;
 	flex-direction: column;
@@ -27,6 +28,29 @@
 	justify-content: space-between;
 	background-color: var(--foreground);
 	padding: 120px 60px;
+}
+
+.title {
+	font-size: 38px;
+	font-weight: 600;
+	color: var(--text-primary);
+	margin: 0;
+}
+
+.description {
+	font-size: 18px;
+	line-height: 28px;
+	color: var(--text-secondary);
+	margin: 16px 0 40px 0;
+}
+
+.link {
+	color: rgb(2, 127, 180);
+	font-weight: 600;
+}
+
+.link:hover {
+	text-decoration: underline;
 }
 
 .intro {

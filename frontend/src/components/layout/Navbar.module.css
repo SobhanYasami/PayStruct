@@ -178,4 +178,11 @@
 
 .SignIn {
 	color: #333;
+	padding: 3px 16px;
+	border: 1px solid #333;
+	border-radius: 9px;
+}
+
+.SignIn:hover {
+	background-color: #f6f6f6;
 }

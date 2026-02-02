@@ -1,0 +1,27 @@
+.main {
+	width: 100%;
+	height: calc(100vh - 73px);
+	position: relative;
+}
+
+.childrenContainer {
+	position: relative;
+	direction: rtl;
+	height: calc(100vh - 73px);
+	width: calc(100% - 220px);
+	color: rgb(35, 35, 35);
+}
+
+.Overlay {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	background-color: rgba(180, 180, 180, 0.4);
+	backdrop-filter: blur(6px);
+	z-index: 20;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}

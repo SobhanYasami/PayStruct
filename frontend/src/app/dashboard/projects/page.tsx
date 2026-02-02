@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import styles from "./page.module.css";
 import Dialog from "@/components/ui/Dialog";
 import PageHeader from "@/components/layout/ProjectPageHeader";
+import { useMutation } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+
+//
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const Project_URL = `${API_URL}/management/projects/`;
 
 /* -------------------- Types -------------------- */
 interface Contractor {
@@ -26,19 +32,82 @@ interface Project {
 	updatedAt: string;
 }
 
-/* ----------   Reusable Components --------------   */
+interface ProjectCreationPayload {
+	name: string;
+	phase: string;
+}
 
+async function projectCreationReq(payload: ProjectCreationPayload) {
+	let token = localStorage.getItem("usr-token");
+	if (!token) {
+		throw new Error("UnAuthorized");
+	}
+	const res = await fetch(`${Project_URL}`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `bearer ${token}`,
+		},
+		body: JSON.stringify(payload),
+	});
+
+	if (!res.ok) {
+		const err = await res.json();
+		throw new Error(err.message || "Creating project failed!");
+	}
+
+	return res.json();
+}
+
+async function getAllProjects() {
+	let token = localStorage.getItem("usr-token");
+	if (!token) {
+		throw new Error("UnAuthorized");
+	}
+	const res = await fetch(`${Project_URL}`, {
+		method: "GET",
+		headers: {
+			Authorization: `bearer ${token}`,
+		},
+	});
+
+	if (!res.ok) {
+		const err = await res.json();
+		throw new Error(err.message || "Creating project failed!");
+	}
+
+	return res.json();
+}
+/* ----------   Reusable Components --------------   */
 // Create Project Form Component
-function CreateProjectForm({ onCancel }: { onCancel: () => void }) {
+function CreateProjectForm({
+	onCancel,
+	setUpdateUi,
+}: {
+	onCancel: () => void;
+	setUpdateUi: Dispatch<SetStateAction<string>>;
+}) {
 	const [formData, setFormData] = useState({
 		name: "",
 		phase: "",
 	});
 
+	const mutation = useMutation({
+		mutationFn: projectCreationReq,
+		onSuccess: (data) => {
+			toast.success(data.message);
+			setUpdateUi(data.message);
+		},
+		onError(error) {
+			console.log(error.message);
+		},
+	});
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		console.log("Creating project:", formData);
-		// Handle form submission
+
+		mutation.mutate({ name: formData.name, phase: formData.phase });
 	};
 
 	const handleInputChange = (field: string, value: string) => {
@@ -123,18 +192,33 @@ function DeleteConfirmationDialog({
 	);
 }
 
-/* ----------   Main Component --------------   */
+/* ---------- Main Component -------------- */
 export default function Projects() {
 	const [showCreate, setShowCreate] = useState(false);
 	const [showEdit, setShowEdit] = useState(false);
 	const [showDelete, setShowDelete] = useState(false);
+	const [projectList, setProjectList] = useState<Project[]>();
+
 	const [search, setSearch] = useState("");
 
+	const [updateui, setUpdateUi] = useState("");
+
+	// todo: implement it
 	const handleDeleteConfirm = () => {
-		console.log("Project deleted");
 		setShowDelete(false);
-		// Add actual delete logic here
 	};
+
+	useEffect(() => {
+		const res = getAllProjects();
+		res.then((data) => {
+			setProjectList(data.data);
+		});
+		res.catch((err) => {
+			// setProjectList([]);
+			console.log(err);
+			toast.error(err);
+		});
+	}, [updateui]);
 
 	return (
 		<main
@@ -149,11 +233,31 @@ export default function Projects() {
 					onSearchChange={setSearch}
 					onCreateClick={() => setShowCreate(true)}
 				/>
+
+				<div className={styles.projectListContainer}>
+					{/* {projectList &&
+							projectList.map((project) => (
+								<div
+									key={project.name}
+									className={styles.project}
+								>
+									{project.name}
+									<div className={styles.projectPhaseContainer}>
+										{project.phases.map((phase) => (
+											<span key={`${project.name}-${phase}`}>{phase}</span>
+										))}
+									</div>
+								</div>
+							))} */}
+				</div>
 			</div>
 
 			{/* Dialogs */}
 			{showCreate && (
-				<CreateProjectForm onCancel={() => setShowCreate(false)} />
+				<CreateProjectForm
+					onCancel={() => setShowCreate(false)}
+					setUpdateUi={setUpdateUi}
+				/>
 			)}
 
 			{showEdit && <EditProjectForm onCancel={() => setShowEdit(false)} />}

@@ -64,7 +64,7 @@ func (s *ContractService) CreateProject(ctx context.Context, userID uuid.UUID, n
 }
 
 // GetAllProjects fetches projects, groups them by name, and returns a summary.
-func (s *ContractService) GetAllProjects(ctx context.Context) ([]ProjectSummary, error) {
+func (s *ContractService) GetAllProjects(ctx context.Context) ([]models.Project, error) {
 	// We can define the limit here, or pass it as an argument.
 	const projectLimit = 50
 
@@ -78,21 +78,21 @@ func (s *ContractService) GetAllProjects(ctx context.Context) ([]ProjectSummary,
 	}
 
 	//? 2) Group projects by name and collect phases (Business logic handled by service)
-	projectsMap := make(map[string][]int)
-	for _, project := range projects {
-		projectsMap[project.Name] = append(projectsMap[project.Name], int(project.Phase))
-	}
+	// projectsMap := make(map[string][]int)
+	// for _, project := range projects {
+	// 	projectsMap[project.Name] = append(projectsMap[project.Name], int(project.Phase))
+	// }
 
 	//? 3) Build final response structure (Transformation logic handled by service)
-	responseProjects := make([]ProjectSummary, 0, len(projectsMap))
-	for name, phases := range projectsMap {
-		responseProjects = append(responseProjects, ProjectSummary{
-			Name:   name,
-			Phases: phases,
-		})
-	}
+	// responseProjects := make([]ProjectSummary, 0, len(projectsMap))
+	// for name, phases := range projectsMap {
+	// 	responseProjects = append(responseProjects, ProjectSummary{
+	// 		Name:   name,
+	// 		Phases: phases,
+	// 	})
+	// }
 
-	return responseProjects, nil
+	return projects, nil
 }
 
 // get project by ID

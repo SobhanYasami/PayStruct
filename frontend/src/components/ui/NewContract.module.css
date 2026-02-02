@@ -1,0 +1,165 @@
+.Container {
+	background-color: rgb(242, 242, 242);
+	border-radius: 9px;
+	position: relative;
+	padding: 12px;
+	min-width: 450px;
+	min-height: 250px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+
+.CloseBtn {
+	position: absolute;
+	top: 9px;
+	left: 9px;
+	padding: 2px 6px;
+	font-size: 19px;
+	font-weight: 600;
+	color: red;
+	background-color: aliceblue;
+	border-radius: 6px;
+	border: 1px solid red;
+}
+.CloseBtn:hover {
+	background-color: red;
+	color: white;
+}
+
+.Title {
+	margin-bottom: 30px;
+	font-size: 20px;
+}
+
+.FormContainer {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	width: 100%;
+}
+
+.SelectGroup {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	width: 100%;
+}
+
+.SelectGroup > select {
+	background-color: white;
+	color: black;
+	width: 49%;
+	padding: 6px 5px;
+	border-radius: 6px;
+}
+
+.NumBudgetGroup {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+}
+
+.NumBudgetGroup > input {
+	width: 49%;
+	height: 30px;
+	border-radius: 6px;
+	border: 1px solid;
+	padding: 2px 9px;
+	color: rgb(46, 46, 46);
+	background-color: rgb(232, 232, 232);
+}
+.NumBudgetGroup > input::placeholder {
+	color: rgb(46, 46, 46);
+}
+
+.DateGroup {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+}
+
+.DateGroup > div {
+	width: 49%;
+	height: 30px;
+	border-radius: 6px;
+	border: 1px solid;
+	padding: 2px 9px;
+	color: rgb(46, 46, 46);
+	background-color: rgb(232, 232, 232);
+	font-size: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.DateGroup > div > input {
+	background-color: white;
+	color: black;
+	border: none;
+}
+.DateGroup > input::placeholder {
+	color: rgb(46, 46, 46);
+}
+
+.InsuranceGroup {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+}
+
+.InsuranceGroup > input {
+	width: 49%;
+	height: 30px;
+	border-radius: 6px;
+	border: 1px solid;
+	padding: 2px 9px;
+	color: rgb(46, 46, 46);
+	background-color: rgb(232, 232, 232);
+}
+.InsuranceGroup > input::placeholder {
+	color: rgb(46, 46, 46);
+}
+
+.FileGroup {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+}
+
+.FileGroup > input {
+	width: 49%;
+	height: 30px;
+	border-radius: 6px;
+	border: 1px solid;
+	padding: 2px 9px;
+	color: rgb(46, 46, 46);
+	background-color: rgb(232, 232, 232);
+}
+.FileGroup > input::placeholder {
+	color: rgb(46, 46, 46);
+}
+
+.SubmitBtn {
+	width: 100%;
+	height: 30px;
+	border-radius: 9px;
+	padding: 3px;
+	padding-bottom: 5px;
+	background-color: rgb(2, 123, 209);
+	font-weight: 600;
+	border: 1px solid;
+}
+
+.SubmitBtn:hover {
+	background-color: rgb(2, 123, 239);
+}
+
+.Error {
+	color: red;
+	font-size: small;
+}

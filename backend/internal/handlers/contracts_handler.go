@@ -7,6 +7,8 @@ import (
 	// "os"
 	// "path/filepath"
 
+	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -53,18 +55,18 @@ func (handler *ContractHandler) CreateProject(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userUUID, ok := c.Locals("userID").(uuid.UUID)
 	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "access denied!"))
 	}
 	//? 2-1) request struct
 	type RequestBody struct {
-		ProjectName string `json:"projectName" validate:"required"`
+		ProjectName string `json:"name" validate:"required"`
 		Phase       string `json:"phase" validate:"required"`
 	}
 
 	//? 2-2) Parse Body request
 	var req RequestBody
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request! body request"))
 	}
 	//? 2-3) Validate using struct tags
 	if err := validate.Struct(req); err != nil {
@@ -325,10 +327,6 @@ func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 		ContractNumber: c.FormValue("contract_number"),
 	}
 
-	req.GrossBudget, _ = strconv.ParseFloat(c.FormValue("gross_budget"), 64)
-	req.StartDate, _ = time.Parse(time.RFC3339, c.FormValue("start_date"))
-	req.EndDate, _ = time.Parse(time.RFC3339, c.FormValue("end_date"))
-
 	if err := validate.Struct(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request Fields!"))
 	}
@@ -343,6 +341,41 @@ func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid project_id"))
 	}
+	req.GrossBudget, err = strconv.ParseFloat(c.FormValue("gross_budget"), 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "invalid gross_budget"))
+	}
+
+	req.StartDate, err = time.Parse(time.RFC3339, c.FormValue("start_date"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "invalid start_date"))
+	}
+	req.EndDate, err = time.Parse(time.RFC3339, c.FormValue("end_date"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "invalid end_date"))
+	}
+
+	var f float64
+	f, err = strconv.ParseFloat(c.FormValue("insurance_rate"), 32)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(ErrorResponse(BadRequest, "invalid insurance_rate"))
+	}
+	req.InsuranceRate = float32(f)
+
+	f, err = strconv.ParseFloat(c.FormValue("performance_bond"), 32)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(ErrorResponse(BadRequest, "invalid performance_bond"))
+	}
+	req.PerformanceBond = float32(f)
+
+	f, err = strconv.ParseFloat(c.FormValue("added_value_tax"), 32)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(ErrorResponse(BadRequest, "invalid added_value_tax"))
+	}
+	req.AddedValueTax = float32(f)
 
 	// 5. File handling
 	file, err := c.FormFile("scanned_file")
@@ -357,7 +390,7 @@ func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 	ext := filepath.Ext(file.Filename)
 	filename := uuid.New().String() + ext
 
-	baseDir := "../../../storage/contracts"
+	baseDir := "../storage/contracts"
 	uploadDir := filepath.Join(baseDir, contractorUUID.String())
 
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
@@ -369,6 +402,8 @@ func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 	if err := c.SaveFile(file, dst); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "could not save uploaded file"))
 	}
+
+	fmt.Println("every things works well till here")
 
 	// 6. Service call
 	err = handler.contractService.CreateContract(
@@ -387,7 +422,8 @@ func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return fiber.ErrInternalServerError
+		log.Printf("CreateContract DB error: %v", err)
+		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
 	}
 
 	return c.Status(fiber.StatusCreated).

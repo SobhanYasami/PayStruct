@@ -1,0 +1,55 @@
+.Container {
+	position: absolute;
+	right: 0;
+	top: 0;
+	bottom: 0;
+
+	background-color: white;
+	color: rgb(84, 84, 84);
+	width: 220px;
+	padding: 30px 0px;
+	z-index: 999;
+	font-weight: 600;
+	font-size: 14px;
+
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+
+	border-left: 2px solid rgba(123, 123, 123, 0.82);
+	border-radius: 3px 0px 0px 3px;
+}
+
+.PartContainer {
+	width: 100%;
+	background-color: rgb(255, 255, 255);
+	text-align: right;
+	padding: 4px 6px;
+	border-top: 1px solid rgba(115, 115, 115, 0.905);
+}
+
+.PartHeader {
+	width: 100%;
+	border-bottom: 2px solid rgba(110, 110, 110, 0.796);
+	padding: 1px 6px;
+	margin-bottom: 4px;
+}
+.PartHeader:hover {
+	color: rgb(0, 108, 223);
+	border-bottom: 2px solid rgba(0, 108, 223, 0.796);
+}
+
+.PartItems {
+	padding: 2px 0px;
+}
+
+.PartItems > button {
+	margin: 2px;
+	padding: 1px 16px;
+	border-radius: 9px;
+	background-color: rgb(0, 210, 60);
+}
+
+.PartItems > button:hover {
+	background-color: rgb(0, 187, 53);
+}

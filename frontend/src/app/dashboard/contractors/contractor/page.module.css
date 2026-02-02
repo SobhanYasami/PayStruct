@@ -1,0 +1,154 @@
+.PageContainer {
+	position: relative;
+	direction: rtl;
+	height: calc(100vh - 73px);
+	width: 100%;
+	color: rgb(35, 35, 35);
+	padding: 9px;
+}
+
+.PageHeader {
+	width: 100%;
+	border-bottom: 2px solid slategrey;
+	font-size: 16px;
+	font-weight: 600;
+	padding: 3px 9px;
+	border-radius: 9px;
+}
+
+.SearchBar {
+	border-top: 3px solid slategrey;
+	border-bottom: 2px solid slategrey;
+	border-radius: 9px;
+	padding: 6px 9px;
+}
+.SearchForm {
+	display: flex;
+	gap: 3px;
+}
+
+.SearchForm > input {
+	background-color: aliceblue;
+	padding: 6px 9px;
+	border-radius: 6px;
+	min-width: 400px;
+	border: 1px solid rgb(75, 75, 75);
+}
+.SearchForm > button {
+	background-color: rgb(0, 132, 173);
+	border-radius: 6px;
+	padding: 0px 12px;
+	border: 1px solid;
+}
+
+.SearchForm > button:hover {
+	background-color: rgb(0, 99, 132);
+}
+
+.ListContainer {
+	border-top: 3px solid slategrey;
+	border-radius: 9px;
+
+	min-height: 700px;
+	overflow-y: auto;
+	padding: 2px;
+}
+
+.ListHeader {
+	width: 100%;
+	padding: 0px 6px;
+	font-weight: 600;
+}
+
+.Skeleton {
+	color: blue;
+	width: 100%;
+	height: 100%;
+	padding: 3px;
+	text-align: center;
+}
+
+.ErrorMessage {
+	color: red;
+	text-align: center;
+}
+
+.UL {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.ListRowHeader {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	background-color: rgb(211, 211, 211);
+	border-bottom: 2px solid black;
+	border-radius: 3px 3px 0px 0px;
+	padding: 3px 4px;
+}
+
+.col1 {
+	min-width: 90px;
+	border-left: 1px solid slategrey;
+}
+.col2 {
+	min-width: 180px;
+	border-left: 1px solid slategrey;
+}
+.col3 {
+	min-width: 110px;
+	border-left: 1px solid slategrey;
+}
+.col4 {
+	min-width: 110px;
+	border-left: 1px solid slategrey;
+}
+
+.ListRow {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 4px;
+	background-color: rgb(255, 255, 255);
+	border-bottom: 1px solid black;
+}
+
+.Legal {
+	color: rgb(0, 102, 255);
+	min-width: 90px;
+	border-left: 1px solid slategrey;
+}
+.NonLegal {
+	min-width: 90px;
+	border-left: 1px solid slategrey;
+}
+
+.fullNameCol {
+	min-width: 180px;
+	border-left: 1px solid slategrey;
+}
+
+.nationalID {
+	min-width: 110px;
+	border-left: 1px solid slategrey;
+}
+
+.preferentialID {
+	min-width: 110px;
+	border-left: 1px solid slategrey;
+}
+
+.DelBtn {
+	color: red;
+	background-color: white;
+	border: none;
+	padding: 1px;
+	font-size: 5px;
+	border-radius: 3px;
+}
+.DelBtn:hover {
+	background-color: red;
+	color: white;
+}

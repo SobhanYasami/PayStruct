@@ -1,0 +1,108 @@
+.Container {
+	background-color: rgb(242, 242, 242);
+	border-radius: 9px;
+	position: relative;
+	padding: 12px;
+	min-width: 450px;
+	min-height: 250px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+
+.CloseBtn {
+	position: absolute;
+	top: 9px;
+	left: 9px;
+	padding: 2px 6px;
+	font-size: 19px;
+	font-weight: 600;
+	color: red;
+	background-color: aliceblue;
+	border-radius: 6px;
+	border: 1px solid red;
+}
+.CloseBtn:hover {
+	background-color: red;
+	color: white;
+}
+
+.Title {
+	margin-bottom: 30px;
+	font-size: 20px;
+}
+
+.FormContainer {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	width: 100%;
+}
+
+.RadioGroup {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	width: 100%;
+}
+
+.FullNameContainer {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+}
+
+.FullNameContainer > input {
+	width: 49%;
+	height: 30px;
+	border-radius: 9px;
+	padding: 2px 9px;
+	color: rgb(46, 46, 46);
+	background-color: rgb(232, 232, 232);
+}
+.FullNameContainer > input::placeholder {
+	color: rgb(46, 46, 46);
+}
+
+.IDsContainer {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+}
+
+.IDsContainer > input {
+	width: 49%;
+	height: 30px;
+	border-radius: 9px;
+	padding: 2px 9px;
+	color: rgb(46, 46, 46);
+	background-color: rgb(232, 232, 232);
+}
+
+.IDsContainer > input::placeholder {
+	color: rgb(46, 46, 46);
+}
+
+.SubmitBtn {
+	width: 100%;
+	height: 30px;
+	border-radius: 9px;
+	padding: 3px;
+	padding-bottom: 5px;
+	background-color: rgb(2, 123, 209);
+	font-weight: 600;
+}
+
+.SubmitBtn:hover {
+	background-color: rgb(2, 123, 239);
+}
+
+.Error {
+	color: red;
+	font-size: small;
+}

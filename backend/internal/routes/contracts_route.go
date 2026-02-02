@@ -37,9 +37,10 @@ func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler) {
 	contracts.Put("/:id", h.UpdateContract)
 	contracts.Delete("/:id", h.DeleteContract)
 
-	// router.Post("/contractors/new-contract", middlewares.Authenticate(), contractHandler.CreateContractor)
+	// WBS
+	wbs := contracts.Group("wbs")
+	wbs.Post("/", h.CreateContract)
 
-	// router.Get("/contractors/search-by-id", middlewares.Authenticate(), contractHandler.GetContractorByID)
 	//! Trading System Routes
 	// router.Get("/contractors/contractor-projects", middlewares.Authenticate(), contractHandler.GetContractorProjects)
 	// router.Get("/contractors/get-last-status-statement", middlewares.Authenticate(), contractHandler.GetLastStatusStatement)

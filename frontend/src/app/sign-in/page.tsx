@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
 // -----------------------------
@@ -21,6 +22,7 @@ type SignUpPayload = {
 	last_name: string;
 	user_name: string;
 	password: string;
+	role: string;
 };
 
 async function signInRequest(payload: SignInPayload) {
@@ -92,12 +94,20 @@ export default function SignIn() {
 function SignInForm() {
 	const [userName, setUserName] = useState("");
 	const [password, setPassword] = useState("");
+	const router = useRouter();
 
 	const mutation = useMutation({
 		mutationFn: signInRequest,
 		onSuccess: (data) => {
-			// example: store token, redirect, etc.
+			// todo: remove printing to console
 			console.log("Signed in", data);
+
+			// todo: store them in cookies instead of local storage
+			localStorage.setItem("usr-token", data.data.token);
+			localStorage.setItem("usr-role", data.data.role);
+
+			toast.success(data.message);
+			router.push("/dashboard");
 		},
 	});
 
@@ -159,7 +169,9 @@ function SignUpForm() {
 	const mutation = useMutation({
 		mutationFn: signUpRequest,
 		onSuccess: (data) => {
+			// Todo: remove printing to console
 			console.log("Signed up", data);
+			toast.success(data.message);
 		},
 	});
 
@@ -176,6 +188,8 @@ function SignUpForm() {
 			password,
 			first_name: firstName,
 			last_name: lastName,
+			// Todo: properly handle user role
+			role: "admin",
 		});
 	};
 

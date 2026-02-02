@@ -158,15 +158,15 @@
 .submitBtn {
 	background-color: #2563eb;
 	color: white;
-	padding: 2px 12px;
+	padding: 2px 18px;
 	border-radius: 6px;
 	border: none;
-	font-weight: 500;
+	font-weight: 600;
 	margin-top: 30px;
 	cursor: pointer;
 }
-.submitBt:hover {
-	background-color: #047cc2;
+.submitBtn:hover {
+	background-color: #1b5ce8;
 }
 
 /* ============================= */
@@ -204,4 +204,29 @@
 
 .dialogButtonSecondary:hover {
 	background: #d1d5db;
+}
+
+.projectListContainer {
+	height: 100%;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	color: #111827;
+	padding: 4px;
+}
+
+.project {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 4px 18px;
+	border: 1px solid gray;
+	border-radius: 2px;
+}
+
+.projectPhaseContainer {
+	display: flex;
+	align-items: center;
+	gap: 9px;
 }
