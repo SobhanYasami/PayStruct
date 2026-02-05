@@ -76,8 +76,7 @@ export default function NewStatusStatement({
 			return data;
 		},
 		onSuccess: () => {
-			toast.success("ساختار شکست با موفقیت ثبت شد");
-			setIsPopOpen(false);
+			toast.success("قرارداد یافت شد");
 		},
 		onError: (error: unknown) => {
 			const err = error as ApiError;

@@ -1,0 +1,25 @@
+.Container {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: rgb(194, 194, 194);
+	font-size: 30px;
+	font-weight: 600;
+	direction: rtl;
+}
+
+.Overlay {
+	position: absolute;
+	top: 80;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 300;
+	padding: 90px;
+	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-items: center;
+	background: rgba(18, 18, 18, 0.35);
+	backdrop-filter: blur(1px);
+}
