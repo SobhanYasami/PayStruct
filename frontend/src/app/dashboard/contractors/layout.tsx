@@ -9,11 +9,13 @@ import {
 } from "@/providers/context/DashboardContext";
 import NewContract from "@/components/ui/NewContract";
 import NewWBS from "@/components/ui/NewWBS";
+import NewStatusStatement from "@/components/ui/NewStatusStatement";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const Contractor_URL = `${API_URL}/management/contractors/`;
 const Contract_URL = `${API_URL}/management/contracts/`;
-const WBS_URL = `${API_URL}/management/contracts/wbs`;
+const WBS_URL = `${API_URL}/management/contracts/wbs/`;
+const StatusStatement_URL = `${API_URL}/management/contracts/status-statement/`;
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 	const { isPopOpen, setIsPopOpen, formName, setFormName } = useDashboard();
@@ -45,6 +47,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 							<NewWBS
 								setIsPopOpen={setIsPopOpen}
 								apiUrl={WBS_URL}
+							/>
+						)}
+						{formName == "new-status-sttmnt" && (
+							<NewStatusStatement
+								setIsPopOpen={setIsPopOpen}
+								apiUrl={StatusStatement_URL}
 							/>
 						)}
 					</Overlay>

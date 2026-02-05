@@ -39,7 +39,12 @@ func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler) {
 
 	// WBS
 	wbs := contracts.Group("wbs")
-	wbs.Post("/", h.CreateContract)
+	wbs.Post("/", h.CreateWBS) // Create WBS Entry
+	wbs.Post("/:contract-number", h.GetContractWBS)
+
+	// StatusStatement
+	statusStatement := contracts.Group("status-statement")
+	statusStatement.Post("/", h.CreateStatusStatement)
 
 	//! Trading System Routes
 	// router.Get("/contractors/contractor-projects", middlewares.Authenticate(), contractHandler.GetContractorProjects)

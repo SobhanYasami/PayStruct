@@ -8,6 +8,7 @@ import { Trash } from "lucide-react";
 
 import styles from "./page.module.css";
 import NewContractor from "@/components/ui/NewContractor";
+import { toPersianDigits } from "@/utils/PersianNumberCoverter";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const Contractor_URL = `${API_URL}/management/contractors/`;
@@ -101,8 +102,12 @@ export default function page() {
 								<p className={styles.fullNameCol}>
 									{cntrs.first_name} {cntrs.last_name}
 								</p>
-								<p className={styles.nationalID}>{cntrs.national_id}</p>
-								<p className={styles.preferentialID}>{cntrs.preferential_id}</p>
+								<p className={styles.nationalID}>
+									{toPersianDigits(cntrs.national_id)}
+								</p>
+								<p className={styles.preferentialID}>
+									{toPersianDigits(cntrs.preferential_id)}
+								</p>
 								<button className={styles.DelBtn}>
 									<Trash size={15} />
 								</button>

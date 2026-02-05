@@ -1,9 +1,7 @@
-"use client";
-
+import { useMutation } from "@tanstack/react-query";
+import styles from "./ExtraWorks.module.css";
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import styles from "./NewWBS.module.css";
 import { toPersianDigits } from "@/utils/PersianNumberCoverter";
 
 type WBSItem = {
@@ -13,7 +11,7 @@ type WBSItem = {
 	unit_price: number;
 };
 
-type NewWBSPayload = {
+type NewExtraWorksPayload = {
 	contract_number: string;
 	items: WBSItem[];
 };
@@ -23,18 +21,14 @@ type ApiError = {
 	message: string;
 };
 
-// ------------------------------------------------
+////
 
-/// ------------------------------
-export default function NewWBS({
-	setIsPopOpen,
-	apiUrl,
-}: {
-	setIsPopOpen: (value: boolean) => void;
-	apiUrl: string;
-}) {
-	const [numberOfItems, setNumberOfItems] = useState(1);
-	const [form, setForm] = useState<NewWBSPayload>({
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const StatusExtraWorks_URL = `${API_URL}/management/contracts/status-statement/extra-works/`;
+
+////
+export default function ExtraWorks() {
+	const [form, setForm] = useState<NewExtraWorksPayload>({
 		contract_number: "",
 		items: [{ description: "", quantity: 0, unit: "", unit_price: 0 }],
 	});
@@ -79,12 +73,12 @@ export default function NewWBS({
 	};
 
 	const mutation = useMutation({
-		mutationFn: async (payload: NewWBSPayload) => {
+		mutationFn: async (payload: NewExtraWorksPayload) => {
 			const token = localStorage.getItem("usr-token");
 
 			console.log("wbs payload", payload);
 
-			const res = await fetch(apiUrl, {
+			const res = await fetch(StatusExtraWorks_URL, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -106,7 +100,6 @@ export default function NewWBS({
 		},
 		onSuccess: () => {
 			toast.success("ساختار شکست با موفقیت ثبت شد");
-			setIsPopOpen(false);
 		},
 		onError: (error: unknown) => {
 			const err = error as ApiError;
@@ -137,35 +130,10 @@ export default function NewWBS({
 
 		mutation.mutate(form);
 	};
-
 	return (
-		<div className={styles.Container}>
-			<button
-				onClick={() => setIsPopOpen(false)}
-				className={styles.CloseBtn}
-			>
-				×
-			</button>
-
-			<h2 className={styles.Title}>ایجاد ساختار شکست جدید</h2>
-
-			<form
-				className={styles.FormContainer}
-				onSubmit={handleSubmit}
-			>
-				<div className={styles.ContractInfoContainer}>
-					<p>
-						شماره قرارداد مربوطه را وارد کنید:
-						<span>(اعداد را به انگلیسی وارد نمایید)</span>
-					</p>
-					<input
-						name='contract_number'
-						placeholder='شماره قرارداد'
-						onChange={handleChange}
-						required
-						className={styles.descriptionInput}
-					/>
-				</div>
+		<>
+			<form className={styles.FormContainer}>
+				<h4>جدول اضافه کاری و دستور کارها و ...</h4>
 				<div className={styles.TableHeader}>
 					<p className={styles.col1}>ردیف</p>
 					<p className={styles.col2}>شرح</p>
@@ -241,6 +209,6 @@ export default function NewWBS({
 					-
 				</button>
 			</div>
-		</div>
+		</>
 	);
 }

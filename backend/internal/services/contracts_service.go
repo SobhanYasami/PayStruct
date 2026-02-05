@@ -269,6 +269,15 @@ func (s *ContractService) GetContractByID(ctx context.Context, contractID uuid.U
 	return &contract, nil
 }
 
+// GetContract by ContractNumber
+func (s *ContractService) GetContractByNumber(ctx context.Context, contractNumber string) (*models.Contract, error) {
+	var contract models.Contract
+	if err := s.db.WithContext(ctx).First(&contract, "contract_number = ?", contractNumber).Error; err != nil {
+		return nil, err
+	}
+	return &contract, nil
+}
+
 // UpdateContract
 func (s *ContractService) UpdateContract(ctx context.Context, contractID, userID, contractorID, projectID uuid.UUID, contractNumber string, GrossBudget float64, insuranceRate, performanceBond, addedValueTax float32, startDate, endDate time.Time, ScanedFileUrl string) error {
 	// Update the contract fields
@@ -312,4 +321,71 @@ func (s *ContractService) DeleteContract(ctx context.Context, contractID, userID
 
 		return nil
 	})
+}
+
+// -----------
+//
+// --------
+func (s *ContractService) CreateContractWBS(ctx context.Context, userID, contractID, contractorID, projectID uuid.UUID, description, unit string, quantity, unitPrice float64) error {
+	// check for existing record with same description under the same contract
+	var existingCount int64
+	if err := s.db.WithContext(ctx).
+		Model(&models.ContractWBS{}).
+		Where("contract_id = ? AND description = ?", contractID, description).
+		Count(&existingCount).Error; err != nil {
+		return err // Return database errors to the handler
+	}
+
+	if existingCount > 0 {
+		return gorm.ErrRegistered // or a custom error indicating duplicate contractor
+	}
+
+	// Create new record
+	contractWbs := models.ContractWBS{
+		BaseModel: models.BaseModel{
+			ID:        uuid.New(),
+			CreatedBy: userID,
+		},
+		Description: description,
+		Unit:        unit,
+		Quantity:    quantity,
+		UnitPrice:   unitPrice,
+		TotalPrice:  quantity * unitPrice,
+	}
+
+	if err := s.db.WithContext(ctx).Create(&contractWbs).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetContractByID
+func (s *ContractService) GetContractWBS(ctx context.Context, contractID uuid.UUID) (*[]models.ContractWBS, error) {
+	var contract_wbs []models.ContractWBS
+	if err := s.db.WithContext(ctx).Find(&contract_wbs, "id = ?", contractID).Error; err != nil {
+		return nil, err
+	}
+	return &contract_wbs, nil
+}
+
+// CreateStatusStatement
+func (s *ContractService) CreateStatusStatement(ctx context.Context, userID, contractID, contractorID, projectID uuid.UUID, statementDate time.Time, workDoneDescription string, workDoneAmount float64) error {
+	// Create new record
+	// statusStatement := models.StatusStatement{
+	// 	BaseModel: models.BaseModel{
+	// 		ID:        uuid.New(),
+	// 		CreatedBy: userID,
+	// 	},
+	// 	ContractID:          contractID,
+	// 	ContractorID:        contractorID,
+	// 	ProjectID:           projectID,
+	// 	StatementDate:       statementDate,
+	// 	WorkDoneDescription: workDoneDescription,
+	// 	WorkDoneAmount:      workDoneAmount,
+	// }
+
+	// if err := s.db.WithContext(ctx).Create(&statusStatement).Error; err != nil {
+	// 	return err
+	// }
+	return nil
 }

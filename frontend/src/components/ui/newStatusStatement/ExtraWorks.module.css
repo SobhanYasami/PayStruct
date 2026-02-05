@@ -1,57 +1,10 @@
-.Container {
-	background-color: rgb(242, 242, 242);
-	border-radius: 9px;
-	position: relative;
-	padding: 12px;
-	min-width: 450px;
-	min-height: 250px;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-}
-
-.CloseBtn {
-	position: absolute;
-	top: 9px;
-	left: 9px;
-	padding: 2px 6px;
-	font-size: 19px;
-	font-weight: 600;
-	color: red;
-	background-color: aliceblue;
-	border-radius: 6px;
-	border: 1px solid red;
-}
-.CloseBtn:hover {
-	background-color: red;
-	color: white;
-}
-
-.Title {
-	margin-bottom: 30px;
-	font-size: 20px;
-}
-
 .FormContainer {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	width: 100%;
-}
-
-.ContractInfoContainer {
-	width: 100%;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 4px 0px;
-}
-.ContractInfoContainer > p > span {
-	font-size: 14px;
-	color: gray;
-	padding: 0px 6px;
+	margin: 9px 0px;
 }
 
 .TableHeader {

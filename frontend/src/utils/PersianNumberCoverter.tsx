@@ -109,7 +109,7 @@ export class NumberConverter {
 	 */
 	static formatCurrency(amount: number, decimals: number = 0): string {
 		const formatted = this.formatNumber(amount, decimals);
-		return `${formatted} ریال`;
+		return `${formatted}`;
 	}
 
 	/**

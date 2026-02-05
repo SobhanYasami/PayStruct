@@ -2,12 +2,8 @@ package handlers
 
 import (
 	// "errors"
-	// "fmt"
 	// "mime/multipart"
-	// "os"
-	// "path/filepath"
 
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,13 +11,9 @@ import (
 	"strings"
 	"time"
 
-	// "time"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
-
-	// "github.com/sobhan-yasami/docs-db-panel/internal/services"
 
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
@@ -50,7 +42,7 @@ type ProjectSummary struct {
 	Phases []int  `json:"phases"`
 }
 
-// ! @Router /management/new-project [post]
+// ! @Router /management/projects [post]
 func (handler *ContractHandler) CreateProject(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userUUID, ok := c.Locals("userID").(uuid.UUID)
@@ -177,7 +169,7 @@ func (handler *ContractHandler) DeleteProject(c *fiber.Ctx) error {
 // ----------------------------
 // Contractor Handlers
 // ----------------------------
-// ! @Router /management/new-contractor [post]
+// ! @Router /management/contractors [post]
 func (handler *ContractHandler) CreateContractor(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userUUID, ok := c.Locals("userID").(uuid.UUID)
@@ -296,7 +288,7 @@ func (handler *ContractHandler) DeleteContractor(c *fiber.Ctx) error {
 // Contract Handlers
 // --------------------------
 
-// ! @Router /management/new-contract [post]
+// ! @Router /management/contracts [post]
 func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
 	userUUID, ok := c.Locals("userID").(uuid.UUID)
@@ -402,8 +394,6 @@ func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
 	if err := c.SaveFile(file, dst); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "could not save uploaded file"))
 	}
-
-	fmt.Println("every things works well till here")
 
 	// 6. Service call
 	err = handler.contractService.CreateContract(
@@ -565,6 +555,142 @@ func (handler *ContractHandler) DeleteContract(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Contract deleted successfully"))
 }
 
+// ! @Router /management/contracts/wbs [post]
+func (handler *ContractHandler) CreateWBS(c *fiber.Ctx) error {
+	//? 1) Get user ID from context (set by middleware)
+	userUUID, ok := c.Locals("userID").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized access"))
+	}
+	//? 2) Parse Body request
+	type Item struct {
+		Description string `json:"description"`
+		Quantity    int64  `json:"quantity"`
+		Unit        string `json:"unit"`
+		UnitPrice   int64  `json:"unit_price"`
+	}
+	type RequestBody struct {
+		ContractNumber string `json:"contract_number" gorm:"default:false;not null"`
+		Items          []Item `json:"items" gorm:"type:varchar(100);not null"`
+	}
+	//? 2-2) Parse Body request
+	var req RequestBody
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Body Request!"))
+	}
+	//? 2-3) Validate using struct tags
+	if err := validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+
+	//? 3) get contract record by its number
+	contract, err := handler.contractService.GetContractByNumber(c.Context(), req.ContractNumber)
+
+	for _, recd := range req.Items {
+		var quantity float64
+		quantity = float64(recd.Quantity)
+
+		var unitPrice float64
+		unitPrice = float64(recd.UnitPrice)
+
+		// service call to save record to database
+		err = handler.contractService.CreateContractWBS(c.Context(), userUUID, contract.ID, contract.ContractorID, contract.ProjectID, recd.Description, recd.Unit, quantity, unitPrice)
+
+		if err != nil {
+			log.Printf("CreateContract DB error: %v", err)
+			return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+		}
+
+	}
+
+	return c.Status(fiber.StatusCreated).
+		JSON(SuccessResponse(nil, "آیتم های ساختار شکست با موفقیت ثبت شدند."))
+}
+
+// ! @Router /management/contract/wbs [post]
+func (handler *ContractHandler) GetContractWBS(c *fiber.Ctx) error {
+	//? 2) Parse Body request
+	type RequestBody struct {
+		ContractNumber string `json:"contract_number" gorm:"default:false;not null"`
+	}
+	//? 2-2) Parse Body request
+	var req RequestBody
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+	//? 2-3) Validate using struct tags
+	if err := validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+
+	//? 3) get contract record by its number
+	contract, err := handler.contractService.GetContractByNumber(c.Context(), req.ContractNumber)
+
+	// service call to get correspoding records
+	contract_wbs, err := handler.contractService.GetContractWBS(c.Context(), contract.ID)
+	if err != nil {
+		log.Printf("CreateContract DB error: %v", err)
+		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+	}
+
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contract_wbs, "ContractWbs retrieved successfully"))
+}
+
+// ! Router /management/contracts/status-statement
+func (handler *ContractHandler) CreateStatusStatement(c *fiber.Ctx) error {
+	//? 1) Get user ID from context (set by middleware)
+	// userUUID, ok := c.Locals("userID").(uuid.UUID)
+	// if !ok {
+	// 	return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+	// }
+	//? 2) Parse Body request
+	type RequestBody struct {
+		ContractID      string  `json:"contract_id"`
+		StatementDate   string  `json:"statement_date"`
+		CompletedAmount float64 `json:"completed_amount"`
+		Remarks         string  `json:"remarks"`
+	}
+	//? 2-2) Parse Body request
+	var req RequestBody
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+	//? 2-3) Validate using struct tags
+	if err := validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+
+	//? 3) UUID parsing
+	// contractUUID, err := uuid.Parse(req.ContractID)
+	// if err != nil {
+	// 	return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid contract_id"))
+	// }
+
+	//? 4) Parse statement date
+	// statementDate, err := time.Parse(time.RFC3339, req.StatementDate)
+	// if err != nil {
+	// 	return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid statement_date format"))
+	// }
+
+	//? 5) Call the service
+	// err = handler.contractService.CreateStatusStatement(
+	// 	c.Context(),
+	// 	userUUID,
+	// 	contractUUID,
+	// 	statementDate,
+	// 	req.CompletedAmount,
+	// 	req.Remarks,
+	// )
+
+	// if err != nil {
+	// 	log.Printf("CreateStatusStatement DB error: %v", err)
+	// 	return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+	// }
+
+	return c.Status(fiber.StatusCreated).
+		JSON(SuccessResponse(nil, "Status statement created successfully"))
+}
+
 // ! @Router /management/new-contract [post]
 // func (ctrl *ContractHandler) CreateContractor(c *fiber.Ctx) error {
 // 	//? 1) Get user ID from context (set by middleware)
@@ -600,341 +726,6 @@ func (handler *ContractHandler) DeleteContract(c *fiber.Ctx) error {
 // 	if err := c.BodyParser(&req); err != nil {
 // 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ورودی های نا معتبر"})
 // 	}
-
-// 	//? 3. Create Contractor
-// 	//* check for existing records
-// 	var existingContractor models.Contractor
-// 	if err := ctrl.db.Where("contract_no = ? AND full_name = ?", req.ContractID, req.FullName).First(&existingContractor).Error; err == nil {
-// 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-// 			"status":  "failure",
-// 			"message": "قرارداد با این شماره قبلا ثبت شده است",
-// 		})
-// 	}
-// 	//* sanitize data
-// 	var legalEntityBool bool
-// 	if req.ContractorType == "legal" {
-// 		legalEntityBool = true
-// 	} else {
-// 		legalEntityBool = false
-// 	}
-// 	grossBudget, err := strconv.ParseFloat(req.GrossContractAmount, 32)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "مبلغ قرارداد نامعتبر است اعداد را انگلیسی وارد کنید"})
-// 	}
-// 	duration := req.ContractEndDate.Sub(req.ContractStartDate)
-// 	days := int(duration.Hours() / 24)
-
-// 	insuranceRate, err := strconv.ParseFloat(req.InsuranceRate, 32)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "نرخ بیمه نامعتبر است اعداد را انگلیسی وارد کنید"})
-// 	}
-// 	performanceBond, err := strconv.ParseFloat(req.PerformanceBond, 32)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "حسن انجام کار نامعتبر است اعداد را انگلیسی وارد کنید"})
-// 	}
-// 	addedValueTax, err := strconv.ParseFloat(req.AddedValueTax, 32)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "مالیات بر ارزش افزوده نامعتبر است اعداد را انگلیسی وارد کنید"})
-// 	}
-
-// 	//*‌ Get scaned file
-// 	file, err := c.FormFile("ScannedFile")
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-// 			"status":  "fail",
-// 			"message": "فایل اسکن شده الزامیست",
-// 		})
-// 	}
-// 	if file.Size > 50*1024*1024 {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-// 			"status":  "failure",
-// 			"message": "حجم فایل نباید بیشتر از 50 مگابایت باشد",
-// 		})
-// 	}
-
-// 	//* Create directory if doesn't exist
-// 	uploadDir := fmt.Sprintf("../storage/%s", req.ContractorNationalID)
-// 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"status":  "fail",
-// 			"message": "خطا در ایجاد پوشه",
-// 		})
-// 	}
-
-// 	//* save scaned file
-// 	filePath := filepath.Join(uploadDir, file.Filename)
-// 	if err := c.SaveFile(file, filePath); err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"status":  "fail",
-// 			"message": "خطا در ذخیره فایل اسکن شده",
-// 		})
-// 	}
-
-// 	//* create model for database
-// 	var contractor = models.Contractor{
-// 		BaseModel: models.BaseModel{
-// 			ID:        uuid.New(),
-// 			CreatedBy: userID,
-// 		},
-// 		FullName:       req.FullName,
-// 		LegalEntity:    legalEntityBool,
-// 		PreferentialID: req.ContractorDetailedID,
-// 		NationalID:     req.ContractorNationalID,
-
-// 		ContractNo:      req.ContractID,
-// 		GrossBudget:     float32(grossBudget),
-// 		StartDate:       req.ContractStartDate,
-// 		Duration:        uint16(days),
-// 		EndDate:         req.ContractEndDate,
-// 		InsuranceRate:   float32(insuranceRate),
-// 		PerformanceBond: float32(performanceBond),
-// 		AddedValueTax:   float32(addedValueTax),
-// 		ScanedFileUrl:   filePath,
-// 	}
-
-// 	if err := ctrl.db.Create(&contractor).Error; err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "خطا در ایجاد قرارداد"})
-// 	}
-
-// 	//? 4. Get Project IDs
-// 	var phase0 int
-// 	var phase1 int
-// 	var phase2 int
-// 	var phase3 int
-
-// 	if req.Phase0 {
-// 		phase0 = 0
-// 	}
-// 	if req.Phase1 {
-// 		phase1 = 1
-// 	}
-// 	if req.Phase2 {
-// 		phase2 = 2
-// 	}
-// 	if req.Phase3 {
-// 		phase3 = 3
-// 	}
-// 	var project_phase0 models.Project
-// 	var project_phase1 models.Project
-// 	var project_phase2 models.Project
-// 	var project_phase3 models.Project
-// 	if err := ctrl.db.Where("name = ? AND phase = ?", req.ProjectName, phase0).First(&project_phase0).Error; err == nil {
-// 	}
-// 	if err := ctrl.db.Where("name = ? AND phase = ?", req.ProjectName, phase1).First(&project_phase1).Error; err == nil {
-// 	}
-// 	if err := ctrl.db.Where("name = ? AND phase = ?", req.ProjectName, phase2).First(&project_phase2).Error; err == nil {
-// 	}
-// 	if err := ctrl.db.Where("name = ? AND phase = ?", req.ProjectName, phase3).First(&project_phase3).Error; err == nil {
-// 	}
-
-// 	if project_phase0.ID != uuid.Nil {
-// 		//* 4.1 Create Contractor Project Table
-// 		var cont_project = models.ContractorProject{
-// 			BaseModel: models.BaseModel{
-// 				ID:        uuid.New(),
-// 				CreatedBy: userID,
-// 			},
-// 			ContractorID: contractor.ID,
-// 			ProjectID:    project_phase0.ID,
-// 		}
-// 		if err := ctrl.db.Create(&cont_project).Error; err != nil {
-// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "خطا در ایجاد جدول پیمانکار-پروژه"})
-// 		}
-// 		//* 4. Create First Status Statement
-// 		var status_statement = models.StatusStatement{
-// 			BaseModel: models.BaseModel{
-// 				ID:        uuid.New(),
-// 				CreatedBy: userID,
-// 			},
-// 			ContractorID: contractor.ID,
-// 			ProjectID:    project_phase0.ID,
-
-// 			ProgressPercent:    0.00,
-// 			StatementDateStart: req.ContractStartDate,
-// 			StatementDateEnd:   req.ContractStartDate,
-// 			Status:             "Zero_Day",
-// 			Number:             0,
-// 			ApprovedBy:         userID.String(),
-// 		}
-// 		if err := ctrl.db.Create(&status_statement).Error; err != nil {
-// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "خطا در ایجاد پیشرفت پیمانکار"})
-// 		}
-// 	}
-// 	if project_phase1.ID != uuid.Nil {
-// 		//* 4.1 Create Contractor Project Table
-// 		var cont_project = models.ContractorProject{
-// 			BaseModel: models.BaseModel{
-// 				ID:        uuid.New(),
-// 				CreatedBy: userID,
-// 			},
-// 			ContractorID: contractor.ID,
-// 			ProjectID:    project_phase1.ID,
-// 		}
-// 		if err := ctrl.db.Create(&cont_project).Error; err != nil {
-// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "خطا در ایجاد جدول پیمانکار-پروژه"})
-// 		}
-// 		//* 4. Create First Status Statement
-// 		var status_statement = models.StatusStatement{
-// 			BaseModel: models.BaseModel{
-// 				ID:        uuid.New(),
-// 				CreatedBy: userID,
-// 			},
-// 			ContractorID: contractor.ID,
-// 			ProjectID:    project_phase1.ID,
-
-// 			ProgressPercent:    0.00,
-// 			StatementDateStart: req.ContractStartDate,
-// 			StatementDateEnd:   req.ContractStartDate,
-// 			Status:             "Zero_Day",
-// 			Number:             0,
-// 			ApprovedBy:         userID.String(),
-// 		}
-// 		if err := ctrl.db.Create(&status_statement).Error; err != nil {
-// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "خطا در ایجاد پیشرفت پیمانکار"})
-// 		}
-// 	}
-// 	if project_phase2.ID != uuid.Nil {
-// 		//* 4.1 Create Contractor Project Table
-// 		var cont_project = models.ContractorProject{
-// 			BaseModel: models.BaseModel{
-// 				ID:        uuid.New(),
-// 				CreatedBy: userID,
-// 			},
-// 			ContractorID: contractor.ID,
-// 			ProjectID:    project_phase2.ID,
-// 		}
-// 		if err := ctrl.db.Create(&cont_project).Error; err != nil {
-// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "خطا در ایجاد جدول پیمانکار-پروژه"})
-// 		}
-// 		//* 4. Create First Status Statement
-// 		var status_statement = models.StatusStatement{
-// 			BaseModel: models.BaseModel{
-// 				ID:        uuid.New(),
-// 				CreatedBy: userID,
-// 			},
-// 			ContractorID: contractor.ID,
-// 			ProjectID:    project_phase2.ID,
-
-// 			ProgressPercent:    0.00,
-// 			StatementDateStart: req.ContractStartDate,
-// 			StatementDateEnd:   req.ContractStartDate,
-// 			Status:             "Zero_Day",
-// 			Number:             0,
-// 			ApprovedBy:         userID.String(),
-// 		}
-// 		if err := ctrl.db.Create(&status_statement).Error; err != nil {
-// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "خطا در ایجاد پیشرفت پیمانکار"})
-// 		}
-// 	}
-// 	if project_phase3.ID != uuid.Nil {
-// 		//* 4.1 Create Contractor Project Table
-// 		var cont_project = models.ContractorProject{
-// 			BaseModel: models.BaseModel{
-// 				ID:        uuid.New(),
-// 				CreatedBy: userID,
-// 			},
-// 			ContractorID: contractor.ID,
-// 			ProjectID:    project_phase3.ID,
-// 		}
-// 		if err := ctrl.db.Create(&cont_project).Error; err != nil {
-// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "خطا در ایجاد جدول پیمانکار-پروژه"})
-// 		}
-// 		//* 4. Create First Status Statement
-// 		var status_statement = models.StatusStatement{
-// 			BaseModel: models.BaseModel{
-// 				ID:        uuid.New(),
-// 				CreatedBy: userID,
-// 			},
-// 			ContractorID: contractor.ID,
-// 			ProjectID:    project_phase3.ID,
-
-// 			ProgressPercent:    0.00,
-// 			StatementDateStart: req.ContractStartDate,
-// 			StatementDateEnd:   req.ContractStartDate,
-// 			Status:             "Zero_Day",
-// 			Number:             0,
-// 			ApprovedBy:         userID.String(),
-// 		}
-// 		if err := ctrl.db.Create(&status_statement).Error; err != nil {
-// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "خطا در ایجاد پیشرفت پیمانکار"})
-// 		}
-// 	}
-
-// 	//? Send Response
-// 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-// 		"status":  "success",
-// 		"message": "قرارداد با موفقیت ایجاد شد",
-// 		"data": fiber.Map{
-// 			"fullName": req.FullName,
-// 		},
-// 	})
-// }
-
-// ! @get /contractors/search-by-id
-// @Summary Search contracts by ID
-// @Tags Contracts
-// @Accept json
-// @Produce json
-// @Param contract_number query int true "Contract number to search"
-// @Success 200 {object} ContractResponse
-// @Router /contractors/search-by-id [get]
-// func (ctrl *ContractHandler) GetContractorByID(c *fiber.Ctx) error {
-// 	//? 1) Parse query parameters
-// 	contractNumber := c.Query("contract_number")
-// 	if contractNumber == "" {
-// 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// 			Status:  "failure",
-// 			Message: "شماره قرارداد وارد نشده است",
-// 		})
-// 	}
-
-// 	//? 3) Query results form database
-// 	var contract models.Contractor
-// 	err := ctrl.db.Where("contract_no = ?", contractNumber).First(&contract).Error
-// 	if err != nil {
-// 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// 			return c.Status(fiber.StatusNotFound).JSON(CtrlResponse{
-// 				Status:  "failure",
-// 				Message: "قرارداد یافت نشد",
-// 			})
-// 		}
-
-// 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// 			Status:  "failure",
-// 			Message: "خطای سرور در دریافت اطلاعات قرارداد",
-// 		})
-// 	}
-
-// 	remainingDuration := time.Until(contract.EndDate)
-// 	RemainingDays := int(remainingDuration.Hours() / 24)
-
-// 	var legal_entity string
-// 	if contract.LegalEntity {
-// 		legal_entity = "حقوقی"
-// 	} else {
-// 		legal_entity = "حقیقی"
-// 	}
-
-// 	//? 5) Return response
-// 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// 		Status:  "success",
-// 		Message: "قرارداد با موفقیت یافت شد",
-// 		Data: fiber.Map{
-// 			"id":               contract.ID,
-// 			"legal_entity":     legal_entity,
-// 			"full_name":        contract.FullName,
-// 			"preferential_id":  contract.PreferentialID,
-// 			"contract_no":      contract.ContractNo,
-// 			"national_id":      contract.NationalID,
-// 			"contract_date":    contract.StartDate,
-// 			"gross_budget":     contract.GrossBudget,
-// 			"remaining_days":   RemainingDays,
-// 			"performance_bond": contract.PerformanceBond,
-// 			"insurance_rate":   contract.InsuranceRate,
-// 			"added_value_tax":  contract.AddedValueTax,
-// 		},
-// 	})
-// }
 
 // Todo: ! @get /contractors/contracts/:[name, limit, page]
 
@@ -2270,5 +2061,3 @@ func (handler *ContractHandler) DeleteContract(c *fiber.Ctx) error {
 // 		"data":    res,
 // 	})
 // }
-
-// ! @post /contractors/print-status

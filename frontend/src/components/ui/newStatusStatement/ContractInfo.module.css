@@ -1,0 +1,50 @@
+.Container {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 0px;
+	border: 1px solid rgb(0, 0, 0);
+	border-radius: 3px;
+	margin: 9px 0px;
+}
+
+.Row1,
+.Row2,
+.Row3,
+.Row4 {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-bottom: 1px solid gray;
+}
+.Row1 {
+	border-bottom: 2px solid rgb(52, 52, 52);
+}
+
+.Row2 {
+	background-color: rgb(199, 230, 255);
+}
+
+.Row3 {
+	background-color: rgb(255, 255, 255);
+}
+
+.Row4 {
+	background-color: rgb(199, 230, 255);
+	border-bottom: 0px;
+}
+
+.Col1,
+.Col2 {
+	width: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0px 6px;
+}
+
+.Col2 {
+	border-right: 1px solid gray;
+}

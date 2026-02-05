@@ -62,6 +62,7 @@ type Contract struct {
 // ----------------------------
 type ContractWBS struct {
 	BaseModel
+	ContractID   uuid.UUID `json:"contract_id" gorm:"type:char(36);not null;index"`
 	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
 	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 
