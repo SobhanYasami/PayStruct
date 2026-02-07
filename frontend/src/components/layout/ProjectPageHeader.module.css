@@ -94,18 +94,3 @@
 		gap: 0.5rem;
 	}
 }
-
-/* Dark mode support (optional) */
-@media (prefers-color-scheme: dark) {
-	.header {
-		border-bottom-color: #334155;
-	}
-
-	.title {
-		color: #f1f5f9;
-	}
-
-	.subtitle {
-		color: #94a3b8;
-	}
-}

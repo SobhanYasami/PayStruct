@@ -4,7 +4,12 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import styles from "./page.module.css";
 import Dialog from "@/components/ui/Dialog";
 import PageHeader from "@/components/layout/ProjectPageHeader";
-import { useMutation } from "@tanstack/react-query";
+import {
+	QueryClient,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
 //
@@ -12,6 +17,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const Project_URL = `${API_URL}/management/projects/`;
 
 /* -------------------- Types -------------------- */
+type ApiRes = {
+	status: string;
+	message: string;
+	data: any[];
+};
+
 interface Contractor {
 	id: string;
 	name: string;
@@ -80,23 +91,18 @@ async function getAllProjects() {
 }
 /* ----------   Reusable Components --------------   */
 // Create Project Form Component
-function CreateProjectForm({
-	onCancel,
-	setUpdateUi,
-}: {
-	onCancel: () => void;
-	setUpdateUi: Dispatch<SetStateAction<string>>;
-}) {
+function CreateProjectForm({ onCancel }: { onCancel: () => void }) {
 	const [formData, setFormData] = useState({
 		name: "",
 		phase: "",
 	});
+	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
 		mutationFn: projectCreationReq,
 		onSuccess: (data) => {
 			toast.success(data.message);
-			setUpdateUi(data.message);
+			queryClient.invalidateQueries({ queryKey: ["Projects"] });
 		},
 		onError(error) {
 			console.log(error.message);
@@ -197,28 +203,24 @@ export default function Projects() {
 	const [showCreate, setShowCreate] = useState(false);
 	const [showEdit, setShowEdit] = useState(false);
 	const [showDelete, setShowDelete] = useState(false);
-	const [projectList, setProjectList] = useState<Project[]>();
 
 	const [search, setSearch] = useState("");
+	const {
+		isPending,
+		isError,
+		data: ProjectList,
+		error,
+	} = useQuery({
+		queryKey: ["Projects"],
+		queryFn: getAllProjects,
+	});
 
-	const [updateui, setUpdateUi] = useState("");
+	console.log("projects", ProjectList);
 
 	// todo: implement it
 	const handleDeleteConfirm = () => {
 		setShowDelete(false);
 	};
-
-	useEffect(() => {
-		const res = getAllProjects();
-		res.then((data) => {
-			setProjectList(data.data);
-		});
-		res.catch((err) => {
-			// setProjectList([]);
-			console.log(err);
-			toast.error(err);
-		});
-	}, [updateui]);
 
 	return (
 		<main
@@ -235,29 +237,26 @@ export default function Projects() {
 				/>
 
 				<div className={styles.projectListContainer}>
-					{/* {projectList &&
-							projectList.map((project) => (
-								<div
-									key={project.name}
-									className={styles.project}
-								>
-									{project.name}
-									<div className={styles.projectPhaseContainer}>
-										{project.phases.map((phase) => (
-											<span key={`${project.name}-${phase}`}>{phase}</span>
-										))}
-									</div>
+					{/* {ProjectList &&
+						ProjectList.data.map((project) => (
+							<div
+								key={project.name}
+								className={styles.project}
+							>
+								{project.name}
+								<div className={styles.projectPhaseContainer}>
+									{project.phases.map((phase) => (
+										<span key={`${project.name}-${phase}`}>{phase}</span>
+									))}
 								</div>
-							))} */}
+							</div>
+						))} */}
 				</div>
 			</div>
 
 			{/* Dialogs */}
 			{showCreate && (
-				<CreateProjectForm
-					onCancel={() => setShowCreate(false)}
-					setUpdateUi={setUpdateUi}
-				/>
+				<CreateProjectForm onCancel={() => setShowCreate(false)} />
 			)}
 
 			{showEdit && <EditProjectForm onCancel={() => setShowEdit(false)} />}

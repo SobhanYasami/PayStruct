@@ -1,0 +1,12 @@
+/* Add to your CSS file */
+.rmdp-wrapper {
+	font-family: "Vazirmatn", "Segoe UI", sans-serif !important;
+}
+
+.rmdp-day-picker {
+	direction: rtl !important;
+}
+
+.rmdp-header {
+	flex-direction: row-reverse !important;
+}

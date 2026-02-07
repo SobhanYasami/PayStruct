@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import styles from "./NewContract.module.css";
+import {
+	PersianDatePickerCustom,
+	PersianDate,
+} from "./persianDatePicker/PersianDatePicker";
 
 type Contractor = {
 	ID: string;
@@ -25,8 +29,8 @@ type NewContractForm = {
 	insurance_rate: string;
 	performance_bond: string;
 	added_value_tax: string;
-	start_date: string;
-	end_date: string;
+	start_date: PersianDate | null;
+	end_date: PersianDate | null;
 	scanned_file: File | null;
 };
 
@@ -85,6 +89,7 @@ export default function NewContract({
 		queryKey: ["projects"],
 		queryFn: fetchProjects,
 	});
+
 	const [form, setForm] = useState<NewContractForm>({
 		contractor_id: "",
 		project_id: "",
@@ -93,8 +98,8 @@ export default function NewContract({
 		insurance_rate: "",
 		performance_bond: "",
 		added_value_tax: "",
-		start_date: "",
-		end_date: "",
+		start_date: null,
+		end_date: null,
 		scanned_file: null,
 	});
 
@@ -126,7 +131,6 @@ export default function NewContract({
 		},
 		onError: (error: unknown) => {
 			const err = error as ApiError;
-
 			toast.error(`${err.status} | ${err.message}`);
 		},
 	});
@@ -144,25 +148,76 @@ export default function NewContract({
 		setForm((prev) => ({ ...prev, [name]: value }));
 	};
 
+	// Fix: Use keyof NewContractForm instead of keyof FormData
+	const handleDateChange =
+		(name: keyof NewContractForm) => (date: PersianDate | null) => {
+			setForm((prev) => ({ ...prev, [name]: date }));
+		};
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+
+		// Validate required fields
+		if (!form.contractor_id) {
+			toast.error("انتخاب پیمانکار الزامی است");
+			return;
+		}
+
+		if (!form.project_id) {
+			toast.error("انتخاب پروژه الزامی است");
+			return;
+		}
+
+		if (!form.contract_number) {
+			toast.error("شماره قرارداد الزامی است");
+			return;
+		}
+
+		if (!form.gross_budget) {
+			toast.error("مبلغ ناخالص کل الزامی است");
+			return;
+		}
+
+		if (!form.start_date) {
+			toast.error("تاریخ شروع الزامی است");
+			return;
+		}
+
+		if (!form.end_date) {
+			toast.error("تاریخ پایان الزامی است");
+			return;
+		}
 
 		if (!form.scanned_file) {
 			toast.error("فایل قرارداد الزامی است");
 			return;
 		}
 
+		// Prepare FormData for submission
 		const fd = new FormData();
-
 		fd.append("contractor_id", form.contractor_id);
 		fd.append("project_id", form.project_id);
 		fd.append("contract_number", form.contract_number);
 		fd.append("gross_budget", form.gross_budget);
-		fd.append("insurance_rate", form.insurance_rate);
-		fd.append("performance_bond", form.performance_bond);
-		fd.append("added_value_tax", form.added_value_tax);
-		fd.append("start_date", new Date(form.start_date).toISOString());
-		fd.append("end_date", new Date(form.end_date).toISOString());
+		fd.append("insurance_rate", form.insurance_rate || "");
+		fd.append("performance_bond", form.performance_bond || "");
+		fd.append("added_value_tax", form.added_value_tax || "");
+
+		// Append dates in Persian format (YYYY-MM-DD)
+		if (form.start_date) {
+			fd.append(
+				"start_date",
+				`${form.start_date.year}-${form.start_date.month.toString().padStart(2, "0")}-${form.start_date.day.toString().padStart(2, "0")}`,
+			);
+		}
+
+		if (form.end_date) {
+			fd.append(
+				"end_date",
+				`${form.end_date.year}-${form.end_date.month.toString().padStart(2, "0")}-${form.end_date.day.toString().padStart(2, "0")}`,
+			);
+		}
+
 		fd.append("scanned_file", form.scanned_file);
 
 		mutation.mutate(fd);
@@ -182,6 +237,7 @@ export default function NewContract({
 			<form
 				className={styles.FormContainer}
 				onSubmit={handleSubmit}
+				noValidate
 			>
 				<div className={styles.SelectGroup}>
 					{/* Contractor Select */}
@@ -190,13 +246,14 @@ export default function NewContract({
 						value={form.contractor_id}
 						onChange={handleChange}
 						required
-						disabled={contractorsLoading}
+						disabled={contractorsLoading || mutation.isPending}
+						className={contractorsLoading ? styles.loading : ""}
 					>
 						<option
 							key='placeholder-contractor'
 							value=''
 						>
-							انتخاب پیمانکار
+							{contractorsLoading ? "در حال بارگذاری..." : "انتخاب پیمانکار"}
 						</option>
 						{contractors?.map((c) => (
 							<option
@@ -214,13 +271,14 @@ export default function NewContract({
 						value={form.project_id}
 						onChange={handleChange}
 						required
-						disabled={projectsLoading}
+						disabled={projectsLoading || mutation.isPending}
+						className={projectsLoading ? styles.loading : ""}
 					>
 						<option
 							key='placeholder-project'
 							value=''
 						>
-							انتخاب پروژه
+							{projectsLoading ? "در حال بارگذاری..." : "انتخاب پروژه"}
 						</option>
 						{projects?.map((p) => (
 							<option
@@ -237,34 +295,42 @@ export default function NewContract({
 					<input
 						name='contract_number'
 						placeholder='شماره قرارداد'
+						value={form.contract_number}
 						onChange={handleChange}
 						required
+						disabled={mutation.isPending}
 					/>
 
 					<input
 						name='gross_budget'
 						placeholder='مبلغ ناخالص کل'
+						value={form.gross_budget}
 						onChange={handleChange}
 						required
+						disabled={mutation.isPending}
+						type='number'
+						min='0'
 					/>
 				</div>
 
 				<div className={styles.DateGroup}>
-					<div>
-						<label>تاریخ قرارداد</label>
-						<input
-							type='date'
+					<div className={styles.DateInputWrapper}>
+						<label className={styles.DateLabel}>تاریخ شروع</label>
+						<PersianDatePickerCustom
 							name='start_date'
-							onChange={handleChange}
+							value={form.start_date}
+							onChange={handleDateChange("start_date")}
+							placeholder='انتخاب تاریخ'
 							required
 						/>
 					</div>
-					<div>
-						<label>تاریخ پایان</label>
-						<input
-							type='date'
+					<div className={styles.DateInputWrapper}>
+						<label className={styles.DateLabel}>تاریخ پایان</label>
+						<PersianDatePickerCustom
 							name='end_date'
-							onChange={handleChange}
+							value={form.end_date}
+							onChange={handleDateChange("end_date")}
+							placeholder='انتخاب تاریخ '
 							required
 						/>
 					</div>
@@ -274,13 +340,25 @@ export default function NewContract({
 					<input
 						name='insurance_rate'
 						placeholder='نرخ بیمه (%)'
+						value={form.insurance_rate}
 						onChange={handleChange}
+						disabled={mutation.isPending}
+						type='number'
+						min='0'
+						max='100'
+						step='0.01'
 					/>
 
 					<input
 						name='performance_bond'
 						placeholder='حسن انجام کار (%)'
+						value={form.performance_bond}
 						onChange={handleChange}
+						disabled={mutation.isPending}
+						type='number'
+						min='0'
+						max='100'
+						step='0.01'
 					/>
 				</div>
 
@@ -288,16 +366,29 @@ export default function NewContract({
 					<input
 						name='added_value_tax'
 						placeholder='مالیات ارزش افزوده (%)'
+						value={form.added_value_tax}
 						onChange={handleChange}
+						disabled={mutation.isPending}
+						type='number'
+						min='0'
+						max='100'
+						step='0.01'
 					/>
 
-					<input
-						type='file'
-						name='scanned_file'
-						accept='.pdf,.jpg,.png'
-						onChange={handleChange}
-						required
-					/>
+					<div className={styles.FileInputWrapper}>
+						<input
+							type='file'
+							name='scanned_file'
+							accept='.pdf,.jpg,.jpeg,.png'
+							onChange={handleChange}
+							required
+							disabled={mutation.isPending}
+							className={styles.FileInput}
+						/>
+						{form.scanned_file && (
+							<span className={styles.FileName}>{form.scanned_file.name}</span>
+						)}
+					</div>
 				</div>
 
 				<button

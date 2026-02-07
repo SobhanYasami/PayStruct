@@ -89,7 +89,7 @@
 	height: 30px;
 	border-radius: 6px;
 	border: 1px solid;
-	padding: 2px 9px;
+	padding: 2px 9px 2px 2px;
 	color: rgb(46, 46, 46);
 	background-color: rgb(232, 232, 232);
 	font-size: 14px;
@@ -139,9 +139,6 @@
 	padding: 2px 9px;
 	color: rgb(46, 46, 46);
 	background-color: rgb(232, 232, 232);
-}
-.FileGroup > input::placeholder {
-	color: rgb(46, 46, 46);
 }
 
 .SubmitBtn {
