@@ -207,14 +207,14 @@ export default function NewContract({
 		if (form.start_date) {
 			fd.append(
 				"start_date",
-				`${form.start_date.year}-${form.start_date.month.toString().padStart(2, "0")}-${form.start_date.day.toString().padStart(2, "0")}`,
+				`${form.start_date.year}-${form.start_date.month.toString().padStart(2, "0")}-${form.start_date.day.toString().padStart(2, "0")}T00:00:00Z`,
 			);
 		}
 
 		if (form.end_date) {
 			fd.append(
 				"end_date",
-				`${form.end_date.year}-${form.end_date.month.toString().padStart(2, "0")}-${form.end_date.day.toString().padStart(2, "0")}`,
+				`${form.end_date.year}-${form.end_date.month.toString().padStart(2, "0")}-${form.end_date.day.toString().padStart(2, "0")}T00:00:00Z`,
 			);
 		}
 
