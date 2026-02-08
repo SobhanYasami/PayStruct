@@ -4,6 +4,7 @@ import (
 	// "errors"
 	// "mime/multipart"
 
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -609,22 +610,17 @@ func (handler *ContractHandler) CreateWBS(c *fiber.Ctx) error {
 
 // ! @Router /management/contract/wbs [post]
 func (handler *ContractHandler) GetContractWBS(c *fiber.Ctx) error {
-	//? 2) Parse Body request
-	type RequestBody struct {
-		ContractNumber string `json:"contract_number" gorm:"default:false;not null"`
-	}
-	//? 2-2) Parse Body request
-	var req RequestBody
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-	}
-	//? 2-3) Validate using struct tags
-	if err := validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	// Get contract number from URL parameter instead of body
+	contractNumber := c.Params("cnum")
+
+	fmt.Println("contract number", contractNumber)
+
+	if contractNumber == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Contract number is required"))
 	}
 
 	//? 3) get contract record by its number
-	contract, err := handler.contractService.GetContractByNumber(c.Context(), req.ContractNumber)
+	contract, err := handler.contractService.GetContractByNumber(c.Context(), contractNumber)
 
 	// service call to get correspoding records
 	contract_wbs, err := handler.contractService.GetContractWBS(c.Context(), contract.ID)
@@ -632,6 +628,8 @@ func (handler *ContractHandler) GetContractWBS(c *fiber.Ctx) error {
 		log.Printf("CreateContract DB error: %v", err)
 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
 	}
+
+	fmt.Println("contract wbs", contract_wbs)
 
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contract_wbs, "ContractWbs retrieved successfully"))
 }

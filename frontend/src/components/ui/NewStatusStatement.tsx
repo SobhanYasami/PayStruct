@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import styles from "./NewStatusStatement.module.css";
@@ -9,16 +9,8 @@ import ContractInformation from "./newStatusStatement/ContractInfo";
 import WorksDone from "./newStatusStatement/WorksDone";
 import ExtraWorks from "./newStatusStatement/ExtraWorks";
 
-type WBSItem = {
-	description: string;
-	quantity: number;
-	unit: string;
-	unit_price: number;
-};
-
-type NewWBSPayload = {
+type ContractWBSPayload = {
 	contract_number: string;
-	items: WBSItem[];
 };
 
 type ApiError = {
@@ -46,22 +38,22 @@ export default function NewStatusStatement({
 	setIsPopOpen: (value: boolean) => void;
 	apiUrl: string;
 }) {
-	const [form, setForm] = useState<NewWBSPayload>({
+	const [form, setForm] = useState<ContractWBSPayload>({
 		contract_number: "",
-		items: [{ description: "", quantity: 0, unit: "", unit_price: 0 }],
 	});
 
+	const [contractData, setContractData] = useState(null);
+	const [wbsData, setWbsData] = useState(null);
+
 	const mutation = useMutation({
-		mutationFn: async (payload: NewWBSPayload) => {
+		mutationFn: async (payload: ContractWBSPayload) => {
 			const token = localStorage.getItem("usr-token");
 
-			const res = await fetch(apiUrl, {
-				method: "POST",
+			const res = await fetch(`${WBS_URL}${payload.contract_number}`, {
+				method: "GET",
 				headers: {
-					"Content-Type": "application/json",
 					Authorization: `Bearer ${token}`,
 				},
-				body: JSON.stringify(payload),
 			});
 
 			const data = await res.json();
@@ -75,8 +67,10 @@ export default function NewStatusStatement({
 
 			return data;
 		},
-		onSuccess: () => {
+		onSuccess: (data) => {
 			toast.success("قرارداد یافت شد");
+			console.log("contract wbs:", data);
+			setWbsData(data.data);
 		},
 		onError: (error: unknown) => {
 			const err = error as ApiError;
@@ -84,15 +78,51 @@ export default function NewStatusStatement({
 		},
 	});
 
+	// Optional: Add a query to fetch contract information
+	// Using queryOptions for v5 compatibility
+	const contractQuery = useQuery({
+		queryKey: ["contract", form.contract_number],
+		queryFn: async () => {
+			const token = localStorage.getItem("usr-token");
+			const res = await fetch(
+				`${Contract_URL}?contract_number=${form.contract_number}`,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				},
+			);
+
+			if (!res.ok) {
+				throw new Error("Failed to fetch contract");
+			}
+
+			return res.json();
+		},
+		enabled: false, // We'll trigger this manually
+	});
+
+	// Handle query success/error with useEffect or useQuery callbacks
+	useEffect(() => {
+		if (contractQuery.isSuccess && contractQuery.data) {
+			setContractData(contractQuery.data.data);
+		}
+	}, [contractQuery.isSuccess, contractQuery.data]);
+
+	useEffect(() => {
+		if (contractQuery.isError) {
+			toast.error("خطا در دریافت اطلاعات قرارداد");
+		}
+	}, [contractQuery.isError]);
+
 	const handleChange = (
 		e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
 	) => {
 		const { name, value } = e.target as HTMLInputElement;
-
 		setForm((prev) => ({ ...prev, [name]: value }));
 	};
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
 		if (!form.contract_number) {
@@ -100,7 +130,18 @@ export default function NewStatusStatement({
 			return;
 		}
 
-		mutation.mutate(form);
+		// First fetch contract data (optional, if needed)
+		try {
+			await contractQuery.refetch();
+
+			// Then fetch WBS data only if contract fetch was successful
+			if (contractQuery.isSuccess) {
+				mutation.mutate(form);
+			}
+		} catch (error) {
+			console.error("Failed to fetch contract:", error);
+			toast.error("خطا در دریافت اطلاعات قرارداد");
+		}
 	};
 
 	return (
@@ -127,19 +168,23 @@ export default function NewStatusStatement({
 						name='contract_number'
 						placeholder='شماره قرارداد'
 						onChange={handleChange}
+						value={form.contract_number}
 						required
 						className={styles.searchInput}
 					/>
 					<button
 						type='submit'
 						className={styles.SearchBtn}
-						disabled={mutation.isPending}
+						disabled={mutation.isPending || contractQuery.isFetching}
 					>
-						{mutation.isPending ? "در حال جست و جو..." : "تایید"}
+						{mutation.isPending || contractQuery.isFetching
+							? "در حال جست و جو..."
+							: "تایید"}
 					</button>
 				</div>
 			</form>
 
+			{/* Pass data to child components */}
 			<ContractInformation />
 			<WorksDone />
 			<ExtraWorks />

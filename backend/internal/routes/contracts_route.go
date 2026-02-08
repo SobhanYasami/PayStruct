@@ -38,12 +38,12 @@ func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler) {
 	contracts.Delete("/:id", h.DeleteContract)
 
 	// WBS
-	wbs := contracts.Group("wbs")
-	wbs.Post("/", h.CreateWBS) // Create WBS Entry
-	wbs.Post("/:contract-number", h.GetContractWBS)
+	wbs := management.Group("/wbs")
+	wbs.Post("/", h.CreateWBS)
+	wbs.Get("/:enum", h.GetContractWBS)
 
 	// StatusStatement
-	statusStatement := contracts.Group("status-statement")
+	statusStatement := management.Group("status-statement")
 	statusStatement.Post("/", h.CreateStatusStatement)
 
 	//! Trading System Routes
