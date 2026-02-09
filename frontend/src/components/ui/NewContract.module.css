@@ -1,162 +1,631 @@
+/* NewContract.module.css */
+
+/* Container */
 .Container {
-	background-color: rgb(242, 242, 242);
-	border-radius: 9px;
+	background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+	border-radius: 20px;
 	position: relative;
-	padding: 12px;
-	min-width: 450px;
-	min-height: 250px;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
+	padding: 0;
+	width: 100%;
+	max-width: 800px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow:
+		0 25px 50px rgba(0, 0, 0, 0.15),
+		0 0 0 1px rgba(59, 130, 246, 0.05);
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+		Arial, sans-serif;
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e1 transparent;
 }
 
+.Container::-webkit-scrollbar {
+	width: 8px;
+}
+
+.Container::-webkit-scrollbar-track {
+	background: #f1f5f9;
+	border-radius: 0 20px 20px 0;
+}
+
+.Container::-webkit-scrollbar-thumb {
+	background: #cbd5e1;
+	border-radius: 4px;
+}
+
+.Container::-webkit-scrollbar-thumb:hover {
+	background: #94a3b8;
+}
+
+/* Close Button */
 .CloseBtn {
 	position: absolute;
-	top: 9px;
-	left: 9px;
-	padding: 2px 6px;
-	font-size: 19px;
-	font-weight: 600;
-	color: red;
-	background-color: aliceblue;
-	border-radius: 6px;
-	border: 1px solid red;
+	top: 20px;
+	left: 20px;
+	width: 36px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #f1f5f9;
+	color: #64748b;
+	border: none;
+	border-radius: 10px;
+	font-size: 22px;
+	font-weight: 400;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	z-index: 10;
 }
+
 .CloseBtn:hover {
-	background-color: red;
+	background: #ef4444;
 	color: white;
+	transform: rotate(90deg);
+}
+
+/* Header */
+.Header {
+	padding: 40px 40px 24px;
+	background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+	color: white;
+	text-align: center;
+	position: relative;
+	overflow: hidden;
+	border-radius: 20px 20px 0 0;
+}
+
+.Header::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.HeaderIcon {
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 20px;
+	background: rgba(255, 255, 255, 0.15);
+	backdrop-filter: blur(10px);
+	border-radius: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .Title {
-	margin-bottom: 30px;
-	font-size: 20px;
+	font-size: 28px;
+	font-weight: 800;
+	margin: 0 0 12px 0;
+	position: relative;
+	letter-spacing: -0.5px;
 }
 
+.Subtitle {
+	font-size: 15px;
+	opacity: 0.9;
+	margin: 0;
+	font-weight: 400;
+}
+
+/* Form Container */
 .FormContainer {
+	padding: 40px;
+}
+
+/* Section */
+.Section {
+	margin-bottom: 40px;
+	padding: 24px;
+	background: white;
+	border-radius: 16px;
+	border: 1px solid #e2e8f0;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+	transition: all 0.3s ease;
+}
+
+.Section:hover {
+	border-color: #cbd5e1;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.SectionHeader {
 	display: flex;
-	flex-direction: column;
 	align-items: center;
-	justify-content: center;
 	gap: 12px;
-	width: 100%;
+	font-size: 16px;
+	font-weight: 700;
+	color: #1e293b;
+	margin-bottom: 24px;
+	padding-bottom: 16px;
+	border-bottom: 2px solid #f1f5f9;
 }
 
-.SelectGroup {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: center;
-	gap: 12px;
-	width: 100%;
+/* Grid */
+.Grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 24px;
 }
 
-.SelectGroup > select {
-	background-color: white;
-	color: black;
-	width: 49%;
-	padding: 6px 5px;
-	border-radius: 6px;
+@media (max-width: 768px) {
+	.Grid {
+		grid-template-columns: 1fr;
+	}
 }
 
-.NumBudgetGroup {
-	width: 100%;
-	display: flex;
-	justify-content: space-between;
+/* Input Group */
+.InputGroup {
+	position: relative;
 }
 
-.NumBudgetGroup > input {
-	width: 49%;
-	height: 30px;
-	border-radius: 6px;
-	border: 1px solid;
-	padding: 2px 9px;
-	color: rgb(46, 46, 46);
-	background-color: rgb(232, 232, 232);
-}
-.NumBudgetGroup > input::placeholder {
-	color: rgb(46, 46, 46);
-}
-
-.DateGroup {
-	width: 100%;
-	display: flex;
-	justify-content: space-between;
-}
-
-.DateGroup > div {
-	width: 49%;
-	height: 30px;
-	border-radius: 6px;
-	border: 1px solid;
-	padding: 2px 9px 2px 2px;
-	color: rgb(46, 46, 46);
-	background-color: rgb(232, 232, 232);
+.InputLabel {
+	display: block;
 	font-size: 14px;
+	font-weight: 600;
+	color: #475569;
+	margin-bottom: 12px;
+}
+
+.Required {
+	color: #ef4444;
+	font-size: 16px;
+	margin-right: 4px;
+}
+
+/* Select Styles */
+.SelectWrapper {
+	position: relative;
+}
+
+.Select {
+	width: 100%;
+	padding: 14px 16px 14px 44px;
+	font-size: 15px;
+	color: #1e293b;
+	background: white;
+	border: 2px solid #e2e8f0;
+	border-radius: 12px;
+	transition: all 0.3s ease;
+	appearance: none;
+	cursor: pointer;
+}
+
+.Select:hover {
+	border-color: #cbd5e1;
+}
+
+.Select:focus {
+	outline: none;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.Select:disabled {
+	background: #f8fafc;
+	color: #94a3b8;
+	cursor: not-allowed;
+}
+
+.Select.Loading {
+	background-image: linear-gradient(
+		90deg,
+		#f1f5f9 25%,
+		#e2e8f0 50%,
+		#f1f5f9 75%
+	);
+	background-size: 200% 100%;
+	animation: loading 1.5s infinite;
+}
+
+.SelectIcon {
+	position: absolute;
+	right: 16px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #94a3b8;
+	pointer-events: none;
+}
+
+/* Input Styles */
+.InputWrapper {
+	position: relative;
+}
+
+.Input {
+	width: 100%;
+	padding: 14px 16px 14px 44px;
+	font-size: 15px;
+	color: #1e293b;
+	background: white;
+	border: 2px solid #e2e8f0;
+	border-radius: 12px;
+	transition: all 0.3s ease;
+	box-sizing: border-box;
+}
+
+.Input:focus {
+	outline: none;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.Input:disabled {
+	background: #f8fafc;
+	color: #94a3b8;
+	cursor: not-allowed;
+}
+
+.Input::placeholder {
+	color: #94a3b8;
+}
+
+.InputIcon {
+	position: absolute;
+	right: 16px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #94a3b8;
+	pointer-events: none;
+}
+
+.InputHint {
+	font-size: 12px;
+	color: #64748b;
+	margin-top: 8px;
+	font-weight: 500;
+	background: #f1f5f9;
+	padding: 6px 12px;
+	border-radius: 6px;
+	display: inline-block;
+}
+
+/* Date Input */
+.DateInputWrapper {
+	position: relative;
+}
+
+.DateIcon {
+	position: absolute;
+	right: 16px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #94a3b8;
+	pointer-events: none;
+	z-index: 1;
+}
+
+/* File Upload */
+.FileUploadWrapper {
+	width: 100%;
+}
+
+.FileUploadLabel {
+	display: block;
+	cursor: pointer;
+	margin-bottom: 12px;
+}
+
+.FileInput {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.FileUploadContent {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-}
-.DateGroup > div > input {
-	background-color: white;
-	color: black;
-	border: none;
-}
-.DateGroup > input::placeholder {
-	color: rgb(46, 46, 46);
+	justify-content: center;
+	gap: 12px;
+	padding: 16px;
+	background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+	border: 2px dashed #bae6fd;
+	border-radius: 12px;
+	color: #0ea5e9;
+	font-weight: 600;
+	transition: all 0.3s ease;
 }
 
-.InsuranceGroup {
-	width: 100%;
+.FileUploadContent:hover {
+	background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+	border-color: #0ea5e9;
+}
+
+.FileInfo {
 	display: flex;
-	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 16px;
+	background: #f0fdf4;
+	border: 1px solid #bbf7d0;
+	border-radius: 10px;
+	color: #059669;
 }
 
-.InsuranceGroup > input {
-	width: 49%;
-	height: 30px;
-	border-radius: 6px;
-	border: 1px solid;
-	padding: 2px 9px;
-	color: rgb(46, 46, 46);
-	background-color: rgb(232, 232, 232);
-}
-.InsuranceGroup > input::placeholder {
-	color: rgb(46, 46, 46);
+.FileName {
+	flex: 1;
+	font-size: 14px;
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.FileGroup {
-	width: 100%;
+.RemoveFile {
+	width: 28px;
+	height: 28px;
 	display: flex;
-	justify-content: space-between;
+	align-items: center;
+	justify-content: center;
+	background: #fef2f2;
+	border: 1px solid #fecaca;
+	border-radius: 6px;
+	color: #dc2626;
+	cursor: pointer;
+	transition: all 0.2s ease;
 }
 
-.FileGroup > input {
-	width: 49%;
-	height: 30px;
-	border-radius: 6px;
-	border: 1px solid;
-	padding: 2px 9px;
-	color: rgb(46, 46, 46);
-	background-color: rgb(232, 232, 232);
+.RemoveFile:hover {
+	background: #dc2626;
+	color: white;
+}
+
+/* Error Alert */
+.ErrorAlert {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 16px 20px;
+	background: #fef2f2;
+	border: 1px solid #fecaca;
+	border-radius: 12px;
+	color: #dc2626;
+	font-size: 14px;
+	font-weight: 600;
+	margin: 32px 0;
+}
+
+/* Form Actions */
+.FormActions {
+	display: flex;
+	gap: 16px;
+	margin-top: 40px;
+}
+
+.CancelButton {
+	flex: 1;
+	padding: 16px 24px;
+	background: #f8fafc;
+	color: #64748b;
+	border: 2px solid #e2e8f0;
+	border-radius: 12px;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.CancelButton:hover:not(:disabled) {
+	background: #f1f5f9;
+	border-color: #cbd5e1;
+	transform: translateY(-2px);
+}
+
+.CancelButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
 }
 
 .SubmitBtn {
-	width: 100%;
-	height: 30px;
-	border-radius: 9px;
-	padding: 3px;
-	padding-bottom: 5px;
-	background-color: rgb(2, 123, 209);
+	flex: 2;
+	padding: 16px 24px;
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: white;
+	border: none;
+	border-radius: 12px;
+	font-size: 16px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+}
+
+.SubmitBtn:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 24px rgba(16, 185, 129, 0.4);
+}
+
+.SubmitBtn:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.Loader {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes loading {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
+}
+
+/* Footer */
+.Footer {
+	padding: 20px 40px;
+	background: #f8fafc;
+	border-top: 1px solid #e2e8f0;
+	border-radius: 0 0 20px 20px;
+}
+
+.FooterNote {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	font-size: 13px;
+	color: #64748b;
+	margin: 0;
+	text-align: center;
+}
+
+/* Success State */
+.SuccessContainer {
+	padding: 60px 40px;
+	text-align: center;
+}
+
+.SuccessIcon {
+	width: 96px;
+	height: 96px;
+	margin: 0 auto 32px;
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	animation: successScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes successScale {
+	0% {
+		transform: scale(0);
+		opacity: 0;
+	}
+	70% {
+		transform: scale(1.1);
+		opacity: 1;
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+.SuccessTitle {
+	font-size: 28px;
+	font-weight: 800;
+	color: #059669;
+	margin: 0 0 16px 0;
+}
+
+.SuccessMessage {
+	font-size: 16px;
+	color: #475569;
+	margin: 0 0 40px 0;
+	line-height: 1.6;
+	max-width: 400px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.SuccessDetails {
+	background: #f0fdf4;
+	border: 1px solid #bbf7d0;
+	border-radius: 16px;
+	padding: 32px;
+	margin-bottom: 40px;
+	max-width: 500px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.SuccessDetailItem {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 20px;
+	font-size: 15px;
+	color: #334155;
+}
+
+.SuccessDetailItem:last-child {
+	margin-bottom: 0;
+}
+
+.SuccessDetailItem span {
+	color: #64748b;
+	min-width: 120px;
+	text-align: right;
+}
+
+.SuccessDetailItem strong {
+	color: #059669;
+	font-weight: 700;
+	flex: 1;
+	text-align: right;
+}
+
+.SuccessActions {
+	display: flex;
+	gap: 16px;
+	max-width: 400px;
+	margin: 0 auto;
+}
+
+.NewContractButton {
+	flex: 2;
+	padding: 16px 24px;
+	background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+	color: white;
+	border: none;
+	border-radius: 12px;
+	font-size: 15px;
 	font-weight: 600;
-	border: 1px solid;
+	cursor: pointer;
+	transition: all 0.3s ease;
 }
 
-.SubmitBtn:hover {
-	background-color: rgb(2, 123, 239);
+.NewContractButton:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
 }
 
-.Error {
-	color: red;
-	font-size: small;
+.CloseButton {
+	flex: 1;
+	padding: 16px 24px;
+	background: #f8fafc;
+	color: #64748b;
+	border: 2px solid #e2e8f0;
+	border-radius: 12px;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.CloseButton:hover {
+	background: #f1f5f9;
+	border-color: #cbd5e1;
 }

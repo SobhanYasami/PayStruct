@@ -1,208 +1,801 @@
+/* NewWBS.module.css */
+
+/* Container */
 .Container {
-	background-color: rgb(242, 242, 242);
-	border-radius: 9px;
+	direction: rtl;
+	background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+	border-radius: 20px;
 	position: relative;
-	padding: 12px;
-	min-width: 450px;
-	min-height: 250px;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
+	padding: 0;
+	width: 100%;
+	max-width: 1200px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow:
+		0 25px 50px rgba(0, 0, 0, 0.15),
+		0 0 0 1px rgba(59, 130, 246, 0.05);
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+		Arial, sans-serif;
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e1 transparent;
 }
 
+.Container::-webkit-scrollbar {
+	width: 8px;
+}
+
+.Container::-webkit-scrollbar-track {
+	background: #f1f5f9;
+	border-radius: 0 20px 20px 0;
+}
+
+.Container::-webkit-scrollbar-thumb {
+	background: #cbd5e1;
+	border-radius: 4px;
+}
+
+.Container::-webkit-scrollbar-thumb:hover {
+	background: #94a3b8;
+}
+
+/* Close Button */
 .CloseBtn {
 	position: absolute;
-	top: 9px;
-	left: 9px;
-	padding: 2px 6px;
-	font-size: 19px;
-	font-weight: 600;
-	color: red;
-	background-color: aliceblue;
-	border-radius: 6px;
-	border: 1px solid red;
+	top: 20px;
+	left: 20px;
+	width: 36px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #f1f5f9;
+	color: #64748b;
+	border: none;
+	border-radius: 10px;
+	font-size: 22px;
+	font-weight: 400;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	z-index: 10;
 }
+
 .CloseBtn:hover {
-	background-color: red;
+	background: #ef4444;
 	color: white;
+	transform: rotate(90deg);
+}
+
+/* Header */
+.Header {
+	padding: 40px 40px 24px;
+	background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+	color: white;
+	text-align: center;
+	position: relative;
+	overflow: hidden;
+	border-radius: 20px 20px 0 0;
+}
+
+.Header::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.HeaderIcon {
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 20px;
+	background: rgba(255, 255, 255, 0.15);
+	backdrop-filter: blur(10px);
+	border-radius: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .Title {
-	margin-bottom: 30px;
-	font-size: 20px;
+	font-size: 28px;
+	font-weight: 800;
+	margin: 0 0 12px 0;
+	position: relative;
+	letter-spacing: -0.5px;
 }
 
+.Subtitle {
+	font-size: 15px;
+	opacity: 0.9;
+	margin: 0;
+	font-weight: 400;
+}
+
+/* Form Container */
 .FormContainer {
+	padding: 40px;
+}
+
+/* Contract Info Section */
+.ContractInfoSection {
+	margin-bottom: 32px;
+	padding: 24px;
+	background: white;
+	border-radius: 16px;
+	border: 1px solid #e2e8f0;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.ContractInfoHeader {
 	display: flex;
-	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	font-size: 16px;
+	font-weight: 700;
+	color: #1e293b;
+	margin-bottom: 24px;
+	padding-bottom: 16px;
+	border-bottom: 2px solid #f1f5f9;
+}
+
+.ContractInputWrapper {
+	max-width: 400px;
+}
+
+.ContractInputGroup {
+	position: relative;
+}
+
+.ContractInputLabel {
+	display: block;
+	font-size: 14px;
+	font-weight: 600;
+	color: #475569;
+	margin-bottom: 12px;
+}
+
+.Required {
+	color: #ef4444;
+	font-size: 16px;
+	margin-right: 4px;
+}
+
+.ContractInputContainer {
+	position: relative;
+}
+
+.ContractNumberInput {
+	width: 100%;
+	padding: 14px 16px 14px 44px;
+	font-size: 15px;
+	color: #1e293b;
+	background: white;
+	border: 2px solid #e2e8f0;
+	border-radius: 12px;
+	transition: all 0.3s ease;
+}
+
+.ContractNumberInput:focus {
+	outline: none;
+	border-color: #8b5cf6;
+	box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+}
+
+.ContractNumberInput:disabled {
+	background: #f8fafc;
+	color: #94a3b8;
+	cursor: not-allowed;
+}
+
+.ContractInputIcon {
+	position: absolute;
+	right: 16px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #94a3b8;
+	pointer-events: none;
+}
+
+.ContractInputHint {
+	font-size: 12px;
+	color: #64748b;
+	margin-top: 8px;
+	font-style: italic;
+}
+
+/* Table Section */
+.TableSection {
+	margin-bottom: 32px;
+	border-radius: 16px;
+	overflow: hidden;
+	border: 1px solid #e2e8f0;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* Table Header */
+.TableHeader {
+	display: grid;
+	grid-template-columns: 5% 35% 15% 15% 20% 10%;
+	background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+	border-bottom: 2px solid #cbd5e1;
+}
+
+.TableHeaderCell {
+	padding: 16px 12px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #334155;
+	text-align: center;
+	border-right: 1px solid #e2e8f0;
+	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 100%;
+	gap: 8px;
 }
 
-.ContractInfoContainer {
-	width: 100%;
+.TableHeaderCell:last-child {
+	border-right: none;
+}
+
+/* Table Body */
+.TableBody {
+	max-height: 400px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e1 transparent;
+}
+
+.TableBody::-webkit-scrollbar {
+	width: 6px;
+}
+
+.TableBody::-webkit-scrollbar-track {
+	background: #f1f1f1;
+}
+
+.TableBody::-webkit-scrollbar-thumb {
+	background: #cbd5e1;
+	border-radius: 3px;
+}
+
+.TableBody::-webkit-scrollbar-thumb:hover {
+	background: #94a3b8;
+}
+
+/* Table Row */
+.TableRow {
+	display: grid;
+	grid-template-columns: 5% 35% 15% 15% 20% 10%;
+	transition: all 0.2s ease;
+	border-bottom: 1px solid #f1f5f9;
+}
+
+.TableRow:hover {
+	background-color: #f8fafc;
+}
+
+.EvenRow {
+	background-color: #ffffff;
+}
+
+.OddRow {
+	background-color: #f8fafc;
+}
+
+.TableCell {
+	padding: 12px;
+	border-right: 1px solid #e2e8f0;
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	padding: 4px 0px;
+	justify-content: center;
 }
-.ContractInfoContainer > p > span {
+
+.TableCell:last-child {
+	border-right: none;
+}
+
+.RowNumber {
+	font-weight: 600;
+	color: #475569;
 	font-size: 14px;
-	color: gray;
-	padding: 0px 6px;
 }
 
-.TableHeader {
+/* Input Styles */
+.DescriptionInput,
+.QuantityInput,
+.UnitInput,
+.PriceInput {
 	width: 100%;
-	display: flex;
-	align-items: center;
-	border-bottom: 3px solid gray;
-	background-color: lightsteelblue;
-}
-
-.col1 {
-	min-width: 50px;
-	padding: 2px 6px;
-	border-left: 1px solid gray;
-	border-right: 1px solid gray;
+	padding: 10px 12px;
+	font-size: 14px;
+	color: #1e293b;
+	background: white;
+	border: 2px solid #e2e8f0;
+	border-radius: 8px;
+	transition: all 0.3s ease;
 	text-align: center;
 }
-.col2 {
-	min-width: 390px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
-}
-.col3 {
-	min-width: 120px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
-}
-.col4 {
-	min-width: 80px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
-}
-.col5 {
-	min-width: 200px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
+
+.DescriptionInput {
+	text-align: right;
 }
 
-.RowsContainer {
+.DescriptionInput:focus,
+.QuantityInput:focus,
+.UnitInput:focus,
+.PriceInput:focus {
+	outline: none;
+	border-color: #8b5cf6;
+	box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.DescriptionInput:disabled,
+.QuantityInput:disabled,
+.UnitInput:disabled,
+.PriceInput:disabled {
+	background: #f8fafc;
+	color: #94a3b8;
+	cursor: not-allowed;
+}
+
+.PriceInputWrapper {
 	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.ItemTotal {
+	font-size: 11px;
+	color: #059669;
+	background: #f0fdf4;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-weight: 600;
+	text-align: center;
+}
+
+/* Row Actions */
+.RowActions {
+	display: flex;
+	gap: 8px;
+	justify-content: center;
+}
+
+.DuplicateButton,
+.DeleteButton {
+	width: 32px;
+	height: 32px;
 	display: flex;
 	align-items: center;
-	border-bottom: 1px solid gray;
-	background-color: rgb(255, 255, 255);
+	justify-content: center;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
 }
 
-.descriptionInput {
-	min-width: 390px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	outline: none;
-	border: 1px solid rgb(124, 124, 124);
-}
-.descriptionInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
+.DuplicateButton {
+	background: #dbeafe;
+	color: #1d4ed8;
 }
 
-.quantityInput {
-	width: 120px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	outline: none;
-	border: 1px solid rgb(124, 124, 124);
-}
-.quantityInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
-}
-.unitInput {
-	width: 80px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	outline: none;
-	border: 1px solid rgb(124, 124, 124);
-}
-.unitInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
+.DuplicateButton:hover:not(:disabled) {
+	background: #bfdbfe;
+	transform: translateY(-2px);
 }
 
-.unitPriceInput {
-	min-width: 200px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	border: 1px solid rgb(124, 124, 124);
-	outline: none;
-}
-.unitPriceInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
+.DeleteButton {
+	background: #fee2e2;
+	color: #dc2626;
 }
 
-.AddRowContainer {
-	width: 100%;
+.DeleteButton:hover:not(:disabled) {
+	background: #fecaca;
+	transform: translateY(-2px);
+}
+
+.DuplicateButton:disabled,
+.DeleteButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	transform: none;
+}
+
+/* Totals Card */
+.TotalsCard {
+	margin-bottom: 32px;
+	padding: 24px;
+	background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+	border-radius: 16px;
+	border: 1px solid #bae6fd;
+}
+
+.TotalsGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 16px;
+}
+
+.TotalItem {
 	display: flex;
-	margin: 6px 0px;
-	padding: 0px 9px;
-	gap: 6px;
-}
-.AddRowBtn {
-	width: 30px;
-	height: 30px;
-	border-radius: 9px;
-	padding: 3px;
-	padding-bottom: 5px;
-	background-color: rgb(2, 209, 43);
-	font-size: 20px;
-	font-weight: 600;
-	border: 1px solid;
-}
-.AddRowBtn:hover {
-	background-color: rgb(2, 289, 60);
+	align-items: center;
+	gap: 16px;
+	padding: 16px;
+	background: white;
+	border-radius: 12px;
+	border: 1px solid #e2e8f0;
 }
 
-.RemoveRowBtn {
-	width: 30px;
-	height: 30px;
-	border-radius: 9px;
-	padding: 3px;
-	padding-bottom: 5px;
-	background-color: rgb(209, 2, 2);
-	font-size: 20px;
-	font-weight: 600;
-	border: 1px solid;
+.TotalIcon {
+	width: 40px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+	border-radius: 10px;
+	color: white;
 }
-.RemoveRowBtn:hover {
-	background-color: rgb(239, 2, 2);
+
+.TotalContent {
+	flex: 1;
+}
+
+.TotalLabel {
+	display: block;
+	font-size: 12px;
+	color: #64748b;
+	font-weight: 500;
+	margin-bottom: 4px;
+}
+
+.TotalValue {
+	display: block;
+	font-size: 18px;
+	font-weight: 700;
+	color: #1e293b;
+}
+
+/* Row Management */
+.RowManagement {
+	margin-bottom: 32px;
+}
+
+.RowActionsGroup {
+	display: flex;
+	gap: 12px;
+}
+
+.AddRowButton,
+.ClearAllButton {
+	padding: 12px 20px;
+	border: none;
+	border-radius: 10px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.AddRowButton {
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: white;
+}
+
+.AddRowButton:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.ClearAllButton {
+	background: #f8fafc;
+	color: #64748b;
+	border: 2px solid #e2e8f0;
+}
+
+.ClearAllButton:hover:not(:disabled) {
+	background: #f1f5f9;
+	border-color: #cbd5e1;
+	transform: translateY(-2px);
+}
+
+.AddRowButton:disabled,
+.ClearAllButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
+/* Error Alert */
+.ErrorAlert {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 16px 20px;
+	background: #fef2f2;
+	border: 1px solid #fecaca;
+	border-radius: 12px;
+	color: #dc2626;
+	font-size: 14px;
+	font-weight: 600;
+	margin: 24px 0;
+}
+
+/* Form Actions */
+.FormActions {
+	display: flex;
+	gap: 16px;
+}
+
+.CancelButton,
+.SubmitBtn {
+	flex: 1;
+	padding: 16px 24px;
+	border-radius: 12px;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+}
+
+.CancelButton {
+	background: #f8fafc;
+	color: #64748b;
+	border: 2px solid #e2e8f0;
+}
+
+.CancelButton:hover:not(:disabled) {
+	background: #f1f5f9;
+	border-color: #cbd5e1;
+	transform: translateY(-2px);
 }
 
 .SubmitBtn {
-	width: 100%;
-	height: 30px;
-	border-radius: 6px;
-	margin: 9px 0px;
-	padding: 3px;
-	padding-bottom: 5px;
-	background-color: rgb(2, 123, 209);
+	background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+	color: white;
+	border: none;
+	box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+}
+
+.SubmitBtn:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 24px rgba(139, 92, 246, 0.4);
+}
+
+.CancelButton:disabled,
+.SubmitBtn:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.Loader {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Footer */
+.Footer {
+	padding: 20px 40px;
+	background: #f8fafc;
+	border-top: 1px solid #e2e8f0;
+	border-radius: 0 0 20px 20px;
+}
+
+.FooterNote {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	font-size: 13px;
+	color: #64748b;
+	margin: 0;
+	text-align: center;
+}
+
+/* Success State */
+.SuccessContainer {
+	padding: 60px 40px;
+	text-align: center;
+}
+
+.SuccessIcon {
+	width: 96px;
+	height: 96px;
+	margin: 0 auto 32px;
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	animation: successScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes successScale {
+	0% {
+		transform: scale(0);
+		opacity: 0;
+	}
+	70% {
+		transform: scale(1.1);
+		opacity: 1;
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+.SuccessTitle {
+	font-size: 28px;
+	font-weight: 800;
+	color: #059669;
+	margin: 0 0 16px 0;
+}
+
+.SuccessMessage {
+	font-size: 16px;
+	color: #475569;
+	margin: 0 0 40px 0;
+	line-height: 1.6;
+	max-width: 500px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.SuccessDetails {
+	background: #f0fdf4;
+	border: 1px solid #bbf7d0;
+	border-radius: 16px;
+	padding: 32px;
+	margin-bottom: 40px;
+	max-width: 600px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.SuccessDetailItem {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-bottom: 20px;
+	font-size: 15px;
+	color: #334155;
+}
+
+.SuccessDetailItem:last-child {
+	margin-bottom: 0;
+}
+
+.SuccessDetailItem span {
+	color: #64748b;
+	min-width: 140px;
+	text-align: right;
+}
+
+.SuccessDetailItem strong {
+	color: #059669;
+	font-weight: 700;
+	flex: 1;
+	text-align: right;
+}
+
+.SuccessActions {
+	display: flex;
+	gap: 16px;
+	max-width: 400px;
+	margin: 0 auto;
+}
+
+.NewWBSButton {
+	flex: 2;
+	padding: 16px 24px;
+	background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+	color: white;
+	border: none;
+	border-radius: 12px;
+	font-size: 15px;
 	font-weight: 600;
-	border: 1px solid;
+	cursor: pointer;
+	transition: all 0.3s ease;
 }
 
-.SubmitBtn:hover {
-	background-color: rgb(2, 123, 239);
+.NewWBSButton:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 16px rgba(139, 92, 246, 0.3);
 }
 
-.Error {
-	color: red;
-	font-size: small;
+.CloseButton {
+	flex: 1;
+	padding: 16px 24px;
+	background: #f8fafc;
+	color: #64748b;
+	border: 2px solid #e2e8f0;
+	border-radius: 12px;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.CloseButton:hover {
+	background: #f1f5f9;
+	border-color: #cbd5e1;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+	.Container {
+		max-width: 95vw;
+		margin: 20px;
+	}
+
+	.TableHeader,
+	.TableRow {
+		grid-template-columns: repeat(6, minmax(100px, 1fr));
+	}
+}
+
+@media (max-width: 768px) {
+	.Header,
+	.FormContainer {
+		padding: 24px;
+	}
+
+	.TotalsGrid {
+		grid-template-columns: 1fr;
+	}
+
+	.TableHeader,
+	.TableRow {
+		display: block;
+	}
+
+	.TableHeaderCell,
+	.TableCell {
+		display: none;
+	}
+
+	.TableCell[data-label]:before {
+		content: attr(data-label);
+		font-weight: 700;
+		color: #64748b;
+		margin-left: 8px;
+		min-width: 100px;
+		text-align: right;
+	}
+
+	.TableRow {
+		padding: 16px;
+		border-bottom: 2px solid #e2e8f0;
+	}
+
+	.TableCell {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 8px 0;
+		border: none;
+	}
 }

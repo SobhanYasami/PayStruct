@@ -8,6 +8,24 @@ import {
 	PersianDatePickerCustom,
 	PersianDate,
 } from "./persianDatePicker/PersianDatePicker";
+import {
+	FileText,
+	Building,
+	FolderOpen,
+	Calendar,
+	Percent,
+	Upload,
+	X,
+	Loader2,
+	AlertCircle,
+	CheckCircle,
+	FileCheck,
+	DollarSign,
+	Hash,
+	Shield,
+	Clock,
+	CalendarCheck,
+} from "lucide-react";
 
 type Contractor = {
 	ID: string;
@@ -43,6 +61,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const Contractor_URL = `${API_URL}/management/contractors/`;
 const Projects_URL = `${API_URL}/management/projects/`;
 const Contract_URL = `${API_URL}/management/contracts/`;
+
 // ------------------------------------------------
 const fetchContractors = async (): Promise<Contractor[]> => {
 	const token = localStorage.getItem("usr-token");
@@ -55,7 +74,7 @@ const fetchContractors = async (): Promise<Contractor[]> => {
 
 	if (!res.ok) throw new Error("Failed to load contractors");
 	const data = await res.json();
-	return data.data ?? data; // supports wrapped responses
+	return data.data ?? data;
 };
 
 const fetchProjects = async (): Promise<Project[]> => {
@@ -103,6 +122,8 @@ export default function NewContract({
 		scanned_file: null,
 	});
 
+	const [isSubmitted, setIsSubmitted] = useState(false);
+
 	const mutation = useMutation({
 		mutationFn: async (payload: FormData) => {
 			const token = localStorage.getItem("usr-token");
@@ -127,11 +148,11 @@ export default function NewContract({
 		},
 		onSuccess: () => {
 			toast.success("قرارداد با موفقیت ثبت شد");
-			setIsPopOpen(false);
+			setIsSubmitted(true);
 		},
 		onError: (error: unknown) => {
 			const err = error as ApiError;
-			toast.error(`${err.status} | ${err.message}`);
+			toast.error(err.message);
 		},
 	});
 
@@ -148,7 +169,6 @@ export default function NewContract({
 		setForm((prev) => ({ ...prev, [name]: value }));
 	};
 
-	// Fix: Use keyof NewContractForm instead of keyof FormData
 	const handleDateChange =
 		(name: keyof NewContractForm) => (date: PersianDate | null) => {
 			setForm((prev) => ({ ...prev, [name]: date }));
@@ -158,39 +178,21 @@ export default function NewContract({
 		e.preventDefault();
 
 		// Validate required fields
-		if (!form.contractor_id) {
-			toast.error("انتخاب پیمانکار الزامی است");
-			return;
-		}
+		const requiredFields = [
+			{ field: form.contractor_id, message: "انتخاب پیمانکار الزامی است" },
+			{ field: form.project_id, message: "انتخاب پروژه الزامی است" },
+			{ field: form.contract_number, message: "شماره قرارداد الزامی است" },
+			{ field: form.gross_budget, message: "مبلغ ناخالص کل الزامی است" },
+			{ field: form.start_date, message: "تاریخ شروع الزامی است" },
+			{ field: form.end_date, message: "تاریخ پایان الزامی است" },
+			{ field: form.scanned_file, message: "فایل قرارداد الزامی است" },
+		];
 
-		if (!form.project_id) {
-			toast.error("انتخاب پروژه الزامی است");
-			return;
-		}
-
-		if (!form.contract_number) {
-			toast.error("شماره قرارداد الزامی است");
-			return;
-		}
-
-		if (!form.gross_budget) {
-			toast.error("مبلغ ناخالص کل الزامی است");
-			return;
-		}
-
-		if (!form.start_date) {
-			toast.error("تاریخ شروع الزامی است");
-			return;
-		}
-
-		if (!form.end_date) {
-			toast.error("تاریخ پایان الزامی است");
-			return;
-		}
-
-		if (!form.scanned_file) {
-			toast.error("فایل قرارداد الزامی است");
-			return;
+		for (const { field, message } of requiredFields) {
+			if (!field) {
+				toast.error(message);
+				return;
+			}
 		}
 
 		// Prepare FormData for submission
@@ -218,187 +220,471 @@ export default function NewContract({
 			);
 		}
 
-		fd.append("scanned_file", form.scanned_file);
+		fd.append("scanned_file", form.scanned_file!);
 
 		mutation.mutate(fd);
 	};
+
+	const handleReset = () => {
+		setForm({
+			contractor_id: "",
+			project_id: "",
+			contract_number: "",
+			gross_budget: "",
+			insurance_rate: "",
+			performance_bond: "",
+			added_value_tax: "",
+			start_date: null,
+			end_date: null,
+			scanned_file: null,
+		});
+		setIsSubmitted(false);
+	};
+
+	const formatBudget = (value: string) => {
+		if (!value) return "";
+		const num = parseFloat(value);
+		return num.toLocaleString("fa-IR") + " ریال";
+	};
+
+	if (isSubmitted) {
+		return (
+			<div className={styles.Container}>
+				<button
+					onClick={() => setIsPopOpen(false)}
+					className={styles.CloseBtn}
+					aria-label='بستن پنجره'
+				>
+					×
+				</button>
+
+				<div className={styles.SuccessContainer}>
+					<div className={styles.SuccessIcon}>
+						<CheckCircle size={64} />
+					</div>
+					<h2 className={styles.SuccessTitle}>قرارداد ثبت شد</h2>
+					<p className={styles.SuccessMessage}>
+						قرارداد جدید با موفقیت در سیستم ثبت شد.
+					</p>
+					<div className={styles.SuccessDetails}>
+						<div className={styles.SuccessDetailItem}>
+							<Hash size={16} />
+							<span>شماره قرارداد:</span>
+							<strong>{form.contract_number}</strong>
+						</div>
+						<div className={styles.SuccessDetailItem}>
+							<Building size={16} />
+							<span>پیمانکار:</span>
+							<strong>
+								{
+									contractors?.find((c) => c.ID === form.contractor_id)
+										?.first_name
+								}{" "}
+								{
+									contractors?.find((c) => c.ID === form.contractor_id)
+										?.last_name
+								}
+							</strong>
+						</div>
+						<div className={styles.SuccessDetailItem}>
+							<FolderOpen size={16} />
+							<span>پروژه:</span>
+							<strong>
+								{projects?.find((p) => p.ID === form.project_id)?.name}
+							</strong>
+						</div>
+						<div className={styles.SuccessDetailItem}>
+							<DollarSign size={16} />
+							<span>مبلغ قرارداد:</span>
+							<strong>{formatBudget(form.gross_budget)}</strong>
+						</div>
+					</div>
+					<div className={styles.SuccessActions}>
+						<button
+							onClick={handleReset}
+							className={styles.NewContractButton}
+						>
+							ایجاد قرارداد جدید
+						</button>
+						<button
+							onClick={() => setIsPopOpen(false)}
+							className={styles.CloseButton}
+						>
+							بستن پنجره
+						</button>
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className={styles.Container}>
 			<button
 				onClick={() => setIsPopOpen(false)}
 				className={styles.CloseBtn}
+				aria-label='بستن پنجره'
 			>
 				×
 			</button>
 
-			<h2 className={styles.Title}>ایجاد قرارداد جدید</h2>
+			<div className={styles.Header}>
+				<div className={styles.HeaderIcon}>
+					<FileText size={28} />
+				</div>
+				<h2 className={styles.Title}>ایجاد قرارداد جدید</h2>
+				<p className={styles.Subtitle}>اطلاعات قرارداد جدید را وارد کنید</p>
+			</div>
 
 			<form
 				className={styles.FormContainer}
 				onSubmit={handleSubmit}
+				onReset={handleReset}
 				noValidate
 			>
-				<div className={styles.SelectGroup}>
-					{/* Contractor Select */}
-					<select
-						name='contractor_id'
-						value={form.contractor_id}
-						onChange={handleChange}
-						required
-						disabled={contractorsLoading || mutation.isPending}
-						className={contractorsLoading ? styles.loading : ""}
-					>
-						<option
-							key='placeholder-contractor'
-							value=''
-						>
-							{contractorsLoading ? "در حال بارگذاری..." : "انتخاب پیمانکار"}
-						</option>
-						{contractors?.map((c) => (
-							<option
-								key={c.ID}
-								value={c.ID}
-							>
-								{c.first_name} {c.last_name}
-							</option>
-						))}
-					</select>
-
-					{/* Project Select */}
-					<select
-						name='project_id'
-						value={form.project_id}
-						onChange={handleChange}
-						required
-						disabled={projectsLoading || mutation.isPending}
-						className={projectsLoading ? styles.loading : ""}
-					>
-						<option
-							key='placeholder-project'
-							value=''
-						>
-							{projectsLoading ? "در حال بارگذاری..." : "انتخاب پروژه"}
-						</option>
-						{projects?.map((p) => (
-							<option
-								key={p.ID}
-								value={p.ID}
-							>
-								پروژه: {p.name} — فاز: {p.phase}
-							</option>
-						))}
-					</select>
-				</div>
-
-				<div className={styles.NumBudgetGroup}>
-					<input
-						name='contract_number'
-						placeholder='شماره قرارداد'
-						value={form.contract_number}
-						onChange={handleChange}
-						required
-						disabled={mutation.isPending}
-					/>
-
-					<input
-						name='gross_budget'
-						placeholder='مبلغ ناخالص کل'
-						value={form.gross_budget}
-						onChange={handleChange}
-						required
-						disabled={mutation.isPending}
-						type='number'
-						min='0'
-					/>
-				</div>
-
-				<div className={styles.DateGroup}>
-					<div className={styles.DateInputWrapper}>
-						<label className={styles.DateLabel}>تاریخ شروع</label>
-						<PersianDatePickerCustom
-							name='start_date'
-							value={form.start_date}
-							onChange={handleDateChange("start_date")}
-							placeholder='انتخاب تاریخ'
-							required
-						/>
+				{/* Contractor & Project Selection */}
+				<div className={styles.Section}>
+					<div className={styles.SectionHeader}>
+						<Building size={18} />
+						<span>پیمانکار و پروژه</span>
 					</div>
-					<div className={styles.DateInputWrapper}>
-						<label className={styles.DateLabel}>تاریخ پایان</label>
-						<PersianDatePickerCustom
-							name='end_date'
-							value={form.end_date}
-							onChange={handleDateChange("end_date")}
-							placeholder='انتخاب تاریخ '
-							required
-						/>
+					<div className={styles.Grid}>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								پیمانکار <span className={styles.Required}>*</span>
+							</label>
+							<div className={styles.SelectWrapper}>
+								<select
+									name='contractor_id'
+									value={form.contractor_id}
+									onChange={handleChange}
+									required
+									disabled={contractorsLoading || mutation.isPending}
+									className={`${styles.Select} ${contractorsLoading ? styles.Loading : ""}`}
+								>
+									<option value=''>
+										{contractorsLoading
+											? "در حال بارگذاری..."
+											: "انتخاب پیمانکار"}
+									</option>
+									{contractors?.map((c) => (
+										<option
+											key={c.ID}
+											value={c.ID}
+										>
+											{c.first_name} {c.last_name}
+										</option>
+									))}
+								</select>
+								<Building
+									size={16}
+									className={styles.SelectIcon}
+								/>
+							</div>
+						</div>
+
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								پروژه <span className={styles.Required}>*</span>
+							</label>
+							<div className={styles.SelectWrapper}>
+								<select
+									name='project_id'
+									value={form.project_id}
+									onChange={handleChange}
+									required
+									disabled={projectsLoading || mutation.isPending}
+									className={`${styles.Select} ${projectsLoading ? styles.Loading : ""}`}
+								>
+									<option value=''>
+										{projectsLoading ? "در حال بارگذاری..." : "انتخاب پروژه"}
+									</option>
+									{projects?.map((p) => (
+										<option
+											key={p.ID}
+											value={p.ID}
+										>
+											{p.name} - فاز {p.phase}
+										</option>
+									))}
+								</select>
+								<FolderOpen
+									size={16}
+									className={styles.SelectIcon}
+								/>
+							</div>
+						</div>
 					</div>
 				</div>
 
-				<div className={styles.InsuranceGroup}>
-					<input
-						name='insurance_rate'
-						placeholder='نرخ بیمه (%)'
-						value={form.insurance_rate}
-						onChange={handleChange}
-						disabled={mutation.isPending}
-						type='number'
-						min='0'
-						max='100'
-						step='0.01'
-					/>
+				{/* Contract Details */}
+				<div className={styles.Section}>
+					<div className={styles.SectionHeader}>
+						<Hash size={18} />
+						<span>مشخصات قرارداد</span>
+					</div>
+					<div className={styles.Grid}>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								شماره قرارداد <span className={styles.Required}>*</span>
+							</label>
+							<div className={styles.InputWrapper}>
+								<input
+									name='contract_number'
+									placeholder='مثال: 1403/123'
+									value={form.contract_number}
+									onChange={handleChange}
+									required
+									disabled={mutation.isPending}
+									className={styles.Input}
+								/>
+								<Hash
+									size={16}
+									className={styles.InputIcon}
+								/>
+							</div>
+						</div>
 
-					<input
-						name='performance_bond'
-						placeholder='حسن انجام کار (%)'
-						value={form.performance_bond}
-						onChange={handleChange}
-						disabled={mutation.isPending}
-						type='number'
-						min='0'
-						max='100'
-						step='0.01'
-					/>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								مبلغ ناخالص کل <span className={styles.Required}>*</span>
+							</label>
+							<div className={styles.InputWrapper}>
+								<input
+									name='gross_budget'
+									placeholder='مبلغ به ریال'
+									value={form.gross_budget}
+									onChange={handleChange}
+									required
+									disabled={mutation.isPending}
+									type='number'
+									min='0'
+									className={styles.Input}
+								/>
+								<DollarSign
+									size={16}
+									className={styles.InputIcon}
+								/>
+							</div>
+							{form.gross_budget && (
+								<div className={styles.InputHint}>
+									{formatBudget(form.gross_budget)}
+								</div>
+							)}
+						</div>
+					</div>
 				</div>
 
-				<div className={styles.FileGroup}>
-					<input
-						name='added_value_tax'
-						placeholder='مالیات ارزش افزوده (%)'
-						value={form.added_value_tax}
-						onChange={handleChange}
-						disabled={mutation.isPending}
-						type='number'
-						min='0'
-						max='100'
-						step='0.01'
-					/>
+				{/* Dates */}
+				<div className={styles.Section}>
+					<div className={styles.SectionHeader}>
+						<Calendar size={18} />
+						<span>تاریخ‌ها</span>
+					</div>
+					<div className={styles.Grid}>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								تاریخ شروع <span className={styles.Required}>*</span>
+							</label>
+							<div className={styles.DateInputWrapper}>
+								<PersianDatePickerCustom
+									name='start_date'
+									value={form.start_date}
+									onChange={handleDateChange("start_date")}
+									placeholder='انتخاب تاریخ'
+									required
+								/>
+								<Calendar
+									size={16}
+									className={styles.DateIcon}
+								/>
+							</div>
+						</div>
 
-					<div className={styles.FileInputWrapper}>
-						<input
-							type='file'
-							name='scanned_file'
-							accept='.pdf,.jpg,.jpeg,.png'
-							onChange={handleChange}
-							required
-							disabled={mutation.isPending}
-							className={styles.FileInput}
-						/>
-						{form.scanned_file && (
-							<span className={styles.FileName}>{form.scanned_file.name}</span>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								تاریخ پایان <span className={styles.Required}>*</span>
+							</label>
+							<div className={styles.DateInputWrapper}>
+								<PersianDatePickerCustom
+									name='end_date'
+									value={form.end_date}
+									onChange={handleDateChange("end_date")}
+									placeholder='انتخاب تاریخ'
+									required
+								/>
+								<CalendarCheck
+									size={16}
+									className={styles.DateIcon}
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Rates & Bonds */}
+				<div className={styles.Section}>
+					<div className={styles.SectionHeader}>
+						<Shield size={18} />
+						<span>نرخ‌ها و ضمانت‌ها</span>
+					</div>
+					<div className={styles.Grid}>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>نرخ بیمه (%)</label>
+							<div className={styles.InputWrapper}>
+								<input
+									name='insurance_rate'
+									placeholder='0.00'
+									value={form.insurance_rate}
+									onChange={handleChange}
+									disabled={mutation.isPending}
+									type='number'
+									min='0'
+									max='100'
+									step='0.01'
+									className={styles.Input}
+								/>
+								<Percent
+									size={16}
+									className={styles.InputIcon}
+								/>
+							</div>
+						</div>
+
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>حسن انجام کار (%)</label>
+							<div className={styles.InputWrapper}>
+								<input
+									name='performance_bond'
+									placeholder='0.00'
+									value={form.performance_bond}
+									onChange={handleChange}
+									disabled={mutation.isPending}
+									type='number'
+									min='0'
+									max='100'
+									step='0.01'
+									className={styles.Input}
+								/>
+								<Shield
+									size={16}
+									className={styles.InputIcon}
+								/>
+							</div>
+						</div>
+					</div>
+					<div className={styles.Grid}>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								مالیات ارزش افزوده (%)
+							</label>
+							<div className={styles.InputWrapper}>
+								<input
+									name='added_value_tax'
+									placeholder='0.00'
+									value={form.added_value_tax}
+									onChange={handleChange}
+									disabled={mutation.isPending}
+									type='number'
+									min='0'
+									max='100'
+									step='0.01'
+									className={styles.Input}
+								/>
+								<Percent
+									size={16}
+									className={styles.InputIcon}
+								/>
+							</div>
+						</div>
+
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								فایل قرارداد <span className={styles.Required}>*</span>
+							</label>
+							<div className={styles.FileUploadWrapper}>
+								<label className={styles.FileUploadLabel}>
+									<input
+										type='file'
+										name='scanned_file'
+										accept='.pdf,.jpg,.jpeg,.png'
+										onChange={handleChange}
+										required
+										disabled={mutation.isPending}
+										className={styles.FileInput}
+									/>
+									<div className={styles.FileUploadContent}>
+										<Upload size={20} />
+										<span>انتخاب فایل</span>
+									</div>
+								</label>
+								{form.scanned_file && (
+									<div className={styles.FileInfo}>
+										<FileCheck size={16} />
+										<span className={styles.FileName}>
+											{form.scanned_file.name}
+										</span>
+										<button
+											type='button'
+											onClick={() =>
+												setForm((prev) => ({ ...prev, scanned_file: null }))
+											}
+											className={styles.RemoveFile}
+											aria-label='حذف فایل'
+										>
+											<X size={14} />
+										</button>
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{mutation.isError && (
+					<div className={styles.ErrorAlert}>
+						<AlertCircle size={18} />
+						<span>خطا در ثبت قرارداد</span>
+					</div>
+				)}
+
+				<div className={styles.FormActions}>
+					<button
+						type='reset'
+						className={styles.CancelButton}
+						disabled={mutation.isPending}
+					>
+						پاک کردن فرم
+					</button>
+					<button
+						type='submit'
+						disabled={mutation.isPending}
+						className={styles.SubmitBtn}
+					>
+						{mutation.isPending ? (
+							<>
+								<Loader2
+									className={styles.Loader}
+									size={18}
+								/>
+								در حال ثبت...
+							</>
+						) : (
+							<>
+								<FileText size={18} />
+								ثبت قرارداد
+							</>
 						)}
-					</div>
+					</button>
 				</div>
-
-				<button
-					type='submit'
-					className={styles.SubmitBtn}
-					disabled={mutation.isPending}
-				>
-					{mutation.isPending ? "در حال ثبت..." : "ثبت قرارداد"}
-				</button>
 			</form>
+
+			<div className={styles.Footer}>
+				<p className={styles.FooterNote}>
+					<AlertCircle size={14} />
+					فیلدهای ستاره‌دار الزامی هستند.
+				</p>
+			</div>
 		</div>
 	);
 }
