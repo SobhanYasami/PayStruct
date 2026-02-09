@@ -4,7 +4,6 @@ import (
 	// "errors"
 	// "mime/multipart"
 
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/sobhan-yasami/docs-db-panel/internal/models"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
 
 	"github.com/go-playground/validator/v10"
@@ -612,9 +612,6 @@ func (handler *ContractHandler) CreateWBS(c *fiber.Ctx) error {
 func (handler *ContractHandler) GetContractWBS(c *fiber.Ctx) error {
 	// Get contract number from URL parameter instead of body
 	contractNumber := c.Params("cnum")
-
-	fmt.Println("contract number", contractNumber)
-
 	if contractNumber == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Contract number is required"))
 	}
@@ -629,9 +626,27 @@ func (handler *ContractHandler) GetContractWBS(c *fiber.Ctx) error {
 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
 	}
 
-	fmt.Println("contract wbs", contract_wbs)
+	contractor, err := handler.contractService.GetContractorByID(c.Context(), contract.ContractorID)
+	if err != nil {
+		log.Printf("CreateContract DB error: %v", err)
+		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contract_wbs, "ContractWbs retrieved successfully"))
+	project, err := handler.contractService.GetProjectByID(c.Context(), contract.ProjectID)
+
+	type ResponseData struct {
+		Contractor  models.Contractor    `json:"contractor"`
+		Project     models.Project       `json:"project"`
+		ContractWBS []models.ContractWBS `json:"contractWbs"`
+	}
+
+	resData := ResponseData{
+		Contractor:  *contractor,
+		Project:     *project,
+		ContractWBS: *contract_wbs,
+	}
+
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(resData, "ContractWbs retrieved successfully"))
 }
 
 // ! Router /management/contracts/status-statement

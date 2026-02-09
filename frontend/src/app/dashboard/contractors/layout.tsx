@@ -14,7 +14,7 @@ import NewStatusStatement from "@/components/ui/NewStatusStatement";
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const Contractor_URL = `${API_URL}/management/contractors/`;
 const Contract_URL = `${API_URL}/management/contracts/`;
-const WBS_URL = `${API_URL}/management/contracts/wbs/`;
+const WBS_URL = `${API_URL}/management/wbs/`;
 const StatusStatement_URL = `${API_URL}/management/contracts/status-statement/`;
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {

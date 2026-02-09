@@ -40,7 +40,7 @@ func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler) {
 	// WBS
 	wbs := management.Group("/wbs")
 	wbs.Post("/", h.CreateWBS)
-	wbs.Get("/:enum", h.GetContractWBS)
+	wbs.Get("/:cnum", h.GetContractWBS)
 
 	// StatusStatement
 	statusStatement := management.Group("status-statement")

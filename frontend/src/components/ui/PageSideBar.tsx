@@ -15,7 +15,6 @@ export default function PageSideBar({
 	setFormName: React.Dispatch<React.SetStateAction<DashboardFormName>>;
 }) {
 	const handleBtnClick = (formName: DashboardFormName) => {
-		console.log(`form name is: ${formName}`);
 		setFormName(formName);
 		setIsPopOpen(!isPopOpen);
 	};

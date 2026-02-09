@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import styles from "./NewStatusStatement.module.css";
@@ -9,28 +9,84 @@ import ContractInformation from "./newStatusStatement/ContractInfo";
 import WorksDone from "./newStatusStatement/WorksDone";
 import ExtraWorks from "./newStatusStatement/ExtraWorks";
 
-type ContractWBSPayload = {
+// Types moved to separate interface declarations
+interface ContractWBSPayload {
 	contract_number: string;
-};
+}
 
-type ApiError = {
+interface Contractor {
+	ID: string;
+	first_name: string;
+	last_name: string;
+	legal_entity: boolean;
+	national_id: string;
+	preferential_id: string;
+}
+
+interface Project {
+	ID: string;
+	name: string;
+	phase: number;
+}
+
+interface ContractWBS {
+	ID: string;
+	description: string;
+	quantity: number;
+	unit: string;
+	unit_price: number;
+	total_price: number;
+}
+
+interface ApiError {
 	status: number;
 	message: string;
+}
+
+interface ContractResponse {
+	data: any; // Consider defining a proper type
+}
+
+interface WBSResponse {
+	data: {
+		contractor: Contractor;
+		project: Project;
+		contractWbs: ContractWBS[];
+	};
+}
+
+// Constants
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const CONTRACTOR_URL = `${API_URL}/management/contractors/`;
+const CONTRACT_URL = `${API_URL}/management/contracts/`;
+const WBS_URL = `${API_URL}/management/wbs/`;
+const STATUS_STATEMENT_URL = `${API_URL}/management/contracts/status-statement/`;
+const STATUS_EXTRA_WORKS_URL = `${API_URL}/management/contracts/status-statement/extra-works/`;
+const STATUS_REDUCTIONS_URL = `${API_URL}/management/contracts/status-statement/reductions/`;
+
+// Helper functions
+const fetchWithAuth = async (url: string, options?: RequestInit) => {
+	const token = localStorage.getItem("usr-token");
+
+	const headers = {
+		Authorization: `Bearer ${token}`,
+		"Content-Type": "application/json",
+		...options?.headers,
+	};
+
+	const response = await fetch(url, { ...options, headers });
+
+	if (!response.ok) {
+		const errorData = await response.json().catch(() => ({}));
+		throw {
+			status: response.status,
+			message: errorData?.message || "خطای ناشناخته",
+		} as ApiError;
+	}
+
+	return response.json();
 };
 
-//
-//
-//
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-const Contractor_URL = `${API_URL}/management/contractors/`;
-const Contract_URL = `${API_URL}/management/contracts/`;
-const WBS_URL = `${API_URL}/management/contracts/wbs/`;
-const StatusStatement_URL = `${API_URL}/management/contracts/status-statement/`;
-const StatusExtraWorks_URL = `${API_URL}/management/contracts/status-statement/extra-works/`;
-const StatusReductions_URL = `${API_URL}/management/contracts/status-statement/reductions/`;
-// ------------------------------------------------
-
-/// ------------------------------
 export default function NewStatusStatement({
 	setIsPopOpen,
 	apiUrl,
@@ -38,117 +94,101 @@ export default function NewStatusStatement({
 	setIsPopOpen: (value: boolean) => void;
 	apiUrl: string;
 }) {
-	const [form, setForm] = useState<ContractWBSPayload>({
-		contract_number: "",
+	const [contractNumber, setContractNumber] = useState("");
+
+	// Fetch contract data
+	const {
+		data: contractData,
+		isSuccess: isContractSuccess,
+		isError: isContractError,
+		refetch: refetchContract,
+		isFetching: isContractFetching,
+	} = useQuery<ContractResponse>({
+		queryKey: ["contract", contractNumber],
+		queryFn: () =>
+			fetchWithAuth(`${CONTRACT_URL}?contract_number=${contractNumber}`),
+		enabled: false, // Manual fetch
+		retry: 1,
 	});
 
-	const [contractData, setContractData] = useState(null);
-	const [wbsData, setWbsData] = useState(null);
-
-	const mutation = useMutation({
-		mutationFn: async (payload: ContractWBSPayload) => {
-			const token = localStorage.getItem("usr-token");
-
-			const res = await fetch(`${WBS_URL}${payload.contract_number}`, {
-				method: "GET",
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
-			});
-
-			const data = await res.json();
-
-			if (!res.ok) {
-				throw {
-					status: res.status,
-					message: data?.message || "خطای ناشناخته",
-				} as ApiError;
-			}
-
-			return data;
-		},
+	// Fetch WBS data
+	const {
+		data: wbsData,
+		isSuccess: isWbsSuccess,
+		isError: isWbsError,
+		mutate: fetchWBS,
+		isPending: isWbsPending,
+	} = useMutation<WBSResponse, ApiError, ContractWBSPayload>({
+		mutationFn: (payload) =>
+			fetchWithAuth(`${WBS_URL}${payload.contract_number}`),
 		onSuccess: (data) => {
 			toast.success("قرارداد یافت شد");
 			console.log("contract wbs:", data);
-			setWbsData(data.data);
 		},
-		onError: (error: unknown) => {
-			const err = error as ApiError;
-			toast.error(`${err.status} | ${err.message}`);
+		onError: (error) => {
+			toast.error(`${error.status} | ${error.message}`);
 		},
 	});
 
-	// Optional: Add a query to fetch contract information
-	// Using queryOptions for v5 compatibility
-	const contractQuery = useQuery({
-		queryKey: ["contract", form.contract_number],
-		queryFn: async () => {
-			const token = localStorage.getItem("usr-token");
-			const res = await fetch(
-				`${Contract_URL}?contract_number=${form.contract_number}`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				},
-			);
+	// Derived state
+	const contractorData = wbsData?.data.contractor || null;
+	const projectData = wbsData?.data.project || null;
+	const wbsItems = wbsData?.data.contractWbs || null;
 
-			if (!res.ok) {
-				throw new Error("Failed to fetch contract");
-			}
+	// Handle errors
+	useEffect(() => {
+		if (isContractError) {
+			toast.error("خطا در دریافت اطلاعات قرارداد");
+		}
+	}, [isContractError]);
 
-			return res.json();
+	useEffect(() => {
+		if (isWbsError) {
+			// Error is already handled in mutation onError
+		}
+	}, [isWbsError]);
+
+	// Form handlers
+	const handleInputChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+			setContractNumber(e.target.value);
 		},
-		enabled: false, // We'll trigger this manually
-	});
+		[],
+	);
 
-	// Handle query success/error with useEffect or useQuery callbacks
-	useEffect(() => {
-		if (contractQuery.isSuccess && contractQuery.data) {
-			setContractData(contractQuery.data.data);
-		}
-	}, [contractQuery.isSuccess, contractQuery.data]);
+	const handleSubmit = useCallback(
+		async (e: React.FormEvent) => {
+			e.preventDefault();
 
-	useEffect(() => {
-		if (contractQuery.isError) {
-			toast.error("خطا در دریافت اطلاعات قرارداد");
-		}
-	}, [contractQuery.isError]);
-
-	const handleChange = (
-		e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-	) => {
-		const { name, value } = e.target as HTMLInputElement;
-		setForm((prev) => ({ ...prev, [name]: value }));
-	};
-
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-
-		if (!form.contract_number) {
-			toast.error("شماره قرارداد الزامی است");
-			return;
-		}
-
-		// First fetch contract data (optional, if needed)
-		try {
-			await contractQuery.refetch();
-
-			// Then fetch WBS data only if contract fetch was successful
-			if (contractQuery.isSuccess) {
-				mutation.mutate(form);
+			if (!contractNumber.trim()) {
+				toast.error("شماره قرارداد الزامی است");
+				return;
 			}
-		} catch (error) {
-			console.error("Failed to fetch contract:", error);
-			toast.error("خطا در دریافت اطلاعات قرارداد");
-		}
-	};
+
+			try {
+				// Fetch contract first
+				const contractResult = await refetchContract();
+
+				if (contractResult.isSuccess) {
+					// Then fetch WBS data
+					fetchWBS({ contract_number: contractNumber });
+				}
+			} catch (error) {
+				console.error("Failed to process request:", error);
+				// Error is handled by query/mutation error handlers
+			}
+		},
+		[contractNumber, refetchContract, fetchWBS],
+	);
+
+	const isLoading = isContractFetching || isWbsPending;
 
 	return (
 		<div className={styles.Container}>
 			<button
 				onClick={() => setIsPopOpen(false)}
 				className={styles.CloseBtn}
+				aria-label='بستن فرم'
 			>
 				×
 			</button>
@@ -158,6 +198,7 @@ export default function NewStatusStatement({
 			<form
 				className={styles.SearchFormContainer}
 				onSubmit={handleSubmit}
+				noValidate
 			>
 				<p className={styles.searchPara}>
 					شماره قرارداد مربوطه را وارد کنید:
@@ -167,26 +208,38 @@ export default function NewStatusStatement({
 					<input
 						name='contract_number'
 						placeholder='شماره قرارداد'
-						onChange={handleChange}
-						value={form.contract_number}
+						onChange={handleInputChange}
+						value={contractNumber}
 						required
 						className={styles.searchInput}
+						disabled={isLoading}
+						aria-label='شماره قرارداد'
 					/>
 					<button
 						type='submit'
 						className={styles.SearchBtn}
-						disabled={mutation.isPending || contractQuery.isFetching}
+						disabled={isLoading}
+						aria-busy={isLoading}
 					>
-						{mutation.isPending || contractQuery.isFetching
-							? "در حال جست و جو..."
-							: "تایید"}
+						{isLoading ? "در حال جست و جو..." : "تایید"}
 					</button>
 				</div>
 			</form>
 
 			{/* Pass data to child components */}
-			<ContractInformation />
-			<WorksDone />
+			{contractorData && projectData && (
+				<ContractInformation
+					first_name={contractorData.first_name}
+					last_name={contractorData.last_name}
+					legal_entity={contractorData.legal_entity}
+					preferential_id={contractorData.preferential_id}
+					national_id={contractorData.national_id}
+					project_name={projectData.name}
+					project_phase={projectData.phase}
+				/>
+			)}
+
+			{wbsData && <WorksDone wbsData={wbsItems} />}
 			<ExtraWorks />
 		</div>
 	);

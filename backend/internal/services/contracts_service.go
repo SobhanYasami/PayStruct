@@ -327,6 +327,7 @@ func (s *ContractService) DeleteContract(ctx context.Context, contractID, userID
 //
 // --------
 func (s *ContractService) CreateContractWBS(ctx context.Context, userID, contractID, contractorID, projectID uuid.UUID, description, unit string, quantity, unitPrice float64) error {
+
 	// check for existing record with same description under the same contract
 	var existingCount int64
 	if err := s.db.WithContext(ctx).
@@ -346,11 +347,14 @@ func (s *ContractService) CreateContractWBS(ctx context.Context, userID, contrac
 			ID:        uuid.New(),
 			CreatedBy: userID,
 		},
-		Description: description,
-		Unit:        unit,
-		Quantity:    quantity,
-		UnitPrice:   unitPrice,
-		TotalPrice:  quantity * unitPrice,
+		Description:  description,
+		Unit:         unit,
+		Quantity:     quantity,
+		UnitPrice:    unitPrice,
+		TotalPrice:   quantity * unitPrice,
+		ContractID:   contractID,
+		ProjectID:    projectID,
+		ContractorID: contractorID,
 	}
 
 	if err := s.db.WithContext(ctx).Create(&contractWbs).Error; err != nil {
@@ -362,7 +366,7 @@ func (s *ContractService) CreateContractWBS(ctx context.Context, userID, contrac
 // GetContractByID
 func (s *ContractService) GetContractWBS(ctx context.Context, contractID uuid.UUID) (*[]models.ContractWBS, error) {
 	var contract_wbs []models.ContractWBS
-	if err := s.db.WithContext(ctx).Find(&contract_wbs, "id = ?", contractID).Error; err != nil {
+	if err := s.db.WithContext(ctx).Find(&contract_wbs, "contract_id = ?", contractID).Error; err != nil {
 		return nil, err
 	}
 	return &contract_wbs, nil

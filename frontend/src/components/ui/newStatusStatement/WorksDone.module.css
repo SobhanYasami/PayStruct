@@ -1,112 +1,399 @@
+/* Container */
 .Container {
 	width: 100%;
-	margin: 9px 0px;
+	margin: 24px 0;
+	background: #ffffff;
+	border-radius: 12px;
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+	overflow: hidden;
+	border: 1px solid #e2e8f0;
+}
+
+/* Header */
+.Header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 20px 24px;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	border-bottom: 1px solid #e2e8f0;
 }
 
 .Title {
-	font-size: 16px;
-	text-align: center;
+	font-size: 20px;
+	font-weight: 700;
+	color: white;
+	margin: 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }
 
-.FormContainer {
+.Icon {
+	font-size: 24px;
+}
+
+.Subtitle {
+	font-size: 14px;
+	font-weight: 400;
+	opacity: 0.9;
+	margin-right: 8px;
+}
+
+.HeaderActions {
 	display: flex;
-	flex-direction: column;
+	gap: 12px;
+}
+
+.SaveButton {
+	padding: 10px 24px;
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.SaveButton:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.SaveButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* Loading Spinner */
+.LoadingSpinner {
+	width: 16px;
+	height: 16px;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-radius: 50%;
+	border-top-color: white;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Empty State */
+.EmptyState {
+	padding: 60px 24px;
+	text-align: center;
+	background: #f8fafc;
+}
+
+.EmptyIcon {
+	font-size: 48px;
+	margin-bottom: 16px;
+	opacity: 0.5;
+}
+
+.EmptyText {
+	font-size: 16px;
+	color: #64748b;
+	margin: 0 0 8px 0;
+}
+
+.EmptySubtext {
+	font-size: 14px;
+	color: #94a3b8;
+	margin: 0;
+}
+
+/* Table Wrapper */
+.TableWrapper {
+	padding: 24px;
+}
+
+.TableContainer {
+	border-radius: 8px;
+	overflow: hidden;
+	border: 1px solid #e2e8f0;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Table Header */
+.TableHeader {
+	display: flex;
+	background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+	border-bottom: 2px solid #cbd5e1;
+}
+
+.HeaderCell {
+	padding: 16px 12px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #334155;
+	text-align: center;
+	border-right: 1px solid #e2e8f0;
+	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 100%;
 }
 
-.TableHeader {
-	width: 100%;
+.HeaderCell:last-child {
+	border-right: none;
+}
+
+/* Table Body */
+.TableBody {
+	max-height: 400px;
+	overflow-y: auto;
+}
+
+/* Scrollbar Styling */
+.TableBody::-webkit-scrollbar {
+	width: 6px;
+}
+
+.TableBody::-webkit-scrollbar-track {
+	background: #f1f1f1;
+}
+
+.TableBody::-webkit-scrollbar-thumb {
+	background: #cbd5e1;
+	border-radius: 3px;
+}
+
+.TableBody::-webkit-scrollbar-thumb:hover {
+	background: #94a3b8;
+}
+
+/* Table Row */
+.TableRow {
+	display: flex;
+	transition: all 0.2s ease;
+	border-bottom: 1px solid #f1f5f9;
+}
+
+.TableRow:hover {
+	background-color: #f8fafc;
+}
+
+.EvenRow {
+	background-color: #ffffff;
+}
+
+.OddRow {
+	background-color: #f8fafc;
+}
+
+.BodyCell {
+	padding: 14px 12px;
+	font-size: 13px;
+	color: #334155;
+	border-right: 1px solid #e2e8f0;
 	display: flex;
 	align-items: center;
-	border-bottom: 3px solid rgb(27, 27, 27);
-	background-color: lightsteelblue;
+	justify-content: center;
 }
 
-.col1 {
-	min-width: 50px;
-	padding: 2px 6px;
-	border-left: 1px solid gray;
-	border-right: 1px solid gray;
+.BodyCell:last-child {
+	border-right: none;
+}
+
+.CellContent {
 	text-align: center;
-}
-.col2 {
-	min-width: 390px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
-}
-.col3 {
-	min-width: 120px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
-}
-.col4 {
-	min-width: 80px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
-}
-.col5 {
-	min-width: 100px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
+	word-break: break-word;
 }
 
-.RowsContainer {
+/* Input Wrapper */
+.InputWrapper {
 	width: 100%;
 	display: flex;
+	flex-direction: column;
+	gap: 4px;
 	align-items: center;
-	border-bottom: 1px solid gray;
-	background-color: rgb(255, 255, 255);
 }
 
-.descriptionInput {
-	min-width: 390px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	outline: none;
-	border: 1px solid rgb(124, 124, 124);
-}
-.descriptionInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
-}
-
-.quantityInput {
-	width: 120px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	outline: none;
-	border: 1px solid rgb(124, 124, 124);
-}
-.quantityInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
-}
-.unitInput {
-	width: 80px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	outline: none;
-	border: 1px solid rgb(124, 124, 124);
-}
-.unitInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
+.QuantityInput {
+	width: 100%;
+	max-width: 120px;
+	padding: 8px 12px;
+	border: 2px solid #e2e8f0;
+	border-radius: 6px;
+	font-size: 13px;
+	text-align: center;
+	transition: all 0.2s ease;
+	background: white;
 }
 
-.unitPriceInput {
-	min-width: 200px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	border: 1px solid rgb(124, 124, 124);
+.QuantityInput:focus {
 	outline: none;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
-.unitPriceInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
+
+.QuantityInput::placeholder {
+	color: #94a3b8;
+}
+
+.MaxBadge {
+	font-size: 11px;
+	color: #64748b;
+	background: #f1f5f9;
+	padding: 2px 6px;
+	border-radius: 4px;
+	white-space: nowrap;
+}
+
+/* Total Amount */
+.TotalAmount {
+	font-weight: 600;
+	color: #059669;
+	font-size: 13px;
+}
+
+/* Totals Card */
+.TotalsCard {
+	margin-top: 24px;
+	padding: 20px;
+	background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+	border-radius: 10px;
+	border: 1px solid #bae6fd;
+}
+
+.TotalsGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.TotalItem {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 16px;
+	background: white;
+	border-radius: 8px;
+	border: 1px solid #e2e8f0;
+}
+
+.TotalLabel {
+	font-size: 13px;
+	color: #64748b;
+	font-weight: 500;
+}
+
+.TotalValue {
+	font-size: 14px;
+	font-weight: 700;
+	color: #1e293b;
+}
+
+.TotalsActions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.PrintButton {
+	padding: 10px 20px;
+	background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.PrintButton:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
+}
+
+/* Footer */
+.Footer {
+	padding: 16px 24px;
+	border-top: 1px solid #e2e8f0;
+	background: #f8fafc;
+}
+
+.FooterNote {
+	font-size: 12px;
+	color: #64748b;
+	text-align: center;
+	margin: 0;
+	font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+	.TableHeader,
+	.TableRow {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+	}
+
+	.HeaderCell,
+	.BodyCell {
+		width: 100% !important;
+		border-right: none;
+		border-bottom: 1px solid #e2e8f0;
+		justify-content: flex-start;
+		padding: 12px;
+		text-align: right;
+	}
+
+	.HeaderCell:last-child,
+	.BodyCell:last-child {
+		border-bottom: none;
+	}
+
+	.BodyCell {
+		position: relative;
+		padding-right: 40%;
+	}
+
+	.BodyCell::before {
+		content: attr(data-label);
+		position: absolute;
+		right: 12px;
+		top: 50%;
+		transform: translateY(-50%);
+		font-weight: 700;
+		color: #64748b;
+		font-size: 12px;
+		background: #f1f5f9;
+		padding: 4px 8px;
+		border-radius: 4px;
+	}
+}
+
+@media (max-width: 768px) {
+	.Header {
+		flex-direction: column;
+		gap: 16px;
+		align-items: stretch;
+	}
+
+	.HeaderActions {
+		justify-content: center;
+	}
+
+	.Title {
+		text-align: center;
+		justify-content: center;
+	}
+
+	.TotalsGrid {
+		grid-template-columns: 1fr;
+	}
 }

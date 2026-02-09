@@ -195,10 +195,6 @@ export default function page() {
 		}
 	}, [contracts]);
 
-	if (contracts) {
-		console.log("contracts list", contracts);
-	}
-
 	return (
 		<div className={styles.PageContainer}>
 			<h3 className={styles.PageHeader}>قراردادها</h3>

@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import styles from "./NewContractor.module.css";
 import toast from "react-hot-toast";
+import {
+	Building2,
+	User,
+	CheckCircle,
+	AlertCircle,
+	Loader2,
+} from "lucide-react";
 
 type NewContractorPayload = {
 	legal_entity: boolean;
@@ -21,6 +28,7 @@ export default function NewContractor({
 	apiUrl: string;
 }) {
 	const [isLegalEntity, setIsLegalEntity] = useState(false);
+	const [isSubmitted, setIsSubmitted] = useState(false);
 
 	const [form, setForm] = useState<NewContractorPayload>({
 		legal_entity: isLegalEntity,
@@ -62,15 +70,21 @@ export default function NewContractor({
 			});
 
 			if (!res.ok) {
-				toast.error("خطا در ایجاد پیمانکار");
-				throw new Error("Failed to create contractor");
+				const errorData = await res.json();
+				throw new Error(errorData.message || "خطا در ایجاد پیمانکار");
 			}
 
 			return res.json();
 		},
 		onSuccess: () => {
 			toast.success("پیمانکار با موفقیت ثبت شد");
-			setIsPopOpen(false);
+			setIsSubmitted(true);
+			setTimeout(() => {
+				setIsPopOpen(false);
+			}, 1500);
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || "خطا در ثبت پیمانکار");
 		},
 	});
 
@@ -84,93 +98,229 @@ export default function NewContractor({
 		createContractorMutation.mutate(form);
 	};
 
+	// Reset form
+	const handleReset = () => {
+		setForm({
+			legal_entity: false,
+			first_name: "",
+			last_name: "",
+			national_id: "",
+			preferential_id: "",
+		});
+		setIsLegalEntity(false);
+		setIsSubmitted(false);
+	};
+
+	if (isSubmitted) {
+		return (
+			<div className={styles.Container}>
+				<button
+					onClick={() => setIsPopOpen(false)}
+					className={styles.CloseBtn}
+					aria-label='بستن پنجره'
+				>
+					×
+				</button>
+
+				<div className={styles.SuccessContainer}>
+					<div className={styles.SuccessIcon}>
+						<CheckCircle size={64} />
+					</div>
+					<h2 className={styles.SuccessTitle}>ثبت موفق</h2>
+					<p className={styles.SuccessMessage}>
+						پیمانکار جدید با موفقیت در سیستم ثبت شد.
+					</p>
+					<div className={styles.SuccessDetails}>
+						<p>
+							<strong>نام:</strong> {form.first_name} {form.last_name}
+						</p>
+						<p>
+							<strong>شماره ملی:</strong> {form.national_id}
+						</p>
+						{form.preferential_id && (
+							<p>
+								<strong>شناسه تفضیلی:</strong> {form.preferential_id}
+							</p>
+						)}
+					</div>
+					<div className={styles.SuccessActions}>
+						<button
+							onClick={handleReset}
+							className={styles.NewContractorButton}
+						>
+							ثبت پیمانکار جدید
+						</button>
+						<button
+							onClick={() => setIsPopOpen(false)}
+							className={styles.CloseButton}
+						>
+							بستن پنجره
+						</button>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className={styles.Container}>
 			<button
 				onClick={() => setIsPopOpen(false)}
 				className={styles.CloseBtn}
+				aria-label='بستن پنجره'
 			>
 				×
 			</button>
 
-			<h2 className={styles.Title}>ایجاد پیمانکار جدید</h2>
+			<div className={styles.Header}>
+				<div className={styles.HeaderIcon}>
+					{isLegalEntity ? <Building2 size={24} /> : <User size={24} />}
+				</div>
+				<h2 className={styles.Title}>ایجاد پیمانکار جدید</h2>
+				<p className={styles.Subtitle}>اطلاعات پیمانکار جدید را وارد کنید</p>
+			</div>
 
 			<form
 				className={styles.FormContainer}
 				onSubmit={handleSubmit}
+				onReset={handleReset}
 			>
-				{/* Legal Entity Radio */}
-				<div className={styles.RadioGroup}>
-					<label>
-						<input
-							type='radio'
-							checked={!isLegalEntity}
-							onChange={() => setIsLegalEntity(false)}
-						/>
-						حقیقی
-					</label>
-
-					<label>
-						<input
-							type='radio'
-							checked={isLegalEntity}
-							onChange={() => setIsLegalEntity(true)}
-						/>
-						حقوقی
-					</label>
+				{/* Legal Entity Toggle */}
+				<div className={styles.ToggleGroup}>
+					<div className={styles.ToggleLabel}>نوع پیمانکار</div>
+					<div className={styles.ToggleButtons}>
+						<button
+							type='button'
+							className={`${styles.ToggleButton} ${!isLegalEntity ? styles.ToggleActive : ""}`}
+							onClick={() => setIsLegalEntity(false)}
+						>
+							<User size={16} />
+							حقیقی
+						</button>
+						<button
+							type='button'
+							className={`${styles.ToggleButton} ${isLegalEntity ? styles.ToggleActive : ""}`}
+							onClick={() => setIsLegalEntity(true)}
+						>
+							<Building2 size={16} />
+							حقوقی
+						</button>
+					</div>
 				</div>
 
-				<div className={styles.FullNameContainer}>
-					<input
-						name='first_name'
-						placeholder='نام'
-						value={form.first_name}
-						onChange={handleChange}
-						disabled={isLegalEntity}
-						required
-					/>
+				<div className={styles.FormSection}>
+					<label className={styles.SectionLabel}>مشخصات</label>
+					<div className={styles.InputGrid}>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								نام{" "}
+								{isLegalEntity && <span className={styles.Hint}>(شرکت)</span>}
+							</label>
+							<input
+								name='first_name'
+								placeholder={isLegalEntity ? "شرکت" : "نام"}
+								value={form.first_name}
+								onChange={handleChange}
+								disabled={isLegalEntity}
+								required
+								className={styles.Input}
+							/>
+						</div>
 
-					{/* Last Name */}
-					<input
-						name='last_name'
-						placeholder='نام خانوادگی یا نام شرکت'
-						value={form.last_name}
-						onChange={handleChange}
-						required
-					/>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								نام خانوادگی{" "}
+								{isLegalEntity && (
+									<span className={styles.Hint}>(نام شرکت)</span>
+								)}
+							</label>
+							<input
+								name='last_name'
+								placeholder={isLegalEntity ? "نام شرکت" : "نام خانوادگی"}
+								value={form.last_name}
+								onChange={handleChange}
+								required
+								className={styles.Input}
+							/>
+						</div>
+					</div>
 				</div>
 
-				<div className={styles.IDsContainer}>
-					{/* National ID */}
-					<input
-						name='national_id'
-						placeholder='شماره ملی'
-						value={form.national_id}
-						onChange={handleChange}
-						required
-					/>
+				<div className={styles.FormSection}>
+					<label className={styles.SectionLabel}>شناسه‌ها</label>
+					<div className={styles.InputGrid}>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>
+								شماره ملی <span className={styles.Required}>*</span>
+							</label>
+							<input
+								name='national_id'
+								placeholder='کد ملی / شناسه ملی'
+								value={form.national_id}
+								onChange={handleChange}
+								required
+								pattern='[0-9]*'
+								maxLength={11}
+								className={styles.Input}
+							/>
+							<div className={styles.InputHint}>اعداد انگلیسی وارد شود</div>
+						</div>
 
-					{/* Preferential ID */}
-					<input
-						name='preferential_id'
-						placeholder='شناسه تفضیلی'
-						value={form.preferential_id}
-						onChange={handleChange}
-					/>
+						<div className={styles.InputGroup}>
+							<label className={styles.InputLabel}>شناسه تفضیلی</label>
+							<input
+								name='preferential_id'
+								placeholder='اختیاری'
+								value={form.preferential_id}
+								onChange={handleChange}
+								className={styles.Input}
+							/>
+							<div className={styles.InputHint}>در صورت وجود وارد کنید</div>
+						</div>
+					</div>
 				</div>
-
-				<button
-					type='submit'
-					disabled={createContractorMutation.isPending}
-					className={styles.SubmitBtn}
-				>
-					{createContractorMutation.isPending ? "در حال ثبت..." : "ثبت"}
-				</button>
 
 				{createContractorMutation.isError && (
-					<p className={styles.Error}>خطا در ثبت پیمانکار</p>
+					<div className={styles.ErrorAlert}>
+						<AlertCircle size={18} />
+						<span>خطا در ثبت پیمانکار</span>
+					</div>
 				)}
+
+				<div className={styles.FormActions}>
+					<button
+						type='reset'
+						className={styles.CancelButton}
+						disabled={createContractorMutation.isPending}
+					>
+						پاک کردن فرم
+					</button>
+					<button
+						type='submit'
+						disabled={createContractorMutation.isPending}
+						className={styles.SubmitBtn}
+					>
+						{createContractorMutation.isPending ? (
+							<>
+								<Loader2
+									className={styles.Loader}
+									size={18}
+								/>
+								در حال ثبت...
+							</>
+						) : (
+							"ثبت پیمانکار"
+						)}
+					</button>
+				</div>
 			</form>
+
+			<div className={styles.Footer}>
+				<p className={styles.FooterNote}>
+					<AlertCircle size={14} />
+					فیلدهای ستاره‌دار الزامی هستند.
+				</p>
+			</div>
 		</div>
 	);
 }
