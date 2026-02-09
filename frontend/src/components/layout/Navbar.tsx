@@ -39,16 +39,6 @@ const navItems: NavItem[] = [
 		href: "/dashboard/contractors",
 		icon: <Wallet size={20} />,
 	},
-	{
-		title: "گزارش‌ها",
-		href: "/dashboard/reports",
-		icon: <BarChart3 size={20} />,
-	},
-	{
-		title: "تنظیمات",
-		href: "/dashboard/settings",
-		icon: <Settings size={20} />,
-	},
 ];
 
 export default function Navbar() {
@@ -100,53 +90,6 @@ export default function Navbar() {
 					</div>
 
 					{/* Avatar Dropdown */}
-					<div
-						className={styles.avatarWrapper}
-						ref={dropdownRef}
-					>
-						<button
-							onClick={() => setDropdownOpen(!dropdownOpen)}
-							className={styles.avatarButton}
-						>
-							<Image
-								src='/avatar.png'
-								alt='User Avatar'
-								width={36}
-								height={36}
-								className={styles.avatarImage}
-							/>
-							<span className={styles.avatarName}>مدیر سیستم</span>
-						</button>
-
-						<AnimatePresence>
-							{dropdownOpen && (
-								<motion.div
-									initial={{ opacity: 0, y: -5 }}
-									animate={{ opacity: 1, y: 0 }}
-									exit={{ opacity: 0, y: -5 }}
-									transition={{ duration: 0.2 }}
-									className={styles.dropdown}
-								>
-									<Link
-										href='/profile'
-										className={styles.dropdownItem}
-										onClick={() => setDropdownOpen(false)}
-									>
-										<User size={16} />
-										<span>پروفایل</span>
-									</Link>
-
-									<button
-										className={`${styles.dropdownItem} ${styles.logout}`}
-										onClick={() => alert("خروج از حساب")}
-									>
-										<LogOut size={16} />
-										<span>خروج</span>
-									</button>
-								</motion.div>
-							)}
-						</AnimatePresence>
-					</div>
 
 					<div className={styles.SignIn}>
 						<Link href='/sign-in'>ورود | ثبت نام</Link>

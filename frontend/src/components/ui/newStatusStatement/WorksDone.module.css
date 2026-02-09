@@ -3,8 +3,8 @@
 	width: 100%;
 	margin: 24px 0;
 	background: #ffffff;
-	border-radius: 12px;
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+	border-radius: 16px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 	overflow: hidden;
 	border: 1px solid #e2e8f0;
 }
@@ -14,30 +14,46 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 20px 24px;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-	border-bottom: 1px solid #e2e8f0;
+	padding: 24px 32px;
+	background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.HeaderLeft {
+	display: flex;
+	align-items: center;
+	gap: 24px;
+}
+
+.TitleSection {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.TitleIcon {
+	width: 48px;
+	height: 48px;
+	background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+	border-radius: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
 }
 
 .Title {
 	font-size: 20px;
 	font-weight: 700;
 	color: white;
-	margin: 0;
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-.Icon {
-	font-size: 24px;
+	margin: 0 0 4px 0;
 }
 
 .Subtitle {
 	font-size: 14px;
+	color: #94a3b8;
+	margin: 0;
 	font-weight: 400;
-	opacity: 0.9;
-	margin-right: 8px;
 }
 
 .HeaderActions {
@@ -45,12 +61,12 @@
 	gap: 12px;
 }
 
+.PrintButton,
+.CalculateButton,
 .SaveButton {
-	padding: 10px 24px;
-	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-	color: white;
+	padding: 10px 20px;
 	border: none;
-	border-radius: 8px;
+	border-radius: 10px;
 	font-size: 14px;
 	font-weight: 600;
 	cursor: pointer;
@@ -58,81 +74,143 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.PrintButton {
+	background: #f8fafc;
+	color: #475569;
+	border: 2px solid #e2e8f0;
+}
+
+.PrintButton:hover {
+	background: #f1f5f9;
+	border-color: #cbd5e1;
+	transform: translateY(-2px);
+}
+
+.CalculateButton {
+	background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+	color: white;
+}
+
+.CalculateButton:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.SaveButton {
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: white;
+	box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
 .SaveButton:hover:not(:disabled) {
 	transform: translateY(-2px);
-	box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+	box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
 }
 
 .SaveButton:disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
+	transform: none;
 }
 
-/* Loading Spinner */
-.LoadingSpinner {
-	width: 16px;
-	height: 16px;
-	border: 2px solid rgba(255, 255, 255, 0.3);
-	border-radius: 50%;
-	border-top-color: white;
-	animation: spin 0.8s linear infinite;
+.Loader {
+	animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
 	to {
 		transform: rotate(360deg);
 	}
 }
 
-/* Empty State */
-.EmptyState {
-	padding: 60px 24px;
-	text-align: center;
+/* Control Panel */
+.ControlPanel {
+	padding: 20px 32px;
 	background: #f8fafc;
+	border-bottom: 1px solid #e2e8f0;
 }
 
-.EmptyIcon {
-	font-size: 48px;
+.ControlGroup {
+	display: flex;
+	align-items: center;
+	gap: 12px;
 	margin-bottom: 16px;
-	opacity: 0.5;
 }
 
-.EmptyText {
-	font-size: 16px;
-	color: #64748b;
-	margin: 0 0 8px 0;
-}
-
-.EmptySubtext {
+.ControlLabel {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	font-size: 14px;
-	color: #94a3b8;
-	margin: 0;
+	color: #475569;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.Checkbox {
+	width: 18px;
+	height: 18px;
+	border-radius: 4px;
+	border: 2px solid #cbd5e1;
+	cursor: pointer;
+}
+
+.ProgressBar {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.ProgressLabel {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 14px;
+	color: #475569;
+	font-weight: 500;
+}
+
+.ProgressTrack {
+	height: 8px;
+	background: #e2e8f0;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.ProgressFill {
+	height: 100%;
+	background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+	border-radius: 4px;
+	transition: width 0.3s ease;
 }
 
 /* Table Wrapper */
 .TableWrapper {
-	padding: 24px;
+	padding: 32px;
 }
 
 .TableContainer {
-	border-radius: 8px;
+	border-radius: 12px;
 	overflow: hidden;
 	border: 1px solid #e2e8f0;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 /* Table Header */
 .TableHeader {
-	display: flex;
+	display: grid;
+	grid-template-columns: 5% 30% 10% 10% 12% 12% 10% 12% 9%;
 	background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 	border-bottom: 2px solid #cbd5e1;
 }
 
-.HeaderCell {
-	padding: 16px 12px;
+.TableHeaderCell {
+	padding: 18px 12px;
 	font-size: 13px;
 	font-weight: 700;
 	color: #334155;
@@ -141,9 +219,10 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	gap: 8px;
 }
 
-.HeaderCell:last-child {
+.TableHeaderCell:last-child {
 	border-right: none;
 }
 
@@ -151,20 +230,21 @@
 .TableBody {
 	max-height: 400px;
 	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e1 transparent;
 }
 
-/* Scrollbar Styling */
 .TableBody::-webkit-scrollbar {
-	width: 6px;
+	width: 8px;
 }
 
 .TableBody::-webkit-scrollbar-track {
-	background: #f1f1f1;
+	background: #f1f5f9;
 }
 
 .TableBody::-webkit-scrollbar-thumb {
 	background: #cbd5e1;
-	border-radius: 3px;
+	border-radius: 4px;
 }
 
 .TableBody::-webkit-scrollbar-thumb:hover {
@@ -173,13 +253,20 @@
 
 /* Table Row */
 .TableRow {
-	display: flex;
+	display: grid;
+	grid-template-columns: 5% 30% 10% 10% 12% 12% 10% 12% 9%;
 	transition: all 0.2s ease;
 	border-bottom: 1px solid #f1f5f9;
+	cursor: pointer;
 }
 
 .TableRow:hover {
 	background-color: #f8fafc;
+}
+
+.TableRow.EditingRow {
+	background-color: #f0f9ff;
+	box-shadow: inset 0 0 0 2px #3b82f6;
 }
 
 .EvenRow {
@@ -190,27 +277,78 @@
 	background-color: #f8fafc;
 }
 
-.BodyCell {
-	padding: 14px 12px;
-	font-size: 13px;
-	color: #334155;
-	border-right: 1px solid #e2e8f0;
+.TableCell {
+	padding: 16px 12px;
+	border-right: 1px solid #f1f5f9;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 }
 
-.BodyCell:last-child {
+.TableCell:last-child {
 	border-right: none;
 }
 
-.CellContent {
-	text-align: center;
-	word-break: break-word;
+.RowNumber {
+	font-weight: 600;
+	color: #475569;
+	font-size: 14px;
 }
 
-/* Input Wrapper */
-.InputWrapper {
+.DescriptionCell {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.DescriptionText {
+	font-size: 14px;
+	color: #1e293b;
+	text-align: right;
+	line-height: 1.4;
+}
+
+.RowProgress {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.RowProgressTrack {
+	flex: 1;
+	height: 4px;
+	background: #e2e8f0;
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.RowProgressFill {
+	height: 100%;
+	background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+	border-radius: 2px;
+}
+
+.RowProgressText {
+	font-size: 11px;
+	color: #64748b;
+	font-weight: 600;
+	min-width: 30px;
+}
+
+.UnitText {
+	font-size: 13px;
+	color: #475569;
+	font-weight: 500;
+}
+
+.TotalQuantity {
+	font-size: 14px;
+	font-weight: 600;
+	color: #334155;
+}
+
+.QuantityInputWrapper {
 	width: 100%;
 	display: flex;
 	flex-direction: column;
@@ -218,30 +356,38 @@
 	align-items: center;
 }
 
-.QuantityInput {
+.QuantityInput,
+.NewQuantityInput {
 	width: 100%;
-	max-width: 120px;
+	max-width: 100px;
 	padding: 8px 12px;
 	border: 2px solid #e2e8f0;
-	border-radius: 6px;
+	border-radius: 8px;
 	font-size: 13px;
 	text-align: center;
 	transition: all 0.2s ease;
 	background: white;
+	font-family: "Courier New", monospace;
 }
 
-.QuantityInput:focus {
+.QuantityInput:focus,
+.NewQuantityInput:focus {
 	outline: none;
 	border-color: #3b82f6;
 	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.QuantityInput::placeholder {
-	color: #94a3b8;
+.NewQuantityInput {
+	border-color: #10b981;
+}
+
+.NewQuantityInput:focus {
+	border-color: #059669;
+	box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 .MaxBadge {
-	font-size: 11px;
+	font-size: 10px;
 	color: #64748b;
 	background: #f1f5f9;
 	padding: 2px 6px;
@@ -249,131 +395,223 @@
 	white-space: nowrap;
 }
 
-/* Total Amount */
+.Remaining {
+	font-size: 14px;
+	font-weight: 600;
+	color: #475569;
+}
+
+.NegativeRemaining {
+	font-size: 14px;
+	font-weight: 600;
+	color: #ef4444;
+}
+
 .TotalAmount {
+	font-size: 14px;
 	font-weight: 600;
 	color: #059669;
-	font-size: 13px;
+	font-family: "Courier New", monospace;
+}
+
+.ZeroAmount {
+	font-size: 14px;
+	color: #94a3b8;
+	font-style: italic;
+}
+
+.RowActions {
+	display: flex;
+	gap: 4px;
+	justify-content: center;
+}
+
+.ActionButton {
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	border-radius: 6px;
+	background: #f8fafc;
+	color: #64748b;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.ActionButton:hover {
+	background: #f1f5f9;
+	transform: translateY(-2px);
 }
 
 /* Totals Card */
 .TotalsCard {
 	margin-top: 24px;
-	padding: 20px;
+	padding: 24px;
 	background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-	border-radius: 10px;
+	border-radius: 12px;
 	border: 1px solid #bae6fd;
+}
+
+.TotalsHeader {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	font-size: 16px;
+	font-weight: 700;
+	color: #0c4a6e;
+	margin-bottom: 20px;
+	padding-bottom: 12px;
+	border-bottom: 2px solid #bae6fd;
 }
 
 .TotalsGrid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 	gap: 16px;
-	margin-bottom: 16px;
 }
 
 .TotalItem {
 	display: flex;
-	justify-content: space-between;
 	align-items: center;
-	padding: 12px 16px;
+	gap: 16px;
+	padding: 16px;
 	background: white;
-	border-radius: 8px;
+	border-radius: 10px;
 	border: 1px solid #e2e8f0;
 }
 
+.TotalIcon {
+	width: 36px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 8px;
+	color: white;
+}
+
+.TotalContent {
+	flex: 1;
+}
+
 .TotalLabel {
-	font-size: 13px;
+	display: block;
+	font-size: 12px;
 	color: #64748b;
 	font-weight: 500;
+	margin-bottom: 4px;
 }
 
 .TotalValue {
-	font-size: 14px;
+	display: block;
+	font-size: 16px;
 	font-weight: 700;
 	color: #1e293b;
 }
 
-.TotalsActions {
-	display: flex;
-	justify-content: flex-end;
+/* Empty State */
+.EmptyState {
+	padding: 60px 32px;
+	text-align: center;
+	background: #f8fafc;
 }
 
-.PrintButton {
-	padding: 10px 20px;
-	background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-	color: white;
-	border: none;
-	border-radius: 8px;
-	font-size: 13px;
+.EmptyIcon {
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 20px;
+	color: #94a3b8;
+	opacity: 0.5;
+}
+
+.EmptyText {
+	font-size: 16px;
+	color: #475569;
 	font-weight: 600;
-	cursor: pointer;
-	transition: all 0.3s ease;
-	display: flex;
-	align-items: center;
-	gap: 8px;
+	margin: 0 0 8px 0;
 }
 
-.PrintButton:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
+.EmptySubtext {
+	font-size: 14px;
+	color: #94a3b8;
+	margin: 0;
+	max-width: 400px;
+	margin: 0 auto;
+	line-height: 1.6;
 }
 
 /* Footer */
 .Footer {
-	padding: 16px 24px;
+	padding: 20px 32px;
 	border-top: 1px solid #e2e8f0;
 	background: #f8fafc;
 }
 
+.FooterNotes {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
 .FooterNote {
-	font-size: 12px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
 	color: #64748b;
-	text-align: center;
-	margin: 0;
-	font-style: italic;
 }
 
 /* Responsive Design */
+@media (max-width: 1400px) {
+	.TableHeader,
+	.TableRow {
+		grid-template-columns: 5% 25% 8% 8% 10% 10% 8% 12% 14%;
+	}
+}
+
+@media (max-width: 1200px) {
+	.TableHeader,
+	.TableRow {
+		grid-template-columns: 5% 22% 8% 8% 10% 10% 8% 12% 17%;
+	}
+}
+
 @media (max-width: 1024px) {
 	.TableHeader,
 	.TableRow {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		display: block;
 	}
 
-	.HeaderCell,
-	.BodyCell {
-		width: 100% !important;
+	.TableHeaderCell {
+		display: none;
+	}
+
+	.TableCell {
+		display: flex;
+		justify-content: space-between;
+		padding: 12px 16px;
 		border-right: none;
-		border-bottom: 1px solid #e2e8f0;
-		justify-content: flex-start;
-		padding: 12px;
+		border-bottom: 1px solid #f1f5f9;
 		text-align: right;
 	}
 
-	.HeaderCell:last-child,
-	.BodyCell:last-child {
-		border-bottom: none;
-	}
-
-	.BodyCell {
-		position: relative;
-		padding-right: 40%;
-	}
-
-	.BodyCell::before {
+	.TableCell:before {
 		content: attr(data-label);
-		position: absolute;
-		right: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		font-weight: 700;
+		font-weight: 600;
 		color: #64748b;
-		font-size: 12px;
-		background: #f1f5f9;
-		padding: 4px 8px;
-		border-radius: 4px;
+		margin-left: 12px;
+		min-width: 120px;
+		text-align: right;
+	}
+
+	.RowActions {
+		justify-content: flex-end;
+	}
+
+	.TotalsGrid {
+		grid-template-columns: repeat(2, 1fr);
 	}
 }
 
@@ -385,15 +623,15 @@
 	}
 
 	.HeaderActions {
-		justify-content: center;
-	}
-
-	.Title {
-		text-align: center;
+		flex-wrap: wrap;
 		justify-content: center;
 	}
 
 	.TotalsGrid {
 		grid-template-columns: 1fr;
+	}
+
+	.FooterNotes {
+		text-align: center;
 	}
 }

@@ -149,7 +149,7 @@ export default function PageSideBar({
 			id: "projects",
 			title: "پروژه‌ها",
 			icon: <FolderOpen size={20} />,
-			path: "project",
+			path: "../projects",
 			color: "#ef4444",
 			items: [],
 		},

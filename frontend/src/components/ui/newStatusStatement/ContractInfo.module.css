@@ -1,50 +1,110 @@
+/* ContractInfo.module.css */
+
 .Container {
 	width: 100%;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	padding: 0px;
-	border: 1px solid rgb(0, 0, 0);
-	border-radius: 3px;
-	margin: 9px 0px;
+	padding: 0 40px 32px;
 }
 
-.Row1,
-.Row2,
-.Row3,
-.Row4 {
-	width: 100%;
+.SectionHeader {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	font-size: 18px;
+	font-weight: 700;
+	color: #1e293b;
+	margin-bottom: 24px;
+	padding-bottom: 16px;
+	border-bottom: 2px solid #f1f5f9;
+}
+
+.InfoGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	gap: 24px;
+}
+
+@media (max-width: 1024px) {
+	.InfoGrid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.InfoCard {
+	background: white;
+	border-radius: 16px;
+	border: 1px solid #e2e8f0;
+	padding: 24px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+	transition: all 0.3s ease;
+}
+
+.InfoCard:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.InfoCardHeader {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-bottom: 20px;
+	padding-bottom: 16px;
+	border-bottom: 2px solid #f1f5f9;
+}
+
+.InfoIcon {
+	width: 40px;
+	height: 40px;
+	border-radius: 10px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border-bottom: 1px solid gray;
-}
-.Row1 {
-	border-bottom: 2px solid rgb(52, 52, 52);
+	color: white;
 }
 
-.Row2 {
-	background-color: rgb(199, 230, 255);
+.InfoTitle {
+	font-size: 16px;
+	font-weight: 700;
+	color: #1e293b;
+	margin: 0;
 }
 
-.Row3 {
-	background-color: rgb(255, 255, 255);
-}
-
-.Row4 {
-	background-color: rgb(199, 230, 255);
-	border-bottom: 0px;
-}
-
-.Col1,
-.Col2 {
-	width: 50%;
+.InfoContent {
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 0px 6px;
+	flex-direction: column;
+	gap: 16px;
 }
 
-.Col2 {
-	border-right: 1px solid gray;
+.InfoItem {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 0;
+	border-bottom: 1px solid #f1f5f9;
+}
+
+.InfoItem:last-child {
+	border-bottom: none;
+	padding-bottom: 0;
+}
+
+.InfoLabel {
+	font-size: 14px;
+	color: #64748b;
+	font-weight: 500;
+}
+
+.InfoValue {
+	font-size: 15px;
+	font-weight: 600;
+	color: #1e293b;
+	text-align: left;
+}
+
+.InfoValue.Legal {
+	color: #8b5cf6;
+}
+
+.InfoValue.Natural {
+	color: #10b981;
 }

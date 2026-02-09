@@ -8,6 +8,22 @@ import { toPersianDigits } from "@/utils/PersianNumberCoverter";
 import ContractInformation from "./newStatusStatement/ContractInfo";
 import WorksDone from "./newStatusStatement/WorksDone";
 import ExtraWorks from "./newStatusStatement/ExtraWorks";
+import {
+	FileText,
+	Search,
+	X,
+	Loader2,
+	AlertCircle,
+	Building2,
+	User,
+	Hash,
+	Calendar,
+	Percent,
+	DollarSign,
+	TrendingUp,
+	Layers,
+	CheckCircle,
+} from "lucide-react";
 
 // Types moved to separate interface declarations
 interface ContractWBSPayload {
@@ -44,7 +60,7 @@ interface ApiError {
 }
 
 interface ContractResponse {
-	data: any; // Consider defining a proper type
+	data: any;
 }
 
 interface WBSResponse {
@@ -95,6 +111,8 @@ export default function NewStatusStatement({
 	apiUrl: string;
 }) {
 	const [contractNumber, setContractNumber] = useState("");
+	const [isSubmitted, setIsSubmitted] = useState(false);
+	const [showContractInfo, setShowContractInfo] = useState(false);
 
 	// Fetch contract data
 	const {
@@ -123,10 +141,10 @@ export default function NewStatusStatement({
 			fetchWithAuth(`${WBS_URL}${payload.contract_number}`),
 		onSuccess: (data) => {
 			toast.success("قرارداد یافت شد");
-			console.log("contract wbs:", data);
+			setShowContractInfo(true);
 		},
 		onError: (error) => {
-			toast.error(`${error.status} | ${error.message}`);
+			toast.error(error.message);
 		},
 	});
 
@@ -181,53 +199,150 @@ export default function NewStatusStatement({
 		[contractNumber, refetchContract, fetchWBS],
 	);
 
+	const handleReset = () => {
+		setContractNumber("");
+		setShowContractInfo(false);
+		setIsSubmitted(false);
+	};
+
 	const isLoading = isContractFetching || isWbsPending;
+
+	if (isSubmitted) {
+		return (
+			<div className={styles.Container}>
+				<button
+					onClick={() => setIsPopOpen(false)}
+					className={styles.CloseBtn}
+					aria-label='بستن پنجره'
+				>
+					×
+				</button>
+
+				<div className={styles.SuccessContainer}>
+					<div className={styles.SuccessIcon}>
+						<CheckCircle size={64} />
+					</div>
+					<h2 className={styles.SuccessTitle}>صورت وضعیت ثبت شد</h2>
+					<p className={styles.SuccessMessage}>
+						صورت وضعیت جدید با موفقیت در سیستم ثبت شد.
+					</p>
+					<div className={styles.SuccessDetails}>
+						<div className={styles.SuccessDetailItem}>
+							<Hash size={16} />
+							<span>شماره قرارداد:</span>
+							<strong>{contractNumber}</strong>
+						</div>
+						<div className={styles.SuccessDetailItem}>
+							<Building2 size={16} />
+							<span>پیمانکار:</span>
+							<strong>
+								{contractorData?.first_name} {contractorData?.last_name}
+							</strong>
+						</div>
+						<div className={styles.SuccessDetailItem}>
+							<Layers size={16} />
+							<span>پروژه:</span>
+							<strong>
+								{projectData?.name} - فاز {projectData?.phase}
+							</strong>
+						</div>
+					</div>
+					<div className={styles.SuccessActions}>
+						<button
+							onClick={handleReset}
+							className={styles.NewStatementButton}
+						>
+							ایجاد صورت وضعیت جدید
+						</button>
+						<button
+							onClick={() => setIsPopOpen(false)}
+							className={styles.CloseButton}
+						>
+							بستن پنجره
+						</button>
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className={styles.Container}>
 			<button
 				onClick={() => setIsPopOpen(false)}
 				className={styles.CloseBtn}
-				aria-label='بستن فرم'
+				aria-label='بستن پنجره'
 			>
 				×
 			</button>
 
-			<h2 className={styles.Title}>ایجاد صورت وضعیت جدید</h2>
+			<div className={styles.Header}>
+				<div className={styles.HeaderIcon}>
+					<FileText size={28} />
+				</div>
+				<h2 className={styles.Title}>ایجاد صورت وضعیت جدید</h2>
+				<p className={styles.Subtitle}>
+					شماره قرارداد را وارد کنید تا اطلاعات آن بارگذاری شود
+				</p>
+			</div>
 
 			<form
 				className={styles.SearchFormContainer}
 				onSubmit={handleSubmit}
 				noValidate
 			>
-				<p className={styles.searchPara}>
-					شماره قرارداد مربوطه را وارد کنید:
-					<span>(اعداد را به انگلیسی وارد نمایید)</span>
-				</p>
-				<div className={styles.SearchInputBtnContainer}>
-					<input
-						name='contract_number'
-						placeholder='شماره قرارداد'
-						onChange={handleInputChange}
-						value={contractNumber}
-						required
-						className={styles.searchInput}
-						disabled={isLoading}
-						aria-label='شماره قرارداد'
-					/>
+				<div className={styles.SearchSection}>
+					<div className={styles.SearchHeader}>
+						<Search size={20} />
+						<span>جستجوی قرارداد</span>
+					</div>
+					<div className={styles.SearchInputGroup}>
+						<label className={styles.SearchLabel}>
+							شماره قرارداد <span className={styles.Required}>*</span>
+						</label>
+						<div className={styles.SearchInputWrapper}>
+							<input
+								name='contract_number'
+								placeholder='مثال: 1403/123'
+								onChange={handleInputChange}
+								value={contractNumber}
+								required
+								className={styles.searchInput}
+								disabled={isLoading}
+								aria-label='شماره قرارداد'
+							/>
+						</div>
+						<div className={styles.SearchHint}>
+							<AlertCircle size={14} />
+							<span>اعداد را به انگلیسی وارد نمایید</span>
+						</div>
+					</div>
 					<button
 						type='submit'
 						className={styles.SearchBtn}
 						disabled={isLoading}
 						aria-busy={isLoading}
 					>
-						{isLoading ? "در حال جست و جو..." : "تایید"}
+						{isLoading ? (
+							<>
+								<Loader2
+									className={styles.Loader}
+									size={18}
+								/>
+								در حال جست و جو...
+							</>
+						) : (
+							<>
+								<Search size={18} />
+								جستجوی قرارداد
+							</>
+						)}
 					</button>
 				</div>
 			</form>
 
-			{/* Pass data to child components */}
-			{contractorData && projectData && (
+			{/* Contract Information */}
+			{showContractInfo && contractorData && projectData && (
 				<ContractInformation
 					first_name={contractorData.first_name}
 					last_name={contractorData.last_name}
@@ -239,8 +354,53 @@ export default function NewStatusStatement({
 				/>
 			)}
 
-			{wbsData && <WorksDone wbsData={wbsItems} />}
-			<ExtraWorks />
+			{/* Works Done Section */}
+			{wbsItems && showContractInfo && (
+				<div className={styles.WorksSection}>
+					<div className={styles.SectionHeader}>
+						<Layers size={20} />
+						<span>کارکرد پروژه</span>
+					</div>
+					<WorksDone wbsData={wbsItems} />
+				</div>
+			)}
+
+			{/* Extra Works Section */}
+			{showContractInfo && (
+				<div className={styles.ExtraWorksSection}>
+					<div className={styles.SectionHeader}>
+						<TrendingUp size={20} />
+						<span>کارهای اضافه</span>
+					</div>
+					<ExtraWorks />
+				</div>
+			)}
+
+			{/* Submit Button (when contract is loaded) */}
+			{showContractInfo && (
+				<div className={styles.SubmitSection}>
+					<button
+						className={styles.SubmitButton}
+						onClick={() => setIsSubmitted(true)}
+					>
+						<FileText size={18} />
+						ثبت صورت وضعیت
+					</button>
+					<button
+						className={styles.CancelButton}
+						onClick={handleReset}
+					>
+						شروع مجدد
+					</button>
+				</div>
+			)}
+
+			<div className={styles.Footer}>
+				<p className={styles.FooterNote}>
+					<AlertCircle size={14} />
+					پس از جستجوی قرارداد، می‌توانید کارکرد و کارهای اضافه را وارد کنید.
+				</p>
+			</div>
 		</div>
 	);
 }

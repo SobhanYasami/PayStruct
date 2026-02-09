@@ -1,161 +1,521 @@
-.FormContainer {
+/* Container */
+.Container {
+	width: 100%;
+	margin: 24px 0;
+	background: #ffffff;
+	border-radius: 16px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+	overflow: hidden;
+	border: 1px solid #e2e8f0;
+}
+
+/* Header */
+.Header {
 	display: flex;
-	flex-direction: column;
+	justify-content: space-between;
+	align-items: center;
+	padding: 24px 32px;
+	background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.HeaderLeft {
+	display: flex;
+	align-items: center;
+	gap: 24px;
+}
+
+.TitleSection {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.TitleIcon {
+	width: 48px;
+	height: 48px;
+	background: rgba(255, 255, 255, 0.15);
+	backdrop-filter: blur(10px);
+	border-radius: 12px;
+	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 100%;
-	margin: 9px 0px;
+	color: white;
+	border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.TableHeader {
-	width: 100%;
+.Title {
+	font-size: 20px;
+	font-weight: 700;
+	color: white;
+	margin: 0 0 4px 0;
+}
+
+.Subtitle {
+	font-size: 14px;
+	color: rgba(255, 255, 255, 0.9);
+	margin: 0;
+	font-weight: 400;
+}
+
+.HeaderActions {
+	display: flex;
+	gap: 12px;
+}
+
+.PrintButton,
+.CalculateButton,
+.SaveButton {
+	padding: 10px 20px;
+	border: none;
+	border-radius: 10px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
 	display: flex;
 	align-items: center;
-	border-bottom: 3px solid gray;
-	background-color: lightsteelblue;
+	gap: 8px;
 }
 
-.col1 {
-	min-width: 50px;
-	padding: 2px 6px;
-	border-left: 1px solid gray;
-	border-right: 1px solid gray;
+.PrintButton {
+	background: rgba(255, 255, 255, 0.15);
+	color: white;
+	border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.PrintButton:hover {
+	background: rgba(255, 255, 255, 0.25);
+	transform: translateY(-2px);
+}
+
+.CalculateButton {
+	background: rgba(255, 255, 255, 0.15);
+	color: white;
+	border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.CalculateButton:hover {
+	background: rgba(255, 255, 255, 0.25);
+	transform: translateY(-2px);
+}
+
+.SaveButton {
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: white;
+	box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.SaveButton:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+}
+
+.SaveButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.Loader {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Control Panel */
+.ControlPanel {
+	padding: 20px 32px;
+	background: #f8fafc;
+	border-bottom: 1px solid #e2e8f0;
+}
+
+.RowManagement {
+	display: flex;
+	gap: 12px;
+}
+
+.AddRowButton,
+.ClearAllButton {
+	padding: 12px 20px;
+	border: none;
+	border-radius: 10px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.AddRowButton {
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: white;
+}
+
+.AddRowButton:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.ClearAllButton {
+	background: #f8fafc;
+	color: #64748b;
+	border: 2px solid #e2e8f0;
+}
+
+.ClearAllButton:hover {
+	background: #f1f5f9;
+	border-color: #cbd5e1;
+	transform: translateY(-2px);
+}
+
+/* Table Wrapper */
+.TableWrapper {
+	padding: 32px;
+}
+
+.TableContainer {
+	border-radius: 12px;
+	overflow: hidden;
+	border: 1px solid #e2e8f0;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Table Header */
+.TableHeader {
+	display: grid;
+	grid-template-columns: 5% 35% 15% 15% 20% 10%;
+	background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+	border-bottom: 2px solid #cbd5e1;
+}
+
+.TableHeaderCell {
+	padding: 18px 12px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #334155;
+	text-align: center;
+	border-right: 1px solid #e2e8f0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+.TableHeaderCell:last-child {
+	border-right: none;
+}
+
+/* Table Body */
+.TableBody {
+	max-height: 400px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e1 transparent;
+}
+
+.TableBody::-webkit-scrollbar {
+	width: 8px;
+}
+
+.TableBody::-webkit-scrollbar-track {
+	background: #f1f5f9;
+}
+
+.TableBody::-webkit-scrollbar-thumb {
+	background: #cbd5e1;
+	border-radius: 4px;
+}
+
+.TableBody::-webkit-scrollbar-thumb:hover {
+	background: #94a3b8;
+}
+
+/* Table Row */
+.TableRow {
+	display: grid;
+	grid-template-columns: 5% 35% 15% 15% 20% 10%;
+	transition: all 0.2s ease;
+	border-bottom: 1px solid #f1f5f9;
+	cursor: pointer;
+}
+
+.TableRow:hover {
+	background-color: #f8fafc;
+}
+
+.TableRow.EditingRow {
+	background-color: #f0f9ff;
+	box-shadow: inset 0 0 0 2px #8b5cf6;
+}
+
+.EvenRow {
+	background-color: #ffffff;
+}
+
+.OddRow {
+	background-color: #f8fafc;
+}
+
+.TableCell {
+	padding: 16px 12px;
+	border-right: 1px solid #f1f5f9;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.TableCell:last-child {
+	border-right: none;
+}
+
+.RowNumber {
+	font-weight: 600;
+	color: #475569;
+	font-size: 14px;
+}
+
+/* Input Styles */
+.DescriptionInput,
+.QuantityInput,
+.UnitInput,
+.PriceInput {
+	width: 100%;
+	padding: 10px 12px;
+	font-size: 14px;
+	color: #1e293b;
+	background: white;
+	border: 2px solid #e2e8f0;
+	border-radius: 8px;
+	transition: all 0.3s ease;
 	text-align: center;
 }
-.col2 {
-	min-width: 390px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
-}
-.col3 {
-	min-width: 120px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
-}
-.col4 {
-	min-width: 80px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
-}
-.col5 {
-	min-width: 200px;
-	padding: 4px 6px;
-	border-left: 1px solid gray;
+
+.DescriptionInput {
+	text-align: right;
 }
 
-.RowsContainer {
+.DescriptionInput:focus,
+.QuantityInput:focus,
+.UnitInput:focus,
+.PriceInput:focus {
+	outline: none;
+	border-color: #8b5cf6;
+	box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.DescriptionInput::placeholder,
+.QuantityInput::placeholder,
+.UnitInput::placeholder,
+.PriceInput::placeholder {
+	color: #94a3b8;
+}
+
+.PriceInputWrapper {
 	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.ItemTotal {
+	font-size: 11px;
+	color: #059669;
+	background: #f0fdf4;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-weight: 600;
+	text-align: center;
+}
+
+/* Row Actions */
+.RowActions {
+	display: flex;
+	gap: 8px;
+	justify-content: center;
+}
+
+.ActionButton {
+	width: 32px;
+	height: 32px;
 	display: flex;
 	align-items: center;
-	border-bottom: 1px solid gray;
-	background-color: rgb(255, 255, 255);
-}
-
-.descriptionInput {
-	min-width: 390px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	outline: none;
-	border: 1px solid rgb(124, 124, 124);
-}
-.descriptionInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
-}
-
-.quantityInput {
-	width: 120px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	outline: none;
-	border: 1px solid rgb(124, 124, 124);
-}
-.quantityInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
-}
-.unitInput {
-	width: 80px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	outline: none;
-	border: 1px solid rgb(124, 124, 124);
-}
-.unitInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
-}
-
-.unitPriceInput {
-	min-width: 200px;
-	background-color: white;
-	color: rgb(57, 57, 57);
-	padding: 6px 6px;
-	border: 1px solid rgb(124, 124, 124);
-	outline: none;
-}
-.unitPriceInput:focus {
-	border: 1px solid dodgerblue;
-	outline: none;
-}
-
-.AddRowContainer {
-	width: 100%;
-	display: flex;
-	margin: 6px 0px;
-	padding: 0px 9px;
-	gap: 6px;
-}
-.AddRowBtn {
-	width: 30px;
-	height: 30px;
-	border-radius: 9px;
-	padding: 3px;
-	padding-bottom: 5px;
-	background-color: rgb(2, 209, 43);
-	font-size: 20px;
-	font-weight: 600;
-	border: 1px solid;
-}
-.AddRowBtn:hover {
-	background-color: rgb(2, 289, 60);
-}
-
-.RemoveRowBtn {
-	width: 30px;
-	height: 30px;
-	border-radius: 9px;
-	padding: 3px;
-	padding-bottom: 5px;
-	background-color: rgb(209, 2, 2);
-	font-size: 20px;
-	font-weight: 600;
-	border: 1px solid;
-}
-.RemoveRowBtn:hover {
-	background-color: rgb(239, 2, 2);
-}
-
-.SubmitBtn {
-	width: 100%;
-	height: 30px;
+	justify-content: center;
+	border: none;
 	border-radius: 6px;
-	margin: 9px 0px;
-	padding: 3px;
-	padding-bottom: 5px;
-	background-color: rgb(2, 123, 209);
-	font-weight: 600;
-	border: 1px solid;
+	background: #f8fafc;
+	color: #64748b;
+	cursor: pointer;
+	transition: all 0.2s ease;
 }
 
-.SubmitBtn:hover {
-	background-color: rgb(2, 123, 239);
+.ActionButton:hover:not(:disabled) {
+	background: #f1f5f9;
+	transform: translateY(-2px);
 }
 
-.Error {
-	color: red;
-	font-size: small;
+.ActionButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	transform: none;
+}
+
+/* Totals Card */
+.TotalsCard {
+	margin-top: 24px;
+	padding: 24px;
+	background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+	border-radius: 12px;
+	border: 1px solid #e9d5ff;
+}
+
+.TotalsHeader {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	font-size: 16px;
+	font-weight: 700;
+	color: #7c3aed;
+	margin-bottom: 20px;
+	padding-bottom: 12px;
+	border-bottom: 2px solid #e9d5ff;
+}
+
+.TotalsGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 16px;
+}
+
+.TotalItem {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 16px;
+	background: white;
+	border-radius: 10px;
+	border: 1px solid #e2e8f0;
+}
+
+.TotalIcon {
+	width: 36px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 8px;
+	color: white;
+}
+
+.TotalContent {
+	flex: 1;
+}
+
+.TotalLabel {
+	display: block;
+	font-size: 12px;
+	color: #64748b;
+	font-weight: 500;
+	margin-bottom: 4px;
+}
+
+.TotalValue {
+	display: block;
+	font-size: 16px;
+	font-weight: 700;
+	color: #1e293b;
+}
+
+/* Footer */
+.Footer {
+	padding: 20px 32px;
+	border-top: 1px solid #e2e8f0;
+	background: #f8fafc;
+}
+
+.FooterNotes {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.FooterNote {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	color: #64748b;
+	line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+	.TableHeader,
+	.TableRow {
+		display: block;
+	}
+
+	.TableHeaderCell {
+		display: none;
+	}
+
+	.TableCell {
+		display: flex;
+		justify-content: space-between;
+		padding: 12px 16px;
+		border-right: none;
+		border-bottom: 1px solid #f1f5f9;
+		text-align: right;
+	}
+
+	.TableCell:before {
+		content: attr(data-label);
+		font-weight: 600;
+		color: #64748b;
+		margin-left: 12px;
+		min-width: 120px;
+		text-align: right;
+	}
+
+	.RowActions {
+		justify-content: flex-end;
+	}
+
+	.TotalsGrid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (max-width: 768px) {
+	.Header {
+		flex-direction: column;
+		gap: 16px;
+		align-items: stretch;
+	}
+
+	.HeaderActions {
+		flex-wrap: wrap;
+		justify-content: center;
+	}
+
+	.RowManagement {
+		flex-direction: column;
+	}
+
+	.TotalsGrid {
+		grid-template-columns: 1fr;
+	}
+
+	.FooterNotes {
+		text-align: center;
+	}
 }
