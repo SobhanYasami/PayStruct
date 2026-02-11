@@ -92,7 +92,11 @@ export default function Navbar() {
 					{/* Avatar Dropdown */}
 
 					<div className={styles.SignIn}>
-						<Link href='/sign-in'>ورود | ثبت نام</Link>
+						<Link href='/sign-in'>
+							<span>ورود</span>
+							<span className={styles.separator}>|</span>
+							<span>ثبت نام</span>
+						</Link>
 					</div>
 
 					{/* Mobile Hamburger */}

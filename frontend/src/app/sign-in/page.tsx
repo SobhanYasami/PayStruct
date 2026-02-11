@@ -34,7 +34,7 @@ async function signInRequest(payload: SignInPayload) {
 
 	if (!res.ok) {
 		const err = await res.json();
-		throw new Error(err.message || "Sign in failed");
+		throw new Error(err.message || "ورود ناموفق بود");
 	}
 
 	return res.json();
@@ -49,40 +49,104 @@ async function signUpRequest(payload: SignUpPayload) {
 
 	if (!res.ok) {
 		const err = await res.json();
-		throw new Error(err.message || "Sign up failed");
+		throw new Error(err.message || "ثبت نام ناموفق بود");
 	}
 
 	return res.json();
 }
 
 // -----------------------------
-// Page
+// Main Component
 // -----------------------------
-export default function SignIn() {
-	const [activeTab, setActiveTab] = useState("signin");
+export default function AuthPage() {
+	const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
 
 	return (
 		<div
 			className={styles.container}
 			dir='rtl'
 		>
-			<div className={styles.card}>
-				<div className={styles.tabs}>
-					<button
-						className={activeTab === "signin" ? styles.activeTab : styles.tab}
-						onClick={() => setActiveTab("signin")}
-					>
-						ورود
-					</button>
-					<button
-						className={activeTab === "signup" ? styles.activeTab : styles.tab}
-						onClick={() => setActiveTab("signup")}
-					>
-						ثبت نام
-					</button>
+			<div className={styles.wrapper}>
+				{/* Left Panel with Branding */}
+				<div className={styles.brandPanel}>
+					<div className={styles.brandContent}>
+						<div className={styles.logo}>
+							<span className={styles.logoIcon}>🔐</span>
+							<h1 className={styles.logoText}>پنل مدیریت</h1>
+						</div>
+						<div className={styles.brandMessage}>
+							<h2 className={styles.brandTitle}>به سیستم مدیریت خوش آمدید</h2>
+							<p className={styles.brandSubtitle}>
+								حساب کاربری خود را ایجاد کنید یا وارد شوید تا به امکانات کامل
+								دسترسی داشته باشید
+							</p>
+						</div>
+						<div className={styles.features}>
+							<div className={styles.feature}>
+								<span className={styles.featureIcon}>✓</span>
+								<span>مدیریت امن و آسان</span>
+							</div>
+							<div className={styles.feature}>
+								<span className={styles.featureIcon}>✓</span>
+								<span>دسترسی آنی به امکانات</span>
+							</div>
+							<div className={styles.feature}>
+								<span className={styles.featureIcon}>✓</span>
+								<span>پشتیبانی 24/7</span>
+							</div>
+						</div>
+					</div>
 				</div>
 
-				{activeTab === "signin" ? <SignInForm /> : <SignUpForm />}
+				{/* Right Panel with Form */}
+				<div className={styles.formPanel}>
+					<div className={styles.formCard}>
+						<div className={styles.tabsContainer}>
+							<div className={styles.tabs}>
+								<button
+									className={`${styles.tab} ${activeTab === "signin" ? styles.activeTab : ""}`}
+									onClick={() => setActiveTab("signin")}
+								>
+									<span className={styles.tabIcon}>→</span>
+									<span>ورود به حساب</span>
+								</button>
+								<button
+									className={`${styles.tab} ${activeTab === "signup" ? styles.activeTab : ""}`}
+									onClick={() => setActiveTab("signup")}
+								>
+									<span className={styles.tabIcon}>+</span>
+									<span>ایجاد حساب</span>
+								</button>
+							</div>
+							<div
+								className={styles.tabIndicator}
+								data-active={activeTab}
+							/>
+						</div>
+
+						<div className={styles.formWrapper}>
+							{activeTab === "signin" ? <SignInForm /> : <SignUpForm />}
+						</div>
+
+						<p className={styles.terms}>
+							با ادامه، با{" "}
+							<a
+								href='#'
+								className={styles.link}
+							>
+								شرایط استفاده
+							</a>{" "}
+							و{" "}
+							<a
+								href='#'
+								className={styles.link}
+							>
+								حریم خصوصی
+							</a>{" "}
+							موافقت می‌کنید.
+						</p>
+					</div>
+				</div>
 			</div>
 		</div>
 	);
@@ -99,15 +163,15 @@ function SignInForm() {
 	const mutation = useMutation({
 		mutationFn: signInRequest,
 		onSuccess: (data) => {
-			// todo: remove printing to console
-			console.log("Signed in", data);
-
-			// todo: store them in cookies instead of local storage
+			// Store in cookies (implement proper cookie storage)
 			localStorage.setItem("usr-token", data.data.token);
 			localStorage.setItem("usr-role", data.data.role);
 
-			toast.success(data.message);
+			toast.success("ورود موفقیت‌آمیز بود");
 			router.push("/dashboard");
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || "خطا در ورود");
 		},
 	});
 
@@ -121,36 +185,79 @@ function SignInForm() {
 			className={styles.form}
 			onSubmit={onSubmit}
 		>
-			<h2 className={styles.title}>خوش آمدید</h2>
+			<div className={styles.formHeader}>
+				<h2 className={styles.formTitle}>خوش بازگشتی!</h2>
+				<p className={styles.formSubtitle}>
+					لطفاً اطلاعات حساب خود را وارد کنید
+				</p>
+			</div>
 
-			<label className={styles.label}>نام کاربری</label>
-			<input
-				type='text'
-				value={userName}
-				onChange={(e) => setUserName(e.target.value)}
-				required
-				className={styles.input}
-			/>
+			<div className={styles.inputGroup}>
+				<label className={styles.label}>
+					<span>نام کاربری</span>
+					<span className={styles.required}>*</span>
+				</label>
+				<div className={styles.inputWrapper}>
+					<input
+						type='text'
+						value={userName}
+						onChange={(e) => setUserName(e.target.value)}
+						required
+						className={styles.input}
+						placeholder='نام کاربری خود را وارد کنید'
+						disabled={mutation.isPending}
+					/>
+					<span className={styles.inputIcon}>👤</span>
+				</div>
+			</div>
 
-			<label className={styles.label}>رمز عبور</label>
-			<input
-				type='password'
-				value={password}
-				onChange={(e) => setPassword(e.target.value)}
-				required
-				className={styles.input}
-			/>
+			<div className={styles.inputGroup}>
+				<div className={styles.labelRow}>
+					<label className={styles.label}>
+						<span>رمز عبور</span>
+						<span className={styles.required}>*</span>
+					</label>
+					<a
+						href='#'
+						className={styles.forgotPassword}
+					>
+						فراموشی رمز عبور؟
+					</a>
+				</div>
+				<div className={styles.inputWrapper}>
+					<input
+						type='password'
+						value={password}
+						onChange={(e) => setPassword(e.target.value)}
+						required
+						className={styles.input}
+						placeholder='رمز عبور خود را وارد کنید'
+						disabled={mutation.isPending}
+					/>
+					<span className={styles.inputIcon}>🔒</span>
+				</div>
+			</div>
 
 			{mutation.isError && (
-				<p className={styles.error}>{mutation.error.message}</p>
+				<div className={styles.errorAlert}>
+					<span className={styles.errorIcon}>⚠️</span>
+					<span>{mutation.error.message}</span>
+				</div>
 			)}
 
 			<button
 				type='submit'
 				disabled={mutation.isPending}
-				className={styles.primaryButton}
+				className={styles.submitButton}
 			>
-				{mutation.isPending ? "در حال ورود..." : "ورود"}
+				{mutation.isPending ? (
+					<>
+						<span className={styles.spinner} />
+						<span>در حال ورود...</span>
+					</>
+				) : (
+					"ورود به حساب"
+				)}
 			</button>
 		</form>
 	);
@@ -169,9 +276,11 @@ function SignUpForm() {
 	const mutation = useMutation({
 		mutationFn: signUpRequest,
 		onSuccess: (data) => {
-			// Todo: remove printing to console
-			console.log("Signed up", data);
-			toast.success(data.message);
+			toast.success("حساب کاربری با موفقیت ایجاد شد");
+			// Optionally auto-login or redirect
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || "خطا در ثبت نام");
 		},
 	});
 
@@ -179,7 +288,7 @@ function SignUpForm() {
 		e.preventDefault();
 
 		if (password !== confirmPassword) {
-			toast.error("Passwords do not match");
+			toast.error("رمز عبور و تأیید آن مطابقت ندارند");
 			return;
 		}
 
@@ -188,7 +297,6 @@ function SignUpForm() {
 			password,
 			first_name: firstName,
 			last_name: lastName,
-			// Todo: properly handle user role
 			role: "admin",
 		});
 	};
@@ -198,62 +306,130 @@ function SignUpForm() {
 			className={styles.form}
 			onSubmit={onSubmit}
 		>
-			<h2 className={styles.title}>ایجاد حساب کاربری</h2>
-			<label className={styles.label}>نام</label>
-			<input
-				type='text'
-				value={firstName}
-				onChange={(e) => setFirstName(e.target.value)}
-				required
-				className={styles.input}
-			/>
+			<div className={styles.formHeader}>
+				<h2 className={styles.formTitle}>ایجاد حساب جدید</h2>
+				<p className={styles.formSubtitle}>
+					اطلاعات خود را برای شروع وارد کنید
+				</p>
+			</div>
 
-			<label className={styles.label}>نام خانوادگی</label>
-			<input
-				type='text'
-				value={lastName}
-				onChange={(e) => setLastName(e.target.value)}
-				required
-				className={styles.input}
-			/>
+			<div className={styles.rowInputs}>
+				<div className={styles.inputGroup}>
+					<label className={styles.label}>
+						<span>نام</span>
+						<span className={styles.required}>*</span>
+					</label>
+					<div className={styles.inputWrapper}>
+						<input
+							type='text'
+							value={firstName}
+							onChange={(e) => setFirstName(e.target.value)}
+							required
+							className={styles.input}
+							placeholder='نام'
+							disabled={mutation.isPending}
+						/>
+					</div>
+				</div>
 
-			<label className={styles.label}>نام کاربری</label>
-			<input
-				type='text'
-				value={userName}
-				onChange={(e) => setUserName(e.target.value)}
-				required
-				className={styles.input}
-			/>
+				<div className={styles.inputGroup}>
+					<label className={styles.label}>
+						<span>نام خانوادگی</span>
+						<span className={styles.required}>*</span>
+					</label>
+					<div className={styles.inputWrapper}>
+						<input
+							type='text'
+							value={lastName}
+							onChange={(e) => setLastName(e.target.value)}
+							required
+							className={styles.input}
+							placeholder='نام خانوادگی'
+							disabled={mutation.isPending}
+						/>
+					</div>
+				</div>
+			</div>
 
-			<label className={styles.label}>رمز عبور</label>
-			<input
-				type='password'
-				value={password}
-				onChange={(e) => setPassword(e.target.value)}
-				required
-				className={styles.input}
-			/>
+			<div className={styles.inputGroup}>
+				<label className={styles.label}>
+					<span>نام کاربری</span>
+					<span className={styles.required}>*</span>
+				</label>
+				<div className={styles.inputWrapper}>
+					<input
+						type='text'
+						value={userName}
+						onChange={(e) => setUserName(e.target.value)}
+						required
+						className={styles.input}
+						placeholder='نام کاربری دلخواه'
+						disabled={mutation.isPending}
+					/>
+					<span className={styles.inputIcon}>👤</span>
+				</div>
+			</div>
 
-			<label className={styles.label}>تایید رمز عبور</label>
-			<input
-				type='password'
-				value={confirmPassword}
-				onChange={(e) => setConfirmPassword(e.target.value)}
-				required
-				className={styles.input}
-			/>
+			<div className={styles.rowInputs}>
+				<div className={styles.inputGroup}>
+					<label className={styles.label}>
+						<span>رمز عبور</span>
+						<span className={styles.required}>*</span>
+					</label>
+					<div className={styles.inputWrapper}>
+						<input
+							type='password'
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							required
+							className={styles.input}
+							placeholder='رمز عبور قوی'
+							disabled={mutation.isPending}
+						/>
+						<span className={styles.inputIcon}>🔒</span>
+					</div>
+				</div>
+
+				<div className={styles.inputGroup}>
+					<label className={styles.label}>
+						<span>تأیید رمز عبور</span>
+						<span className={styles.required}>*</span>
+					</label>
+					<div className={styles.inputWrapper}>
+						<input
+							type='password'
+							value={confirmPassword}
+							onChange={(e) => setConfirmPassword(e.target.value)}
+							required
+							className={styles.input}
+							placeholder='تکرار رمز عبور'
+							disabled={mutation.isPending}
+						/>
+						<span className={styles.inputIcon}>✓</span>
+					</div>
+				</div>
+			</div>
 
 			{mutation.isError && (
-				<p className={styles.error}>{mutation.error.message}</p>
+				<div className={styles.errorAlert}>
+					<span className={styles.errorIcon}>⚠️</span>
+					<span>{mutation.error.message}</span>
+				</div>
 			)}
 
 			<button
 				type='submit'
 				disabled={mutation.isPending}
-				className={styles.primaryButton}
+				className={styles.submitButton}
 			>
-				{mutation.isPending ? "در حال ایجاد حساب..." : "ثبت نام"}
+				{mutation.isPending ? (
+					<>
+						<span className={styles.spinner} />
+						<span>در حال ایجاد حساب...</span>
+					</>
+				) : (
+					"ایجاد حساب کاربری"
+				)}
 			</button>
 		</form>
 	);
