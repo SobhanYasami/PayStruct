@@ -20,30 +20,24 @@ import {
 	CheckCircle,
 	AlertCircle,
 } from "lucide-react";
+import { toPersianDigits } from "@/utils/PersianNumberCoverter";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const Project_URL = `${API_URL}/management/projects/`;
 
 /* -------------------- Types -------------------- */
 interface Contractor {
-	id: string;
+	ID: string;
 	name: string;
 	share: number;
 	statusStatements: number;
 }
 
 interface Project {
-	id: string;
+	ID: string;
 	name: string;
-	phases: string[];
-	startDate: string;
-	endDate: string;
-	budget: number;
+	phase: number;
 	contractors: Contractor[];
-	turnover: number;
-	createdAt: string;
-	updatedAt: string;
-	status?: "active" | "completed" | "on-hold";
 }
 
 interface ProjectCreationPayload {
@@ -136,16 +130,6 @@ function ProjectCard({
 						className={styles.projectIcon}
 					/>
 					<h3 className={styles.projectName}>{project.name}</h3>
-					<span
-						className={styles.projectStatus}
-						style={{ backgroundColor: getStatusColor(project.status) }}
-					>
-						{project.status === "active"
-							? "فعال"
-							: project.status === "completed"
-								? "تکمیل شده"
-								: "در انتظار"}
-					</span>
 				</div>
 				<div className={styles.projectActions}>
 					<button
@@ -175,9 +159,7 @@ function ProjectCard({
 							className={styles.detailIcon}
 						/>
 						<span className={styles.detailLabel}>تاریخ شروع:</span>
-						<span className={styles.detailValue}>
-							{formatDate(project.startDate)}
-						</span>
+						<span className={styles.detailValue}>--</span>
 					</div>
 					<div className={styles.detailItem}>
 						<Clock
@@ -185,9 +167,7 @@ function ProjectCard({
 							className={styles.detailIcon}
 						/>
 						<span className={styles.detailLabel}>تاریخ پایان:</span>
-						<span className={styles.detailValue}>
-							{formatDate(project.endDate)}
-						</span>
+						<span className={styles.detailValue}>--</span>
 					</div>
 				</div>
 
@@ -198,9 +178,7 @@ function ProjectCard({
 							className={styles.detailIcon}
 						/>
 						<span className={styles.detailLabel}>بودجه:</span>
-						<span className={styles.detailValue}>
-							{formatCurrency(project.budget)}
-						</span>
+						<span className={styles.detailValue}>--</span>
 					</div>
 					<div className={styles.detailItem}>
 						<Users
@@ -209,7 +187,10 @@ function ProjectCard({
 						/>
 						<span className={styles.detailLabel}>پیمانکاران:</span>
 						<span className={styles.detailValue}>
-							{project.contractors?.length || 0} نفر
+							{(project.contractors &&
+								toPersianDigits(project.contractors?.length)) ||
+								toPersianDigits(0)}{" "}
+							نفر
 						</span>
 					</div>
 				</div>
@@ -218,27 +199,18 @@ function ProjectCard({
 			<div className={styles.projectPhases}>
 				<span className={styles.phasesLabel}>فازها:</span>
 				<div className={styles.phasesList}>
-					{project.phases?.map((phase, index) => (
-						<span
-							key={`phase-${project.id}-${index}`}
-							className={styles.phaseBadge}
-						>
-							فاز {phase}
-						</span>
-					)) || <span className={styles.phaseBadge}>بدون فاز</span>}
+					<span className={styles.phaseBadge}>
+						فاز {project.phase && toPersianDigits(project.phase)}
+					</span>
 				</div>
 			</div>
 
 			<div className={styles.projectFooter}>
 				<div className={styles.turnover}>
 					<span className={styles.turnoverLabel}>گردش مالی:</span>
-					<span className={styles.turnoverValue}>
-						{formatCurrency(project.turnover)}
-					</span>
+					<span className={styles.turnoverValue}>--</span>
 				</div>
-				<div className={styles.lastUpdate}>
-					آخرین بروزرسانی: {formatDate(project.updatedAt)}
-				</div>
+				<div className={styles.lastUpdate}>آخرین بروزرسانی: --</div>
 			</div>
 		</div>
 	);
@@ -493,13 +465,7 @@ export default function Projects() {
 	};
 
 	// Calculate statistics
-	const totalBudget = filteredProjects.reduce(
-		(sum, project) => sum + (project.budget || 0),
-		0,
-	);
-	const activeProjects = filteredProjects.filter(
-		(project) => project.status === "active",
-	).length;
+	const totalBudget = filteredProjects.reduce((sum, project) => sum + 0, 0);
 
 	return (
 		<main className={styles.page}>
@@ -539,13 +505,13 @@ export default function Projects() {
 							<div className={styles.statsContainer}>
 								<StatCard
 									icon={Building}
-									value={filteredProjects.length}
+									value={toPersianDigits(filteredProjects.length)}
 									label='پروژه کل'
 									type='default'
 								/>
 								<StatCard
 									icon={CheckCircle}
-									value={activeProjects}
+									value={toPersianDigits(0)}
 									label='پروژه فعال'
 									type='active'
 								/>
@@ -561,7 +527,7 @@ export default function Projects() {
 								{paginatedProjects.length > 0 ? (
 									paginatedProjects.map((project: Project) => (
 										<ProjectCard
-											key={`project-${project.id}`}
+											key={`project-${project.ID}`}
 											project={project}
 											onEdit={() => handleEditProject(project)}
 											onDelete={() => handleDeleteProject(project)}

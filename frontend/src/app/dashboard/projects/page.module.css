@@ -382,7 +382,7 @@
 
 .deleteMessage {
 	font-size: 1.125rem;
-	color: var(--text-primary);
+	color: var(--secondary);
 	margin-bottom: 12px;
 }
 
