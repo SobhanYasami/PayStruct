@@ -372,6 +372,38 @@ func (s *ContractService) GetContractWBS(ctx context.Context, contractID uuid.UU
 	return &contract_wbs, nil
 }
 
+// create tasks performed
+func (s *ContractService) CreateTasksPerformed(ctx context.Context, userID, statusStatementID uuid.UUID, description, unit string, quantity, unitPrice float64) error {
+	// Create new record
+	taskPerformed := models.TasksPerformed{
+		BaseModel: models.BaseModel{
+			ID:        uuid.New(),
+			CreatedBy: userID,
+		},
+		StatusStatementID: statusStatementID,
+		Description:       description,
+		Unit:              unit,
+		Quantity:          quantity,
+		UnitPrice:         unitPrice,
+		TotalPrice:        quantity * unitPrice,
+	}
+
+	if err := s.db.WithContext(ctx).Create(&taskPerformed).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// get last tasks performed
+func (s *ContractService) GetLastTasksPerformed(ctx context.Context, contractID uuid.UUID) (*[]models.TasksPerformed, error) {
+	var tasks_performed []models.TasksPerformed
+
+	if err := s.db.WithContext(ctx).Where("contract_id = ?", contractID).Order("created_at desc").Find(&tasks_performed).Error; err != nil {
+		return nil, err
+	}
+	return &tasks_performed, nil
+}
+
 // CreateStatusStatement
 func (s *ContractService) CreateStatusStatement(ctx context.Context, userID, contractID, contractorID, projectID uuid.UUID, statementDate time.Time, workDoneDescription string, workDoneAmount float64) error {
 	// Create new record

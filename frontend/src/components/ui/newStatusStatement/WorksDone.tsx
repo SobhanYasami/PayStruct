@@ -251,8 +251,8 @@ export default function WorksDone({
 						<div>
 							<h3 className={styles.Title}>جدول کارکرد پروژه</h3>
 							<p className={styles.Subtitle}>
-								{toPersianDigits(wbsData.length)} آیتم • پیشرفت کلی:{" "}
-								{toPersianDigits(totals.progress)}%
+								تعداد آیتم های ساختار شکست کار:
+								{toPersianDigits(wbsData.length)}
 							</p>
 						</div>
 					</div>
@@ -307,7 +307,7 @@ export default function WorksDone({
 						نمایش کارکرد پیشین
 					</label>
 				</div>
-				<div className={styles.ProgressBar}>
+				{/* <div className={styles.ProgressBar}>
 					<div className={styles.ProgressLabel}>
 						<span>پیشرفت کلی پروژه:</span>
 						<span>{toPersianDigits(totals.progress)}%</span>
@@ -318,72 +318,45 @@ export default function WorksDone({
 							style={{ width: `${totals.progress}%` }}
 						/>
 					</div>
-				</div>
+				</div> */}
 			</div>
 
 			<div className={styles.TableWrapper}>
 				<div className={styles.TableContainer}>
 					<div className={styles.TableHeader}>
-						<div
-							className={styles.TableHeaderCell}
-							style={{ width: "5%" }}
-						>
+						<div className={styles.TableHeaderCell}>
 							<Hash size={14} />
 							<span>ردیف</span>
 						</div>
-						<div
-							className={styles.TableHeaderCell}
-							style={{ width: "30%" }}
-						>
+						<div className={styles.TableHeaderCell}>
 							<FileText size={14} />
 							<span>شرح فعالیت</span>
 						</div>
-						<div
-							className={styles.TableHeaderCell}
-							style={{ width: "10%" }}
-						>
+						<div className={styles.TableHeaderCell}>
 							<Package size={14} />
 							<span>واحد</span>
 						</div>
-						<div
-							className={styles.TableHeaderCell}
-							style={{ width: "10%" }}
-						>
+						<div className={styles.TableHeaderCell}>
 							<span>مقدار کل</span>
 						</div>
 						{showPreviousQuantity && (
-							<div
-								className={styles.TableHeaderCell}
-								style={{ width: "12%" }}
-							>
+							<div className={styles.TableHeaderCell}>
 								<TrendingUp size={14} />
 								<span>کارکرد پیشین</span>
 							</div>
 						)}
-						<div
-							className={styles.TableHeaderCell}
-							style={{ width: "12%" }}
-						>
+						<div className={styles.TableHeaderCell}>
 							<TrendingUp size={14} />
 							<span>کارکرد جدید</span>
 						</div>
-						<div
-							className={styles.TableHeaderCell}
-							style={{ width: "10%" }}
-						>
+						<div className={styles.TableHeaderCell}>
 							<span>مانده</span>
 						</div>
-						<div
-							className={styles.TableHeaderCell}
-							style={{ width: "12%" }}
-						>
+						<div className={styles.TableHeaderCell}>
 							<DollarSign size={14} />
 							<span>مبلغ (ریال)</span>
 						</div>
-						<div
-							className={styles.TableHeaderCell}
-							style={{ width: "9%" }}
-						>
+						<div className={styles.TableHeaderCell}>
 							<span>عملیات</span>
 						</div>
 					</div>
@@ -458,22 +431,7 @@ export default function WorksDone({
 											className={styles.TableCell}
 											data-label='کارکرد پیشین'
 										>
-											<div className={styles.QuantityInputWrapper}>
-												<input
-													type='number'
-													value={previousQuantity}
-													onChange={(e) =>
-														handlePreviousQuantityChange(
-															item.ID,
-															e.target.value,
-														)
-													}
-													className={styles.QuantityInput}
-													min='0'
-													max={item.quantity}
-													onClick={(e) => e.stopPropagation()}
-												/>
-											</div>
+											<div className={styles.QuantityInputWrapper}>--</div>
 										</div>
 									)}
 
@@ -528,48 +486,6 @@ export default function WorksDone({
 												? toPersianDigits(rowTotal.toLocaleString())
 												: "--"}
 										</span>
-									</div>
-
-									<div
-										className={styles.TableCell}
-										data-label='عملیات'
-									>
-										<div className={styles.RowActions}>
-											<button
-												className={styles.ActionButton}
-												onClick={(e) => {
-													e.stopPropagation();
-													handleEditRow(item.ID);
-												}}
-												title='ویرایش'
-											>
-												{editingRow === item.ID ? (
-													<Eye size={14} />
-												) : (
-													<Edit2 size={14} />
-												)}
-											</button>
-											<button
-												className={styles.ActionButton}
-												onClick={(e) => {
-													e.stopPropagation();
-													handleDuplicateRow(item);
-												}}
-												title='تکثیر'
-											>
-												<Copy size={14} />
-											</button>
-											<button
-												className={styles.ActionButton}
-												onClick={(e) => {
-													e.stopPropagation();
-													handleDeleteRow(item.ID);
-												}}
-												title='حذف'
-											>
-												<Trash2 size={14} />
-											</button>
-										</div>
 									</div>
 								</div>
 							);

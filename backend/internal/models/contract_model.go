@@ -82,9 +82,9 @@ type ContractorProject struct {
 	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 }
 
-// todo  /> ######################## |>
 type StatusStatement struct {
 	BaseModel
+	ContractID   uuid.UUID `json:"contract_id" gorm:"type:char(36);not null;index"`
 	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
 	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 
@@ -119,6 +119,7 @@ type AdditionalWorks struct {
 	TotalPrice  float64 `json:"total_price" gorm:"type:decimal(40,2);not null"`
 }
 
+// todo  /> ######################## |>
 type Deductions struct {
 	BaseModel
 	StatusStatementID uuid.UUID `json:"status_statement_id" gorm:"type:char(36);index"`
@@ -144,25 +145,4 @@ type StatusStatmentComm struct {
 	TechStatus    string `json:"tech_status" gorm:"type:varchar(100);not null"`
 	FinanceStatus string `json:"finance_status" gorm:"type:varchar(100);not null"`
 	LegalStatus   string `json:"legal_status" gorm:"type:varchar(100);not null"`
-}
-
-// todo:
-// ! Many-to-Many Relationships
-type ProjectItem struct {
-	BaseModel
-	ProjectID uuid.UUID `json:"project_id" gorm:"type:char(36);index"`
-	ItemID    uuid.UUID `json:"item_id" gorm:"type:char(36);index"`
-}
-
-type ContractorItem struct {
-	BaseModel
-	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);index"`
-	ItemID       uuid.UUID `json:"item_id" gorm:"type:char(36);index"`
-}
-
-type SummaryItem struct {
-	BaseModel
-	Name        string  `json:"name" gorm:"type:text"`
-	Description string  `json:"description" gorm:"type:text"`
-	Price       float64 `json:"price" gorm:"type:float"`
 }

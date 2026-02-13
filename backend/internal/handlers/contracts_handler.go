@@ -651,6 +651,30 @@ func (handler *ContractHandler) GetContractWBS(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(resData, "ContractWbs retrieved successfully"))
 }
 
+// ! @Router /mana
+func (handler *ContractHandler) GetLastTasksPerformed(c *fiber.Ctx) error {
+	// Get contract number from URL parameter instead of body
+	contractNumber := c.Params("cnum")
+	if contractNumber == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Contract number is required"))
+	}
+
+	contract, err := handler.contractService.GetContractByNumber(c.Context(), contractNumber)
+	if err != nil {
+		log.Printf("CreateContract DB error: %v", err)
+		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+	}
+
+	tasks_performed, err := handler.contractService.GetLastTasksPerformed(c.Context(), contract.ID)
+	if err != nil {
+		log.Printf("CreateContract DB error: %v", err)
+		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+	}
+
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(tasks_performed, "Last tasks performed retrieved successfully"))
+
+}
+
 // ! Router /management/contracts/status-statement
 func (handler *ContractHandler) CreateStatusStatement(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)

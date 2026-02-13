@@ -307,6 +307,7 @@
 	color: #1e293b;
 	text-align: right;
 	line-height: 1.4;
+	text-wrap: inherit;
 }
 
 .RowProgress {
@@ -366,6 +367,7 @@
 	font-size: 13px;
 	text-align: center;
 	transition: all 0.2s ease;
+	color: #0f172a;
 	background: white;
 	font-family: "Courier New", monospace;
 }

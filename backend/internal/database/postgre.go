@@ -115,6 +115,10 @@ func migrate() error {
 		&models.Contract{},
 		&models.ContractorProject{},
 		&models.ContractWBS{},
+
+		&models.StatusStatement{},
+		&models.TasksPerformed{},
+		&models.AdditionalWorks{},
 	}
 
 	for _, model := range models {
