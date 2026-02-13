@@ -635,12 +635,14 @@ func (handler *ContractHandler) GetContractWBS(c *fiber.Ctx) error {
 	project, err := handler.contractService.GetProjectByID(c.Context(), contract.ProjectID)
 
 	type ResponseData struct {
+		Contract    models.Contract      `json:"contract"`
 		Contractor  models.Contractor    `json:"contractor"`
 		Project     models.Project       `json:"project"`
 		ContractWBS []models.ContractWBS `json:"contractWbs"`
 	}
 
 	resData := ResponseData{
+		Contract:    *contract,
 		Contractor:  *contractor,
 		Project:     *project,
 		ContractWBS: *contract_wbs,

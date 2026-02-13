@@ -2,7 +2,7 @@
 
 .Container {
 	width: 100%;
-	padding: 0 40px 32px;
+	padding: 0 24px 32px;
 }
 
 .SectionHeader {
@@ -47,8 +47,8 @@
 	display: flex;
 	align-items: center;
 	gap: 16px;
-	margin-bottom: 20px;
-	padding-bottom: 16px;
+	margin-bottom: 10px;
+	padding-bottom: 9px;
 	border-bottom: 2px solid #f1f5f9;
 }
 
@@ -72,7 +72,7 @@
 .InfoContent {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: 6px;
 }
 
 .InfoItem {

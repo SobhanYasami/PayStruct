@@ -30,6 +30,11 @@ interface ContractWBSPayload {
 	contract_number: string;
 }
 
+interface Contract {
+	ID: string;
+	contract_number: string;
+	gross_budget: number;
+}
 interface Contractor {
 	ID: string;
 	first_name: string;
@@ -65,6 +70,7 @@ interface ContractResponse {
 
 interface WBSResponse {
 	data: {
+		contract: Contract;
 		contractor: Contractor;
 		project: Project;
 		contractWbs: ContractWBS[];
@@ -114,20 +120,9 @@ export default function NewStatusStatement({
 	const [isSubmitted, setIsSubmitted] = useState(false);
 	const [showContractInfo, setShowContractInfo] = useState(false);
 
-	// Fetch contract data
-	const {
-		data: contractData,
-		isSuccess: isContractSuccess,
-		isError: isContractError,
-		refetch: refetchContract,
-		isFetching: isContractFetching,
-	} = useQuery<ContractResponse>({
-		queryKey: ["contract", contractNumber],
-		queryFn: () =>
-			fetchWithAuth(`${CONTRACT_URL}?contract_number=${contractNumber}`),
-		enabled: false, // Manual fetch
-		retry: 1,
-	});
+	// todo:
+	// 1. Fetch contract gross budget from API and display it in the contract info section.
+	// 2. Fetch invoice statistics (number of invoices, last physical progress, average monthly progress) from API and display them in the contract info section.
 
 	// Fetch WBS data
 	const {
@@ -149,16 +144,13 @@ export default function NewStatusStatement({
 	});
 
 	// Derived state
+	const contractData = wbsData?.data.contract || null;
 	const contractorData = wbsData?.data.contractor || null;
 	const projectData = wbsData?.data.project || null;
 	const wbsItems = wbsData?.data.contractWbs || null;
 
-	// Handle errors
-	useEffect(() => {
-		if (isContractError) {
-			toast.error("خطا در دریافت اطلاعات قرارداد");
-		}
-	}, [isContractError]);
+	// debug:
+	console.log("Contract Data:", contractData);
 
 	useEffect(() => {
 		if (isWbsError) {
@@ -182,21 +174,15 @@ export default function NewStatusStatement({
 				toast.error("شماره قرارداد الزامی است");
 				return;
 			}
-
 			try {
-				// Fetch contract first
-				const contractResult = await refetchContract();
-
-				if (contractResult.isSuccess) {
-					// Then fetch WBS data
-					fetchWBS({ contract_number: contractNumber });
-				}
+				// Then fetch WBS data
+				fetchWBS({ contract_number: contractNumber });
 			} catch (error) {
 				console.error("Failed to process request:", error);
 				// Error is handled by query/mutation error handlers
 			}
 		},
-		[contractNumber, refetchContract, fetchWBS],
+		[contractNumber, fetchWBS],
 	);
 
 	const handleReset = () => {
@@ -205,7 +191,7 @@ export default function NewStatusStatement({
 		setIsSubmitted(false);
 	};
 
-	const isLoading = isContractFetching || isWbsPending;
+	const isLoading = isWbsPending;
 
 	if (isSubmitted) {
 		return (
@@ -342,13 +328,14 @@ export default function NewStatusStatement({
 			</form>
 
 			{/* Contract Information */}
-			{showContractInfo && contractorData && projectData && (
+			{showContractInfo && contractorData && contractData && projectData && (
 				<ContractInformation
 					first_name={contractorData.first_name}
 					last_name={contractorData.last_name}
 					legal_entity={contractorData.legal_entity}
 					preferential_id={contractorData.preferential_id}
 					national_id={contractorData.national_id}
+					contract_budget={contractData.gross_budget}
 					project_name={projectData.name}
 					project_phase={projectData.phase}
 				/>

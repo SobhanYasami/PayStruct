@@ -1,5 +1,9 @@
 // Updated ContractInformation.tsx:
-import { toPersianDigits } from "@/utils/PersianNumberCoverter";
+import {
+	formatCurrency,
+	NumberConverter,
+	toPersianDigits,
+} from "@/utils/PersianNumberCoverter";
 import styles from "./ContractInfo.module.css";
 import {
 	Building2,
@@ -19,6 +23,7 @@ export default function ContractInformation({
 	legal_entity,
 	preferential_id,
 	national_id,
+	contract_budget,
 	project_name,
 	project_phase,
 }: {
@@ -27,9 +32,13 @@ export default function ContractInformation({
 	legal_entity: boolean;
 	preferential_id: string;
 	national_id: string;
+	contract_budget: number;
 	project_name: string;
 	project_phase: number;
 }) {
+	// todo:
+	// 1. Fetch contract gross budget from API and display it in the contract info section.
+	// 2. Fetch invoice statistics (number of invoices, last physical progress, average monthly progress) from API and display them in the contract info section.
 	return (
 		<div className={styles.Container}>
 			<div className={styles.SectionHeader}>
@@ -106,7 +115,7 @@ export default function ContractInformation({
 						<div className={styles.InfoItem}>
 							<span className={styles.InfoLabel}>مبلغ قرارداد:</span>
 							<span className={styles.InfoValue}>
-								{toPersianDigits("0")} ریال
+								{NumberConverter.formatCurrency(contract_budget)} ریال
 							</span>
 						</div>
 					</div>
@@ -127,15 +136,15 @@ export default function ContractInformation({
 					<div className={styles.InfoContent}>
 						<div className={styles.InfoItem}>
 							<span className={styles.InfoLabel}>تعداد صورت وضعیت‌ها:</span>
-							<span className={styles.InfoValue}>{toPersianDigits(0)}</span>
+							<span className={styles.InfoValue}>--</span>
 						</div>
 						<div className={styles.InfoItem}>
 							<span className={styles.InfoLabel}>آخرین پیشرفت فیزیکی:</span>
-							<span className={styles.InfoValue}>{toPersianDigits(0)}%</span>
+							<span className={styles.InfoValue}>--</span>
 						</div>
 						<div className={styles.InfoItem}>
 							<span className={styles.InfoLabel}>میانگین پیشرفت ماهانه:</span>
-							<span className={styles.InfoValue}>{toPersianDigits(0)}%</span>
+							<span className={styles.InfoValue}>--</span>
 						</div>
 					</div>
 				</div>

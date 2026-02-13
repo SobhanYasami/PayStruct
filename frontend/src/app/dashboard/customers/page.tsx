@@ -279,7 +279,7 @@ export default function Customers() {
 							</div>
 							<div className={styles.contactItem}>
 								<Mail size={20} />
-								<span>support@construction-management.ir</span>
+								<span>support@sobhan-yasami.ir</span>
 							</div>
 						</div>
 						<p className={styles.copyright}>
