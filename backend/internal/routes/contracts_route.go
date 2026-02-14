@@ -42,7 +42,7 @@ func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler) {
 	wbs.Post("/", h.CreateWBS)
 	wbs.Get("/:cnum", h.GetContractWBS)
 	// todo:
-	wbs.Get("/tasks-performed/:cnum", h.GetLastTasksPerformed)
+	wbs.Get("/tasks-performed/:cid", h.GetLastTasksPerformed)
 
 	// StatusStatement
 	statusStatement := management.Group("status-statement")

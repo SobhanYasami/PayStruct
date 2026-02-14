@@ -23,6 +23,19 @@ import {
 
 interface ContractWBS {
 	ID: string;
+	contract_id: string;
+	contractor_id: string;
+	project_id: string;
+	description: string;
+	quantity: number;
+	unit: string;
+	unit_price: number;
+	total_price: number;
+}
+
+interface TaskPerformed {
+	ID: string;
+	status_statement_id: string;
 	description: string;
 	quantity: number;
 	unit: string;
@@ -41,6 +54,37 @@ interface WorkItem {
 	previousQuantity?: number;
 }
 
+interface ApiError {
+	status: number;
+	message: string;
+}
+
+// Helper functions
+const fetchWithAuth = async (url: string, options?: RequestInit) => {
+	const token = localStorage.getItem("usr-token");
+
+	const headers = {
+		Authorization: `Bearer ${token}`,
+		"Content-Type": "application/json",
+		...options?.headers,
+	};
+
+	const response = await fetch(url, { ...options, headers });
+
+	if (!response.ok) {
+		const errorData = await response.json().catch(() => ({}));
+		throw {
+			status: response.status,
+			message: errorData?.message || "خطای ناشناخته",
+		} as ApiError;
+	}
+
+	return response.json();
+};
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const TASK_PERFORMED_URL = `${API_URL}/management/wbs/tasks-performed/`;
+
 export default function WorksDone({
 	wbsData,
 	onWorkDoneUpdate,
@@ -49,6 +93,8 @@ export default function WorksDone({
 	const [isSaving, setIsSaving] = useState(false);
 	const [editingRow, setEditingRow] = useState<string | null>(null);
 	const [showPreviousQuantity, setShowPreviousQuantity] = useState(true);
+
+	// fetch last tasks performed for auto-fill
 
 	// Initialize work items when wbsData changes
 	useMemo(() => {
@@ -80,29 +126,6 @@ export default function WorksDone({
 			[id]: {
 				...workItems[id],
 				newQuantity: Math.min(numValue, maxQuantity),
-			},
-		};
-
-		setWorkItems(updatedItems);
-		if (onWorkDoneUpdate) {
-			onWorkDoneUpdate(updatedItems);
-		}
-	};
-
-	const handlePreviousQuantityChange = (id: string, value: string) => {
-		const numValue = Math.max(0, parseInt(value) || 0);
-		const item = wbsData?.find((item) => item.ID === id);
-		const maxQuantity = item?.quantity || 0;
-
-		const updatedItems = {
-			...workItems,
-			[id]: {
-				...workItems[id],
-				previousQuantity: Math.min(numValue, maxQuantity),
-				newQuantity: Math.min(
-					workItems[id]?.newQuantity || 0,
-					maxQuantity - numValue,
-				),
 			},
 		};
 

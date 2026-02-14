@@ -52,6 +52,9 @@ interface Project {
 
 interface ContractWBS {
 	ID: string;
+	contract_id: string;
+	contractor_id: string;
+	project_id: string;
 	description: string;
 	quantity: number;
 	unit: string;

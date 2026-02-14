@@ -394,11 +394,22 @@ func (s *ContractService) CreateTasksPerformed(ctx context.Context, userID, stat
 	return nil
 }
 
+// GetLastStatement
+func (s *ContractService) GetLastStatusStatement(ctx context.Context, contractID uuid.UUID) (*models.StatusStatement, error) {
+	var status_statement models.StatusStatement
+
+	if err := s.db.WithContext(ctx).Where("contract_id = ?", contractID).Order("created_at desc").Find(&status_statement).Error; err != nil {
+		return nil, err
+	}
+
+	return &status_statement, nil
+}
+
 // get last tasks performed
-func (s *ContractService) GetLastTasksPerformed(ctx context.Context, contractID uuid.UUID) (*[]models.TasksPerformed, error) {
+func (s *ContractService) GetLastTasksPerformed(ctx context.Context, statusStatementID uuid.UUID) (*[]models.TasksPerformed, error) {
 	var tasks_performed []models.TasksPerformed
 
-	if err := s.db.WithContext(ctx).Where("contract_id = ?", contractID).Order("created_at desc").Find(&tasks_performed).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("status_statement_id = ?", statusStatementID).Order("created_at desc").Find(&tasks_performed).Error; err != nil {
 		return nil, err
 	}
 	return &tasks_performed, nil

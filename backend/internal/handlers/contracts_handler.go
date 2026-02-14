@@ -651,28 +651,33 @@ func (handler *ContractHandler) GetContractWBS(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(resData, "ContractWbs retrieved successfully"))
 }
 
-// ! @Router /mana
+// ! @Router /management/wbs/tasks-performed/:cid
 func (handler *ContractHandler) GetLastTasksPerformed(c *fiber.Ctx) error {
 	// Get contract number from URL parameter instead of body
-	contractNumber := c.Params("cnum")
+	contractNumber := c.Params("cid")
 	if contractNumber == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Contract number is required"))
 	}
 
 	contract, err := handler.contractService.GetContractByNumber(c.Context(), contractNumber)
 	if err != nil {
-		log.Printf("CreateContract DB error: %v", err)
+		log.Printf("GetContract DB error: %v", err)
 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
 	}
 
-	tasks_performed, err := handler.contractService.GetLastTasksPerformed(c.Context(), contract.ID)
+	status_statement, err := handler.contractService.GetLastStatusStatement(c.Context(), contract.ID)
 	if err != nil {
-		log.Printf("CreateContract DB error: %v", err)
+		log.Printf("GetStatusStament DB error: %v", err)
+		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+	}
+
+	tasks_performed, err := handler.contractService.GetLastTasksPerformed(c.Context(), status_statement.ID)
+	if err != nil {
+		log.Printf("GetTasksPerfrormed DB error: %v", err)
 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
 	}
 
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(tasks_performed, "Last tasks performed retrieved successfully"))
-
 }
 
 // ! Router /management/contracts/status-statement
