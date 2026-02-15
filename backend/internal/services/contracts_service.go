@@ -398,11 +398,26 @@ func (s *ContractService) CreateTasksPerformed(ctx context.Context, userID, stat
 func (s *ContractService) GetLastStatusStatement(ctx context.Context, contractID uuid.UUID) (*models.StatusStatement, error) {
 	var status_statement models.StatusStatement
 
-	if err := s.db.WithContext(ctx).Where("contract_id = ?", contractID).Order("created_at desc").Find(&status_statement).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("contract_id = ?", contractID).Order("number desc").Find(&status_statement).Error; err != nil {
 		return nil, err
 	}
 
 	return &status_statement, nil
+}
+
+// GetLast2StatusStatements returns the last 2 status statements for a contract
+func (s *ContractService) GetLast2StatusStatements(ctx context.Context, contractID uuid.UUID) ([]*models.StatusStatement, error) {
+	var status_statements []*models.StatusStatement
+
+	if err := s.db.WithContext(ctx).
+		Where("contract_id = ?", contractID).
+		Order("number desc").
+		Limit(2).
+		Find(&status_statements).Error; err != nil {
+		return nil, err
+	}
+
+	return status_statements, nil
 }
 
 // get last tasks performed
@@ -416,23 +431,26 @@ func (s *ContractService) GetLastTasksPerformed(ctx context.Context, statusState
 }
 
 // CreateStatusStatement
-func (s *ContractService) CreateStatusStatement(ctx context.Context, userID, contractID, contractorID, projectID uuid.UUID, statementDate time.Time, workDoneDescription string, workDoneAmount float64) error {
-	// Create new record
-	// statusStatement := models.StatusStatement{
-	// 	BaseModel: models.BaseModel{
-	// 		ID:        uuid.New(),
-	// 		CreatedBy: userID,
-	// 	},
-	// 	ContractID:          contractID,
-	// 	ContractorID:        contractorID,
-	// 	ProjectID:           projectID,
-	// 	StatementDate:       statementDate,
-	// 	WorkDoneDescription: workDoneDescription,
-	// 	WorkDoneAmount:      workDoneAmount,
-	// }
+func (s *ContractService) CreateStatusStatement(ctx context.Context, userID, contractID, contractorID, projectID uuid.UUID, statementDateStart, statementDateEnd time.Time, statusNumber uint16, status string) (models.StatusStatement, error) {
 
-	// if err := s.db.WithContext(ctx).Create(&statusStatement).Error; err != nil {
-	// 	return err
-	// }
-	return nil
+	// todo:
+	// Create new record
+	neue_statusStatement := models.StatusStatement{
+		BaseModel: models.BaseModel{
+			ID:        uuid.New(),
+			CreatedBy: userID,
+		},
+		ContractID:         contractID,
+		ContractorID:       contractorID,
+		ProjectID:          projectID,
+		StatementDateStart: statementDateStart,
+		StatementDateEnd:   statementDateEnd,
+		Status:             status,
+		Number:             statusNumber,
+	}
+
+	if err := s.db.WithContext(ctx).Create(&neue_statusStatement).Error; err != nil {
+		return models.StatusStatement{}, err
+	}
+	return neue_statusStatement, nil
 }

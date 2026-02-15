@@ -333,6 +333,7 @@ export default function NewStatusStatement({
 			{/* Contract Information */}
 			{showContractInfo && contractorData && contractData && projectData && (
 				<ContractInformation
+					contract_id={contractData.ID}
 					first_name={contractorData.first_name}
 					last_name={contractorData.last_name}
 					legal_entity={contractorData.legal_entity}

@@ -41,12 +41,16 @@ func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler) {
 	wbs := management.Group("/wbs")
 	wbs.Post("/", h.CreateWBS)
 	wbs.Get("/:cnum", h.GetContractWBS)
-	// todo:
-	wbs.Get("/tasks-performed/:cid", h.GetLastTasksPerformed)
 
 	// StatusStatement
-	statusStatement := management.Group("status-statement")
+	statusStatement := management.Group("/status-statement")
 	statusStatement.Post("/", h.CreateStatusStatement)
+	statusStatement.Get("/get-by-contract/:cid", h.GetLast2StatusStatements)
+
+	// task performed
+	tasks := statusStatement.Group("/tasks-performed")
+	tasks.Post("/new-task", h.CreateTasksPerformed)
+	tasks.Get("/get-by-contract/:cid", h.GetLastTasksPerformed)
 
 	//! Trading System Routes
 	// router.Get("/contractors/contractor-projects", middlewares.Authenticate(), contractHandler.GetContractorProjects)

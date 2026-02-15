@@ -88,11 +88,11 @@ type StatusStatement struct {
 	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
 	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 
-	ProgressPercent    float32   `json:"progress_percent" gorm:"type:decimal(5,2);not null"`
+	ProgressPercent    float32   `json:"progress_percent" gorm:"type:decimal(5,2)"`
 	StatementDateStart time.Time `json:"statement_date_start" gorm:"not null"`
 	StatementDateEnd   time.Time `json:"statement_date_end" gorm:"not null"`
 	Status             string    `json:"status" gorm:"size:20;not null;index"`
-	Number             uint16    `json:"number" gorm:"not null;index"`
+	Number             uint16    `json:"number" gorm:"not null"`
 	ApprovedBy         string    `json:"approved_by,omitempty" gorm:"size:100"`
 	ApprovedAt         time.Time `json:"approved_at"`
 }

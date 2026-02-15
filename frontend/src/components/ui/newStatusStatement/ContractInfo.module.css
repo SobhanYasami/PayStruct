@@ -108,3 +108,50 @@
 .InfoValue.Natural {
 	color: #10b981;
 }
+
+.InputGroup {
+	position: relative;
+}
+
+.InputLabel {
+	display: block;
+	font-size: 14px;
+	font-weight: 600;
+	color: #475569;
+	margin-bottom: 12px;
+}
+
+.Required {
+	color: #ef4444;
+	font-size: 16px;
+	margin-right: 4px;
+}
+
+.SubmitBtn {
+	flex: 2;
+	padding: 6px 24px;
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: white;
+	border: none;
+	border-radius: 12px;
+	font-size: 16px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+}
+
+.SubmitBtn:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 24px rgba(16, 185, 129, 0.4);
+}
+
+.SubmitBtn:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+	transform: none;
+}

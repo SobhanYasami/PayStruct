@@ -1,6 +1,8 @@
+"use client";
 import styles from "./WorksDone.module.css";
 import { toPersianDigits } from "@/utils/PersianNumberCoverter";
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
 	Save,
 	Printer,
@@ -13,14 +15,13 @@ import {
 	AlertCircle,
 	Loader2,
 	Calculator,
-	PlusCircle,
-	MinusCircle,
 	Edit2,
-	Eye,
 	Trash2,
-	Copy,
 } from "lucide-react";
 
+// -------
+// Types
+// --------------
 interface ContractWBS {
 	ID: string;
 	contract_id: string;
@@ -43,15 +44,11 @@ interface TaskPerformed {
 	total_price: number;
 }
 
-interface WorksDoneProps {
-	wbsData: ContractWBS[] | null;
-	onWorkDoneUpdate?: (workItems: Record<string, WorkItem>) => void;
-}
-
-interface WorkItem {
-	id: string;
-	newQuantity: number;
-	previousQuantity?: number;
+interface ApiResponse<T> {
+	status: string;
+	message: string;
+	data: T;
+	timestamp: string;
 }
 
 interface ApiError {
@@ -59,31 +56,46 @@ interface ApiError {
 	message: string;
 }
 
+interface WorkItem {
+	id: string;
+	newQuantity: number;
+	previousQuantity: number; // Make it required instead of optional
+}
+
+// ----------
 // Helper functions
-const fetchWithAuth = async (url: string, options?: RequestInit) => {
+// --------------
+async function FetchData(url: string) {
 	const token = localStorage.getItem("usr-token");
+	if (!token) throw new Error("UnAuthorized");
 
-	const headers = {
-		Authorization: `Bearer ${token}`,
-		"Content-Type": "application/json",
-		...options?.headers,
-	};
+	const res = await fetch(url, {
+		method: "GET",
+		headers: {
+			Authorization: `bearer ${token}`,
+		},
+	});
 
-	const response = await fetch(url, { ...options, headers });
-
-	if (!response.ok) {
-		const errorData = await response.json().catch(() => ({}));
-		throw {
-			status: response.status,
-			message: errorData?.message || "خطای ناشناخته",
-		} as ApiError;
+	if (!res.ok) {
+		const err = await res.json();
+		throw new Error(err.message || "Failed to fetch projects!");
 	}
 
-	return response.json();
-};
+	return res.json();
+}
 
+// -----------
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-const TASK_PERFORMED_URL = `${API_URL}/management/wbs/tasks-performed/`;
+const TASK_PERFORMED_URL = `${API_URL}/management/status-statement/tasks-performed/`;
+// ------------
+
+// -------
+// Main Component
+// --------
+interface WorksDoneProps {
+	wbsData: ContractWBS[];
+	onWorkDoneUpdate?: (workItems: Record<string, WorkItem>) => void;
+}
 
 export default function WorksDone({
 	wbsData,
@@ -94,38 +106,71 @@ export default function WorksDone({
 	const [editingRow, setEditingRow] = useState<string | null>(null);
 	const [showPreviousQuantity, setShowPreviousQuantity] = useState(true);
 
-	// fetch last tasks performed for auto-fill
+	// Fetch last tasks performed
+	const {
+		isPending,
+		isError,
+		data: lastTaskedPerformed,
+		error,
+	} = useQuery<ApiResponse<TaskPerformed[]>, ApiError>({
+		queryKey: ["tasks-performed", wbsData[0]?.contract_id],
+		queryFn: () => FetchData(`${TASK_PERFORMED_URL}${wbsData[0]?.contract_id}`),
+		enabled: !!wbsData?.[0]?.contract_id,
+	});
 
-	// Initialize work items when wbsData changes
-	useMemo(() => {
-		if (wbsData) {
+	// Process previous tasks when data is fetched
+	const previousTasksMap = useMemo(() => {
+		if (!lastTaskedPerformed?.data || lastTaskedPerformed.data.length === 0) {
+			return new Map();
+		}
+
+		// Create a map of description -> quantity for easy lookup
+		const map = new Map<string, number>();
+		lastTaskedPerformed.data.forEach((task) => {
+			map.set(task.description, task.quantity);
+		});
+
+		return map;
+	}, [lastTaskedPerformed]);
+
+	// Initialize or update work items when wbsData or previous tasks change
+	useEffect(() => {
+		if (wbsData && wbsData.length > 0) {
 			const initialWorkItems: Record<string, WorkItem> = {};
+
 			wbsData.forEach((item) => {
+				// Get previous quantity from map if available, otherwise 0
+				const previousQuantity = previousTasksMap.get(item.description) || 0;
+
 				initialWorkItems[item.ID] = {
 					id: item.ID,
 					newQuantity: 0,
-					previousQuantity: Math.floor(Math.random() * item.quantity * 0.5), // Simulated previous work
+					previousQuantity: previousQuantity,
 				};
 			});
+
 			setWorkItems(initialWorkItems);
 			if (onWorkDoneUpdate) {
 				onWorkDoneUpdate(initialWorkItems);
 			}
 		}
-	}, [wbsData, onWorkDoneUpdate]);
+	}, [wbsData, previousTasksMap, onWorkDoneUpdate]);
 
 	const handleQuantityChange = (id: string, value: string) => {
 		const numValue = Math.max(0, parseInt(value) || 0);
 		const item = wbsData?.find((item) => item.ID === id);
-		const maxQuantity = item
-			? item.quantity - (workItems[id]?.previousQuantity || 0)
-			: 0;
+
+		if (!item) return;
+
+		const previousQuantity = workItems[id]?.previousQuantity || 0;
+		const maxQuantity = Math.max(0, item.quantity - previousQuantity);
 
 		const updatedItems = {
 			...workItems,
 			[id]: {
 				...workItems[id],
 				newQuantity: Math.min(numValue, maxQuantity),
+				previousQuantity: previousQuantity, // Preserve previous quantity
 			},
 		};
 
@@ -136,8 +181,17 @@ export default function WorksDone({
 	};
 
 	const calculateTotals = () => {
-		if (!wbsData)
-			return { totalWork: 0, totalPrice: 0, previousTotal: 0, progress: 0 };
+		if (!wbsData || wbsData.length === 0) {
+			return {
+				totalWork: 0,
+				totalPrice: 0,
+				previousTotal: 0,
+				progress: 0,
+				totalCompleted: 0,
+				formattedPrice: "0 ریال",
+				formattedTotalCompleted: "0",
+			};
+		}
 
 		let totalWork = 0;
 		let totalPrice = 0;
@@ -178,7 +232,6 @@ export default function WorksDone({
 		// Simulate API call
 		setTimeout(() => {
 			setIsSaving(false);
-			// In a real app, you would call an API endpoint here
 			console.log("Saving work items:", workItems);
 		}, 1000);
 	};
@@ -191,27 +244,29 @@ export default function WorksDone({
 		setEditingRow(editingRow === id ? null : id);
 	};
 
-	const handleDuplicateRow = (item: ContractWBS) => {
-		// Implementation for duplicating a row
-		console.log("Duplicate row:", item);
-	};
-
 	const handleDeleteRow = (id: string) => {
-		// Implementation for deleting a row
-		console.log("Delete row:", id);
+		if (window.confirm("آیا از حذف این آیتم اطمینان دارید؟")) {
+			const updatedItems = { ...workItems };
+			delete updatedItems[id];
+			setWorkItems(updatedItems);
+			if (onWorkDoneUpdate) {
+				onWorkDoneUpdate(updatedItems);
+			}
+		}
 	};
 
 	const handleAutoCalculate = () => {
-		// Auto-calculate new quantities based on remaining
 		const updatedItems = { ...workItems };
 		wbsData?.forEach((item) => {
 			const workItem = updatedItems[item.ID];
-			const remaining = item.quantity - (workItem?.previousQuantity || 0);
-			if (remaining > 0) {
-				updatedItems[item.ID] = {
-					...workItem,
-					newQuantity: Math.floor(remaining * 0.3), // 30% of remaining
-				};
+			if (workItem) {
+				const remaining = item.quantity - (workItem.previousQuantity || 0);
+				if (remaining > 0) {
+					updatedItems[item.ID] = {
+						...workItem,
+						newQuantity: Math.floor(remaining * 0.3), // 30% of remaining
+					};
+				}
 			}
 		});
 		setWorkItems(updatedItems);
@@ -219,6 +274,21 @@ export default function WorksDone({
 			onWorkDoneUpdate(updatedItems);
 		}
 	};
+
+	// Show loading state while fetching previous tasks
+	if (isPending) {
+		return (
+			<div className={styles.Container}>
+				<div className={styles.LoadingState}>
+					<Loader2
+						size={48}
+						className={styles.Loader}
+					/>
+					<p>در حال بارگذاری کارکردهای قبلی...</p>
+				</div>
+			</div>
+		);
+	}
 
 	// If no data is provided, show empty state
 	if (!wbsData || wbsData.length === 0) {
@@ -274,7 +344,7 @@ export default function WorksDone({
 						<div>
 							<h3 className={styles.Title}>جدول کارکرد پروژه</h3>
 							<p className={styles.Subtitle}>
-								تعداد آیتم های ساختار شکست کار:
+								تعداد آیتم های ساختار شکست کار:{" "}
 								{toPersianDigits(wbsData.length)}
 							</p>
 						</div>
@@ -330,18 +400,6 @@ export default function WorksDone({
 						نمایش کارکرد پیشین
 					</label>
 				</div>
-				{/* <div className={styles.ProgressBar}>
-					<div className={styles.ProgressLabel}>
-						<span>پیشرفت کلی پروژه:</span>
-						<span>{toPersianDigits(totals.progress)}%</span>
-					</div>
-					<div className={styles.ProgressTrack}>
-						<div
-							className={styles.ProgressFill}
-							style={{ width: `${totals.progress}%` }}
-						/>
-					</div>
-				</div> */}
 			</div>
 
 			<div className={styles.TableWrapper}>
@@ -386,10 +444,17 @@ export default function WorksDone({
 
 					<div className={styles.TableBody}>
 						{wbsData.map((item, index) => {
-							const workItem = workItems[item.ID] || {};
+							const workItem = workItems[item.ID] || {
+								id: item.ID,
+								newQuantity: 0,
+								previousQuantity: 0,
+							};
 							const newQuantity = workItem.newQuantity || 0;
 							const previousQuantity = workItem.previousQuantity || 0;
-							const remaining = item.quantity - previousQuantity - newQuantity;
+							const remaining = Math.max(
+								0,
+								item.quantity - previousQuantity - newQuantity,
+							);
 							const rowTotal = newQuantity * item.unit_price;
 							const rowProgress =
 								item.quantity > 0
@@ -400,7 +465,6 @@ export default function WorksDone({
 								<div
 									key={item.ID}
 									className={`${styles.TableRow} ${index % 2 === 0 ? styles.EvenRow : styles.OddRow} ${editingRow === item.ID ? styles.EditingRow : ""}`}
-									onClick={() => handleEditRow(item.ID)}
 								>
 									<div
 										className={styles.TableCell}
@@ -454,7 +518,9 @@ export default function WorksDone({
 											className={styles.TableCell}
 											data-label='کارکرد پیشین'
 										>
-											<div className={styles.QuantityInputWrapper}>--</div>
+											<div className={styles.PreviousQuantity}>
+												{toPersianDigits(previousQuantity)}
+											</div>
 										</div>
 									)}
 
@@ -492,7 +558,7 @@ export default function WorksDone({
 													: styles.Remaining
 											}
 										>
-											{toPersianDigits(Math.max(0, remaining))}
+											{toPersianDigits(remaining)}
 										</span>
 									</div>
 
@@ -509,6 +575,34 @@ export default function WorksDone({
 												? toPersianDigits(rowTotal.toLocaleString())
 												: "--"}
 										</span>
+									</div>
+
+									<div
+										className={styles.TableCell}
+										data-label='عملیات'
+									>
+										<div className={styles.ActionButtons}>
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleEditRow(item.ID);
+												}}
+												className={styles.ActionButton}
+												title='ویرایش'
+											>
+												<Edit2 size={16} />
+											</button>
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleDeleteRow(item.ID);
+												}}
+												className={styles.ActionButton}
+												title='حذف'
+											>
+												<Trash2 size={16} />
+											</button>
+										</div>
 									</div>
 								</div>
 							);
@@ -589,7 +683,7 @@ export default function WorksDone({
 							<div className={styles.TotalContent}>
 								<span className={styles.TotalLabel}>جمع کل انجام شده</span>
 								<span className={styles.TotalValue}>
-									{/* {toPersianDigits(totals.totalCompleted)} */}
+									{toPersianDigits(totals.totalCompleted)}
 								</span>
 							</div>
 						</div>
@@ -644,7 +738,7 @@ export default function WorksDone({
 					</div>
 					<div className={styles.FooterNote}>
 						<AlertCircle size={14} />
-						<span>مقادیر قرمز نشان‌دهنده کارکرد بیش از حد مجاز است.</span>
+						<span>کارکرد پیشین از صورت وضعیت‌های قبلی محاسبه شده است.</span>
 					</div>
 				</div>
 			</div>

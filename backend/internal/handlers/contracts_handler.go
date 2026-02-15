@@ -651,53 +651,112 @@ func (handler *ContractHandler) GetContractWBS(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(resData, "ContractWbs retrieved successfully"))
 }
 
-// ! @Router /management/wbs/tasks-performed/:cid
-func (handler *ContractHandler) GetLastTasksPerformed(c *fiber.Ctx) error {
-	// Get contract number from URL parameter instead of body
-	contractNumber := c.Params("cid")
-	if contractNumber == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Contract number is required"))
+// ! @Router /management/status-statement/tasks-performed/new
+func (handler *ContractHandler) CreateTasksPerformed(c *fiber.Ctx) error {
+	//? 1) Get user ID from context (set by middleware)
+	userUUID, ok := c.Locals("userID").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+	}
+	//? 2) Parse Body request and Validate
+	type TasksList struct {
+		Description string `json:"description"`
+		Quantity    int64  `json:"quantity"`
+		Unit        string `json:"unit"`
+		UnitPrice   int64  `json:"unit_price"`
 	}
 
-	contract, err := handler.contractService.GetContractByNumber(c.Context(), contractNumber)
+	type RequestBody struct {
+		StatusStatementID string      `json:"status_statement_id"`
+		TasksList         []TasksList `json:"tasks_list"`
+	}
+	var req RequestBody
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Body Request!"))
+	}
+	if err := validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+	}
+
+	//? 3) UUID parsing
+	statusStatementUUID, err := uuid.Parse(req.StatusStatementID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid status_statement_id"))
+	}
+
+	//? 4) Call the service
+	for _, task := range req.TasksList {
+		var quantity float64
+		quantity = float64(task.Quantity)
+
+		var unitPrice float64
+		unitPrice = float64(task.UnitPrice)
+
+		err = handler.contractService.CreateTasksPerformed(c.Context(), userUUID, statusStatementUUID, task.Description, task.Unit, quantity, unitPrice)
+		if err != nil {
+			log.Printf("CreateTasksPerformed DB error: %v", err)
+			return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+		}
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(nil, "Tasks performed created successfully"))
+}
+
+// ! @Router /management/status-statement/tasks-performed/:cid
+// todo: use status statement ID instead of contract ID to get last tasks performed, because it's possible that a contract has multiple status statements and each status statement has its own tasks performed records. so we need to specify which status statement's tasks performed we want to retrieve. but for now, we will use contract ID to get last status statement and then get its tasks performed.
+func (handler *ContractHandler) GetLastTasksPerformed(c *fiber.Ctx) error {
+	//? 1. Get contract ID from URL parameter and pase it
+	contractID := c.Params("cid")
+	if contractID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Contract ID is required"))
+	}
+
+	contractUUID, err := uuid.Parse(contractID)
+	if err != nil {
+		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+	}
+
+	//? 2. Get contract
+	contract, err := handler.contractService.GetContractByID(c.Context(), contractUUID)
 	if err != nil {
 		log.Printf("GetContract DB error: %v", err)
 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
 	}
 
+	//? 3. Get last Status Statemenet of contract
 	status_statement, err := handler.contractService.GetLastStatusStatement(c.Context(), contract.ID)
 	if err != nil {
 		log.Printf("GetStatusStament DB error: %v", err)
 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
 	}
 
+	//? 4. Get last tasks performed of last status statement
 	tasks_performed, err := handler.contractService.GetLastTasksPerformed(c.Context(), status_statement.ID)
 	if err != nil {
 		log.Printf("GetTasksPerfrormed DB error: %v", err)
 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
 	}
-
+	//? 5. Return results
 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(tasks_performed, "Last tasks performed retrieved successfully"))
 }
 
-// ! Router /management/contracts/status-statement
+// ! @Router /management/contracts/status-statement
 func (handler *ContractHandler) CreateStatusStatement(c *fiber.Ctx) error {
 	//? 1) Get user ID from context (set by middleware)
-	// userUUID, ok := c.Locals("userID").(uuid.UUID)
-	// if !ok {
-	// 	return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-	// }
+	userUUID, ok := c.Locals("userID").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+	}
 	//? 2) Parse Body request
 	type RequestBody struct {
-		ContractID      string  `json:"contract_id"`
-		StatementDate   string  `json:"statement_date"`
-		CompletedAmount float64 `json:"completed_amount"`
-		Remarks         string  `json:"remarks"`
+		ContractID        string `json:"contract_id"`
+		StatementDateFrom string `json:"statement_date_from"`
+		StatementDateTo   string `json:"statement_date_to"`
 	}
 	//? 2-2) Parse Body request
 	var req RequestBody
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Body Request!"))
 	}
 	//? 2-3) Validate using struct tags
 	if err := validate.Struct(req); err != nil {
@@ -705,34 +764,85 @@ func (handler *ContractHandler) CreateStatusStatement(c *fiber.Ctx) error {
 	}
 
 	//? 3) UUID parsing
-	// contractUUID, err := uuid.Parse(req.ContractID)
-	// if err != nil {
-	// 	return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid contract_id"))
-	// }
+	contractUUID, err := uuid.Parse(req.ContractID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid contract_id"))
+	}
+	// get contact to retrieve contractor and project ID
+	contract, err := handler.contractService.GetContractByID(c.Context(), contractUUID)
 
 	//? 4) Parse statement date
-	// statementDate, err := time.Parse(time.RFC3339, req.StatementDate)
-	// if err != nil {
-	// 	return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid statement_date format"))
-	// }
+	statementDatefrom, err := time.Parse(time.RFC3339, req.StatementDateFrom)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid statement_date format"))
+	}
+	statementDateTo, err := time.Parse(time.RFC3339, req.StatementDateTo)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid statement_date format"))
+	}
 
-	//? 5) Call the service
-	// err = handler.contractService.CreateStatusStatement(
-	// 	c.Context(),
-	// 	userUUID,
-	// 	contractUUID,
-	// 	statementDate,
-	// 	req.CompletedAmount,
-	// 	req.Remarks,
-	// )
+	// ResponseData
+	type ResponseData struct {
+		PreviousStatusStatement *models.StatusStatement `json:"previous_status_statement,omitempty"`
+		CurrentStatusStatement  *models.StatusStatement `json:"current_status_statement,omitempty"`
+	}
 
-	// if err != nil {
-	// 	log.Printf("CreateStatusStatement DB error: %v", err)
-	// 	return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-	// }
+	//? 5. Get last status statement to find number, progress percent and so on
+	previous_status_statement, err := handler.contractService.GetLastStatusStatement(c.Context(), contractUUID)
 
-	return c.Status(fiber.StatusCreated).
-		JSON(SuccessResponse(nil, "Status statement created successfully"))
+	var current_status_statement models.StatusStatement
+	if previous_status_statement == nil {
+		current_status_statement, err = handler.contractService.CreateStatusStatement(c.Context(), userUUID, contractUUID, contract.ContractorID, contract.ProjectID, statementDatefrom, statementDateTo, 1, "pending")
+
+		if err != nil {
+			log.Printf("CreateStatusStatement DB error: %v", err)
+			return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+		}
+
+		resData := ResponseData{
+			PreviousStatusStatement: nil,
+			CurrentStatusStatement:  &current_status_statement,
+		}
+
+		return c.Status(fiber.StatusCreated).
+			JSON(SuccessResponse(resData, "Status statement created successfully"))
+	} else {
+		current_status_statement, err = handler.contractService.CreateStatusStatement(c.Context(), userUUID, contractUUID, contract.ContractorID, contract.ProjectID, statementDatefrom, statementDateTo, previous_status_statement.Number+1, "pending")
+
+		if err != nil {
+			log.Printf("CreateStatusStatement DB error: %v", err)
+			return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+		}
+
+		resData := ResponseData{
+			PreviousStatusStatement: previous_status_statement,
+			CurrentStatusStatement:  &current_status_statement,
+		}
+
+		return c.Status(fiber.StatusCreated).
+			JSON(SuccessResponse(resData, "Status statement created successfully"))
+	}
+}
+
+// ! @Router /management/contracts/status-statement/
+func (handler *ContractHandler) GetLast2StatusStatements(c *fiber.Ctx) error {
+	//? 1) Get contract ID from URL parameter and pase it
+	contractID := c.Params("cid")
+	if contractID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Contract ID is required"))
+	}
+	//? 2) UUID parsing
+	contractUUID, err := uuid.Parse(contractID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid contract ID"))
+	}
+	//? 3) Call the service
+	status_statements, err := handler.contractService.GetLast2StatusStatements(c.Context(), contractUUID)
+	if err != nil {
+		log.Printf("GetLast2StatusStatements DB error: %v", err)
+		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
+	}
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(status_statements, "Last 2 status statements retrieved successfully"))
 }
 
 // ! @Router /management/new-contract [post]

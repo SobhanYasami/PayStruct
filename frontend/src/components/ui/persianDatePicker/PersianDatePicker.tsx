@@ -450,3 +450,11 @@ export const PersianDatePickerCustom: React.FC<
 };
 
 export default PersianDatePickerCustom;
+
+const formatToRFC3339 = (date: PersianDate): string => {
+	return `${date.year}-${String(date.month).padStart(2, "0")}-${String(
+		date.day,
+	).padStart(2, "0")}T00:00:00Z`;
+};
+
+export { formatToRFC3339 };
