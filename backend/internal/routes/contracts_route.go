@@ -46,12 +46,32 @@ func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler) {
 	statusStatement := management.Group("/status-statement")
 	statusStatement.Post("/", h.CreateStatusStatement)
 	statusStatement.Get("/get-by-contract/:cid", h.GetLast2StatusStatements)
+	statusStatement.Post("/submit/:ssid", h.SubmitStatusStatement)
 
 	// task performed
 	tasks := statusStatement.Group("/tasks-performed")
 	tasks.Post("/new-task", h.CreateTasksPerformed)
 	tasks.Get("/get-by-contract/:cid", h.GetLastTasksPerformed)
 
+	// todo: extra works
+	extraWorks := statusStatement.Group("/extra-works")
+	extraWorks.Post("/new-extra-work", h.CreateExtraWorks)
+	// extraWorks.Get("/get-by-contract/:cid", h.GetLastExtraWorks)
+
+	// todo: deductions
+	// deductions := statusStatement.Group("/deductions")
+	// deductions.Post("/new-deduction", h.CreateDeductions)
+	// deductions.Get("/get-by-contract/:cid", h.GetLastDeductions)
+
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
 	//! Trading System Routes
 	// router.Get("/contractors/contractor-projects", middlewares.Authenticate(), contractHandler.GetContractorProjects)
 	// router.Get("/contractors/get-last-status-statement", middlewares.Authenticate(), contractHandler.GetLastStatusStatement)
@@ -72,7 +92,6 @@ func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler) {
 	// router.Get("/contractors/other-reductions", middlewares.Authenticate(), contractorHandler.GetSttsOtherReductions)
 	//! Internal Routes
 	// Todo: Remaining files
-	// router.Post("/contractors/tasks-final-subs", middlewares.Authenticate(), contractorHandler.TasksFinalSubmition)
 	// router.Post("/contractors/print-status", middlewares.Authenticate(), contractorController.PrintStatusSttmnt)
 
 }

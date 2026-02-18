@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -396,13 +397,21 @@ func (s *ContractService) CreateTasksPerformed(ctx context.Context, userID, stat
 
 // GetLastStatement
 func (s *ContractService) GetLastStatusStatement(ctx context.Context, contractID uuid.UUID) (*models.StatusStatement, error) {
-	var status_statement models.StatusStatement
+	var statusStatement models.StatusStatement
 
-	if err := s.db.WithContext(ctx).Where("contract_id = ?", contractID).Order("number desc").Find(&status_statement).Error; err != nil {
+	err := s.db.WithContext(ctx).
+		Where("contract_id = ?", contractID).
+		Order("number desc").
+		First(&statusStatement).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	return &status_statement, nil
+	return &statusStatement, nil
 }
 
 // GetLast2StatusStatements returns the last 2 status statements for a contract
@@ -432,8 +441,6 @@ func (s *ContractService) GetLastTasksPerformed(ctx context.Context, statusState
 
 // CreateStatusStatement
 func (s *ContractService) CreateStatusStatement(ctx context.Context, userID, contractID, contractorID, projectID uuid.UUID, statementDateStart, statementDateEnd time.Time, statusNumber uint16, status string) (models.StatusStatement, error) {
-
-	// todo:
 	// Create new record
 	neue_statusStatement := models.StatusStatement{
 		BaseModel: models.BaseModel{
@@ -453,4 +460,44 @@ func (s *ContractService) CreateStatusStatement(ctx context.Context, userID, con
 		return models.StatusStatement{}, err
 	}
 	return neue_statusStatement, nil
+}
+
+// SubmitStatusStatement updates the status statement state to "submitted"
+func (s *ContractService) SubmitStatusStatement(ctx context.Context, userUUID, statusStatementID uuid.UUID) error {
+	var statusStatement models.StatusStatement
+	if err := s.db.WithContext(ctx).First(&statusStatement, "id = ?", statusStatementID).Error; err != nil {
+		return err
+	}
+
+	// Update the status to "submitted"
+	statusStatement.Status = "submitted"
+	statusStatement.UpdatedBy = userUUID
+
+	if err := s.db.WithContext(ctx).Save(&statusStatement).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Extra works:
+func (s *ContractService) CreateExtraWorks(ctx context.Context, userID, statusStatementID uuid.UUID, description, unit string, quantity, unitPrice float64) error {
+	// Create new record
+	additionalWork := models.AdditionalWorks{
+		BaseModel: models.BaseModel{
+			ID:        uuid.New(),
+			CreatedBy: userID,
+		},
+		StatusStatementID: statusStatementID,
+		Description:       description,
+		Unit:              unit,
+		Quantity:          quantity,
+		UnitPrice:         unitPrice,
+		TotalPrice:        quantity * unitPrice,
+	}
+
+	if err := s.db.WithContext(ctx).Create(&additionalWork).Error; err != nil {
+		return err
+	}
+	return nil
 }

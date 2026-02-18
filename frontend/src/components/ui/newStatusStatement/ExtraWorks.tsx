@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import styles from "./ExtraWorks.module.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { toPersianDigits } from "@/utils/PersianNumberCoverter";
 import {
@@ -26,9 +26,9 @@ type WBSItem = {
 	unit_price: number;
 };
 
-type NewExtraWorksPayload = {
-	contract_number: string;
-	items: WBSItem[];
+type ExtraWorksPayload = {
+	status_statement_id: string;
+	works_list: WBSItem[];
 };
 
 type ApiError = {
@@ -37,12 +37,12 @@ type ApiError = {
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-const StatusExtraWorks_URL = `${API_URL}/management/contracts/status-statement/extra-works/`;
+const StatusExtraWorks_URL = `${API_URL}/management/status-statement/extra-works/`;
 
 export default function ExtraWorks() {
-	const [form, setForm] = useState<NewExtraWorksPayload>({
-		contract_number: "",
-		items: [
+	const [form, setForm] = useState<ExtraWorksPayload>({
+		status_statement_id: "",
+		works_list: [
 			{
 				description: "",
 				quantity: 0,
@@ -53,25 +53,40 @@ export default function ExtraWorks() {
 	});
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
+	// Get status statement ID from localStorage on component mount
+	useEffect(() => {
+		const statusStatementId = localStorage.getItem("current_status_statement");
+		if (statusStatementId) {
+			setForm((prev) => ({
+				...prev,
+				status_statement_id: statusStatementId,
+			}));
+		} else {
+			toast.error(
+				"شناسه صورت وضعیت یافت نشد. لطفاً ابتدا یک صورت وضعیت انتخاب کنید.",
+			);
+		}
+	}, []);
+
 	const addRow = () => {
 		setForm((prev) => ({
 			...prev,
-			items: [
-				...prev.items,
+			works_list: [
+				...prev.works_list,
 				{ description: "", quantity: 0, unit: "", unit_price: 0 },
 			],
 		}));
 	};
 
 	const removeRow = (index: number) => {
-		if (form.items.length <= 1) {
+		if (form.works_list.length <= 1) {
 			toast.error("حداقل یک آیتم باید وجود داشته باشد");
 			return;
 		}
 
 		setForm((prev) => ({
 			...prev,
-			items: prev.items.filter((_, i) => i !== index),
+			works_list: prev.works_list.filter((_, i) => i !== index),
 		}));
 	};
 
@@ -81,35 +96,35 @@ export default function ExtraWorks() {
 		value: string,
 	) => {
 		setForm((prev) => {
-			const items = [...prev.items];
-			items[index] = {
-				...items[index],
+			const works_list = [...prev.works_list];
+			works_list[index] = {
+				...works_list[index],
 				[field]:
 					field === "quantity" || field === "unit_price"
 						? Number(value) || 0
 						: value,
 			};
-			return { ...prev, items };
+			return { ...prev, works_list };
 		});
 	};
 
 	const duplicateRow = (index: number) => {
-		const itemToDuplicate = form.items[index];
+		const itemToDuplicate = form.works_list[index];
 		setForm((prev) => ({
 			...prev,
-			items: [
-				...prev.items.slice(0, index + 1),
+			works_list: [
+				...prev.works_list.slice(0, index + 1),
 				{ ...itemToDuplicate },
-				...prev.items.slice(index + 1),
+				...prev.works_list.slice(index + 1),
 			],
 		}));
 	};
 
 	const clearAllRows = () => {
-		setForm({
-			contract_number: form.contract_number,
-			items: [{ description: "", quantity: 0, unit: "", unit_price: 0 }],
-		});
+		setForm((prev) => ({
+			...prev,
+			works_list: [{ description: "", quantity: 0, unit: "", unit_price: 0 }],
+		}));
 		toast.success("تمامی سطرها پاک شدند");
 	};
 
@@ -117,7 +132,7 @@ export default function ExtraWorks() {
 		let totalQuantity = 0;
 		let totalAmount = 0;
 
-		form.items.forEach((item) => {
+		form.works_list.forEach((item) => {
 			totalQuantity += item.quantity || 0;
 			totalAmount += (item.quantity || 0) * (item.unit_price || 0);
 		});
@@ -127,15 +142,16 @@ export default function ExtraWorks() {
 			totalAmount,
 			formattedAmount:
 				new Intl.NumberFormat("fa-IR").format(totalAmount) + " ریال",
-			itemsCount: form.items.length,
+			itemsCount: form.works_list.length,
 		};
 	};
 
 	const mutation = useMutation({
-		mutationFn: async (payload: NewExtraWorksPayload) => {
+		mutationFn: async (payload: ExtraWorksPayload) => {
 			const token = localStorage.getItem("usr-token");
+			if (!token) throw new Error("Unauthorized");
 
-			const res = await fetch(StatusExtraWorks_URL, {
+			const res = await fetch(`${StatusExtraWorks_URL}new-extra-work`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -149,7 +165,7 @@ export default function ExtraWorks() {
 			if (!res.ok) {
 				throw {
 					status: res.status,
-					message: data?.message || "خطای ناشناخته",
+					message: data?.message || "خطا در ثبت کارهای اضافه",
 				} as ApiError;
 			}
 
@@ -157,18 +173,31 @@ export default function ExtraWorks() {
 		},
 		onSuccess: () => {
 			toast.success("کارهای اضافه با موفقیت ثبت شد");
+			// Reset form after successful submission (keep status_statement_id)
+			setForm((prev) => ({
+				status_statement_id: prev.status_statement_id,
+				works_list: [{ description: "", quantity: 0, unit: "", unit_price: 0 }],
+			}));
 		},
 		onError: (error: unknown) => {
 			const err = error as ApiError;
-			toast.error(err.message);
+			toast.error(err.message || "خطا در ارتباط با سرور");
 		},
 	});
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 
+		// Check if status statement ID exists
+		if (!form.status_statement_id) {
+			toast.error(
+				"شناسه صورت وضعیت یافت نشد. لطفاً صفحه را مجدداً بارگذاری کنید.",
+			);
+			return;
+		}
+
 		// Validate all items
-		const invalidItems = form.items.filter(
+		const invalidItems = form.works_list.filter(
 			(item) =>
 				!item.description.trim() ||
 				item.quantity <= 0 ||
@@ -185,6 +214,19 @@ export default function ExtraWorks() {
 	};
 
 	const totals = calculateTotals();
+
+	// Show warning if no status statement ID
+	if (!form.status_statement_id) {
+		return (
+			<div className={styles.Container}>
+				<div className={styles.WarningState}>
+					<AlertCircle size={48} />
+					<h3>شناسه صورت وضعیت یافت نشد</h3>
+					<p>لطفاً ابتدا یک صورت وضعیت را انتخاب کنید</p>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className={styles.Container}>
@@ -214,12 +256,12 @@ export default function ExtraWorks() {
 						className={styles.CalculateButton}
 						onClick={() => {
 							// Auto-calculate prices based on quantity
-							const updatedItems = form.items.map((item) => ({
+							const updatedWorksList = form.works_list.map((item) => ({
 								...item,
 								unit_price:
 									item.quantity > 0 ? Math.round(item.quantity * 1000) : 0,
 							}));
-							setForm((prev) => ({ ...prev, items: updatedItems }));
+							setForm((prev) => ({ ...prev, works_list: updatedWorksList }));
 						}}
 						title='محاسبه خودکار'
 					>
@@ -313,7 +355,7 @@ export default function ExtraWorks() {
 					</div>
 
 					<div className={styles.TableBody}>
-						{form.items.map((item, index) => {
+						{form.works_list.map((item, index) => {
 							const itemTotal = (item.quantity || 0) * (item.unit_price || 0);
 
 							return (
@@ -430,7 +472,7 @@ export default function ExtraWorks() {
 													removeRow(index);
 												}}
 												title='حذف سطر'
-												disabled={form.items.length <= 1}
+												disabled={form.works_list.length <= 1}
 											>
 												<Trash2 size={14} />
 											</button>

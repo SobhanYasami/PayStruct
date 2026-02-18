@@ -2,7 +2,7 @@
 import styles from "./WorksDone.module.css";
 import { toPersianDigits } from "@/utils/PersianNumberCoverter";
 import { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	Save,
 	Printer,
@@ -62,6 +62,16 @@ interface WorkItem {
 	previousQuantity: number; // Make it required instead of optional
 }
 
+interface SubmitTasksRequest {
+	status_statement_id: string;
+	tasks_list: {
+		description: string;
+		quantity: number;
+		unit: string;
+		unit_price: number;
+	}[];
+}
+
 // ----------
 // Helper functions
 // --------------
@@ -84,6 +94,30 @@ async function FetchData(url: string) {
 	return res.json();
 }
 
+async function submitTasksPerformed(data: SubmitTasksRequest) {
+	const token = localStorage.getItem("usr-token");
+	if (!token) throw new Error("UnAuthorized");
+
+	const response = await fetch(
+		`${API_URL}/management/status-statement/tasks-performed/new-task`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `bearer ${token}`,
+			},
+			body: JSON.stringify(data),
+		},
+	);
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.message || "Failed to submit tasks");
+	}
+
+	return response.json();
+}
+
 // -----------
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const TASK_PERFORMED_URL = `${API_URL}/management/status-statement/tasks-performed/`;
@@ -101,10 +135,19 @@ export default function WorksDone({
 	wbsData,
 	onWorkDoneUpdate,
 }: WorksDoneProps) {
+	const queryClient = useQueryClient();
 	const [workItems, setWorkItems] = useState<Record<string, WorkItem>>({});
 	const [isSaving, setIsSaving] = useState(false);
 	const [editingRow, setEditingRow] = useState<string | null>(null);
 	const [showPreviousQuantity, setShowPreviousQuantity] = useState(true);
+	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+
+	// Get current status statement ID from localStorage
+	const currentStatusStatementId =
+		typeof window !== "undefined"
+			? localStorage.getItem("current_status_statement")
+			: null;
 
 	// Fetch last tasks performed
 	const {
@@ -116,6 +159,35 @@ export default function WorksDone({
 		queryKey: ["tasks-performed", wbsData[0]?.contract_id],
 		queryFn: () => FetchData(`${TASK_PERFORMED_URL}${wbsData[0]?.contract_id}`),
 		enabled: !!wbsData?.[0]?.contract_id,
+	});
+
+	// Submit mutation
+	const submitMutation = useMutation({
+		mutationFn: submitTasksPerformed,
+		onSuccess: () => {
+			setSubmitSuccess("کارکرد با موفقیت ثبت شد");
+			setSubmitError(null);
+			setIsSaving(false);
+
+			// Clear success message after 3 seconds
+			setTimeout(() => {
+				setSubmitSuccess(null);
+			}, 3000);
+
+			// Invalidate relevant queries to refresh data
+			queryClient.invalidateQueries({
+				queryKey: ["tasks-performed", wbsData[0]?.contract_id],
+			});
+		},
+		onError: (error: Error) => {
+			setSubmitError(error.message || "خطا در ثبت کارکرد");
+			setIsSaving(false);
+
+			// Clear error message after 5 seconds
+			setTimeout(() => {
+				setSubmitError(null);
+			}, 5000);
+		},
 	});
 
 	// Process previous tasks when data is fetched
@@ -228,12 +300,42 @@ export default function WorksDone({
 	};
 
 	const handleSave = () => {
+		// Check if we have a status statement ID
+		if (!currentStatusStatementId) {
+			setSubmitError(
+				"شناسه صورت وضعیت یافت نشد. لطفاً ابتدا یک صورت وضعیت انتخاب کنید.",
+			);
+			setTimeout(() => setSubmitError(null), 5000);
+			return;
+		}
+
+		// Filter out items with zero quantity
+		const tasksToSubmit = Object.values(workItems)
+			.filter((item) => item.newQuantity > 0)
+			.map((item) => {
+				const wbsItem = wbsData.find((wbs) => wbs.ID === item.id);
+				return {
+					description: wbsItem?.description || "",
+					quantity: item.newQuantity,
+					unit: wbsItem?.unit || "",
+					unit_price: wbsItem?.unit_price || 0,
+				};
+			});
+
+		if (tasksToSubmit.length === 0) {
+			setSubmitError("لطفاً حداقل یک آیتم با مقدار غیرصفر وارد کنید");
+			setTimeout(() => setSubmitError(null), 5000);
+			return;
+		}
+
+		const submitData: SubmitTasksRequest = {
+			status_statement_id: currentStatusStatementId,
+			tasks_list: tasksToSubmit,
+		};
+
 		setIsSaving(true);
-		// Simulate API call
-		setTimeout(() => {
-			setIsSaving(false);
-			console.log("Saving work items:", workItems);
-		}, 1000);
+		setSubmitError(null);
+		submitMutation.mutate(submitData);
 	};
 
 	const handlePrint = () => {
@@ -368,9 +470,9 @@ export default function WorksDone({
 					<button
 						className={styles.SaveButton}
 						onClick={handleSave}
-						disabled={isSaving}
+						disabled={isSaving || submitMutation.isPending}
 					>
-						{isSaving ? (
+						{isSaving || submitMutation.isPending ? (
 							<>
 								<Loader2
 									size={18}
@@ -387,6 +489,31 @@ export default function WorksDone({
 					</button>
 				</div>
 			</div>
+
+			{/* Status Messages */}
+			{submitError && (
+				<div className={styles.ErrorMessage}>
+					<AlertCircle size={20} />
+					<span>{submitError}</span>
+				</div>
+			)}
+
+			{submitSuccess && (
+				<div className={styles.SuccessMessage}>
+					<AlertCircle size={20} />
+					<span>{submitSuccess}</span>
+				</div>
+			)}
+
+			{!currentStatusStatementId && (
+				<div className={styles.WarningMessage}>
+					<AlertCircle size={20} />
+					<span>
+						هشدار: شناسه صورت وضعیت یافت نشد. لطفاً ابتدا یک صورت وضعیت انتخاب
+						کنید.
+					</span>
+				</div>
+			)}
 
 			<div className={styles.ControlPanel}>
 				<div className={styles.ControlGroup}>

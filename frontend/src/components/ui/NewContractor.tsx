@@ -60,6 +60,10 @@ export default function NewContractor({
 		mutationFn: async (payload: NewContractorPayload) => {
 			console.log("Creating contractor with payload:", payload);
 			const token = localStorage.getItem("usr-token");
+
+			// debug:
+			console.log("contractor url", apiUrl);
+
 			const res = await fetch(`${apiUrl}`, {
 				method: "POST",
 				headers: {

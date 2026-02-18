@@ -82,12 +82,8 @@ interface WBSResponse {
 
 // Constants
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-const CONTRACTOR_URL = `${API_URL}/management/contractors/`;
-const CONTRACT_URL = `${API_URL}/management/contracts/`;
 const WBS_URL = `${API_URL}/management/wbs/`;
-const STATUS_STATEMENT_URL = `${API_URL}/management/contracts/status-statement/`;
-const STATUS_EXTRA_WORKS_URL = `${API_URL}/management/contracts/status-statement/extra-works/`;
-const STATUS_REDUCTIONS_URL = `${API_URL}/management/contracts/status-statement/reductions/`;
+const StatusStatement_URL = `${API_URL}/management/status-statement/`;
 
 // Helper functions
 const fetchWithAuth = async (url: string, options?: RequestInit) => {
@@ -145,6 +141,25 @@ export default function NewStatusStatement({
 			toast.error(error.message);
 		},
 	});
+
+	// Submit Status Statement Mutation
+	const { mutate: submitStatusStatement, isPending: isSubmitPending } =
+		useMutation<any, ApiError, string>({
+			mutationFn: (ssid: string) =>
+				fetchWithAuth(`${StatusStatement_URL}submit/${ssid}`, {
+					method: "POST",
+				}),
+			onSuccess: () => {
+				toast.success("صورت وضعیت با موفقیت ثبت شد");
+				setIsSubmitted(true);
+
+				// Optional: clear local storage
+				localStorage.removeItem("current_status_statement");
+			},
+			onError: (error) => {
+				toast.error(error.message || "خطا در ثبت صورت وضعیت");
+			},
+		});
 
 	// Derived state
 	const contractData = wbsData?.data.contract || null;
@@ -372,11 +387,36 @@ export default function NewStatusStatement({
 				<div className={styles.SubmitSection}>
 					<button
 						className={styles.SubmitButton}
-						onClick={() => setIsSubmitted(true)}
+						onClick={() => {
+							const raw = localStorage.getItem("current_status_statement");
+
+							if (!raw) {
+								toast.error("شناسه صورت وضعیت یافت نشد");
+								return;
+							}
+
+							const ssid = JSON.parse(raw);
+
+							submitStatusStatement(ssid);
+						}}
+						disabled={isSubmitPending}
 					>
-						<FileText size={18} />
-						ثبت صورت وضعیت
+						{isSubmitPending ? (
+							<>
+								<Loader2
+									className={styles.Loader}
+									size={18}
+								/>
+								در حال ثبت...
+							</>
+						) : (
+							<>
+								<FileText size={18} />
+								ثبت صورت وضعیت
+							</>
+						)}
 					</button>
+
 					<button
 						className={styles.CancelButton}
 						onClick={handleReset}

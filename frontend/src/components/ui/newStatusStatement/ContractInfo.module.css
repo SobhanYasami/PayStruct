@@ -155,3 +155,9 @@
 	cursor: not-allowed;
 	transform: none;
 }
+
+.ErrorMessage {
+	color: #ef4444;
+	font-size: 14px;
+	margin-top: 8px;
+}

@@ -201,9 +201,6 @@ export default function ContractInformation({
 			return;
 		}
 
-		// debug:
-		console.log("console log form data:", formData);
-
 		submitMutation.mutate({
 			contract_id,
 			statement_date_from: formatToRFC3339(formData.statement_date_from),
