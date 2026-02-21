@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -11,20 +12,24 @@ import (
 // BaseModel contains common fields for all models
 // ----------------------------
 type BaseModel struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	CreatedBy uuid.UUID `json:"created_by,omitempty" gorm:"type:char(36);index"`
-	UpdatedBy uuid.UUID `json:"updated_by,omitempty" gorm:"type:char(36)"`
-	DeletedBy uuid.UUID `json:"deleted_by,omitempty" gorm:"type:char(36)"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 
-	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
-	DeletedAt gorm.DeletedAt `json:"-" gorm:""`
+	CreatedBy *uuid.UUID `gorm:"type:uuid;index"`
+	UpdatedBy *uuid.UUID `gorm:"type:uuid;index"`
+	DeletedBy *uuid.UUID `gorm:"type:uuid;index"`
 }
 
 // BeforeCreate hook for BaseModel
 func (b *BaseModel) BeforeCreate(tx *gorm.DB) error {
 	if b.ID == uuid.Nil {
-		b.ID = uuid.New()
+		id, err := uuid.NewV7()
+		if err != nil {
+			return err
+		}
+		b.ID = id
 	}
 	return nil
 }
@@ -32,10 +37,23 @@ func (b *BaseModel) BeforeCreate(tx *gorm.DB) error {
 // ----------------------------
 // Project Model
 // ----------------------------
+type ProjectPhase uint8
+
+const (
+	PhasePlanning         ProjectPhase = 0
+	PhaseConceptualDesign ProjectPhase = 1
+	PhaseDetailedDesign   ProjectPhase = 2
+	PhaseConstruction     ProjectPhase = 3
+	PhaseCommissioning    ProjectPhase = 4
+)
+
 type Project struct {
 	BaseModel
-	Name  string `json:"name" gorm:"size:100;not null;index:idx_project_name"`
-	Phase uint8  `json:"phase" gorm:"not null;default:0"`
+	Name  string       `gorm:"size:100;not null;uniqueIndex:idx_company_project_name"`
+	Phase ProjectPhase `gorm:"not null;default:0"`
+
+	CompanyID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_company_project_name"`
+	Company   Company   `gorm:"constraint:OnDelete:CASCADE;"`
 }
 
 // ----------------------------
@@ -43,34 +61,51 @@ type Project struct {
 // ----------------------------
 type Contract struct {
 	BaseModel
-	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
-	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
 
-	ContractNumber  string    `json:"contract_number" gorm:"size:100;not null;uniqueIndex"`
-	GrossBudget     float64   `json:"gross_budget" gorm:"type:decimal(18,2);not null"`
-	StartDate       time.Time `json:"start_date" gorm:"not null;index"`
-	Duration        uint16    `json:"duration" gorm:"not null;comment:Duration in days"`
-	EndDate         time.Time `json:"end_date" gorm:"not null;index"`
-	InsuranceRate   float32   `json:"insurance_rate" gorm:"type:decimal(4,2)"`
-	PerformanceBond float32   `json:"performance_bond" gorm:"type:decimal(4,2)"`
-	AddedValueTax   float32   `json:"added_value_tax" gorm:"type:decimal(4,2)"`
-	ScanedFileUrl   string    `json:"scanfile_url"`
+	ContractorID uuid.UUID  `gorm:"type:uuid;not null;index"`
+	Contractor   Contractor `gorm:"constraint:OnDelete:CASCADE;"`
+	ProjectID    uuid.UUID  `gorm:"type:uuid;not null;index"`
+	Project      Project    `gorm:"constraint:OnDelete:CASCADE;"`
+
+	ContractNumber string          `gorm:"size:100;not null;uniqueIndex:idx_company_contract_number"`
+	GrossBudget    decimal.Decimal `gorm:"type:decimal(18,2);not null"`
+
+	StartDate time.Time `gorm:"not null;index"`
+	EndDate   time.Time `gorm:"not null;index"`
+
+	InsuranceRate   decimal.Decimal `gorm:"type:decimal(4,2)"`
+	PerformanceBond decimal.Decimal `gorm:"type:decimal(4,2)"`
+	AddedValueTax   decimal.Decimal `gorm:"type:decimal(4,2)"`
+
+	ScannedFileURL string `gorm:"size:500"`
+
+	CompanyID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_company_contract_number"`
+	Company   Company   `gorm:"constraint:OnDelete:CASCADE;"`
 }
+
+// -----------
+// Helper functions
+// -----------
 
 // ----------------------------
 // ContractWBS Model - represents Work Breakdown Structure
 // ----------------------------
 type ContractWBS struct {
 	BaseModel
-	ContractID   uuid.UUID `json:"contract_id" gorm:"type:char(36);not null;index"`
-	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
-	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
+	ContractID uuid.UUID `json:"contract_id" gorm:"type:uuid;not null;index"`
+	Contract   Contract  `gorm:"constraint:OnDelete:CASCADE;"`
+	CompanyID  uuid.UUID `gorm:"type:uuid;not null;index"`
 
-	Description string  `json:"description" gorm:"type:varchar(500);not null"`
-	Unit        string  `json:"unit" gorm:"size:100;not null"`
-	Quantity    float64 `json:"quantity" gorm:"type:decimal(20,2);not null"`
-	UnitPrice   float64 `json:"unit_price" gorm:"type:decimal(30,2);not null"`
-	TotalPrice  float64 `json:"total_price" gorm:"type:decimal(40,2);not null"`
+	Description string          `json:"description" gorm:"type:varchar(500);not null"`
+	Unit        string          `json:"unit" gorm:"size:100;not null"`
+	Quantity    decimal.Decimal `json:"quantity" gorm:"type:decimal(22,4);not null"`
+	UnitPrice   decimal.Decimal `json:"unit_price" gorm:"type:decimal(22,4);not null"`
+	TotalPrice  decimal.Decimal `json:"total_price" gorm:"type:decimal(22,2);not null"`
+}
+
+func (w *ContractWBS) BeforeSave(tx *gorm.DB) error {
+	w.TotalPrice = w.Quantity.Mul(w.UnitPrice)
+	return nil
 }
 
 // ----------------------------
@@ -78,71 +113,87 @@ type ContractWBS struct {
 // ----------------------------
 type ContractorProject struct {
 	BaseModel
-	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
-	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
+	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:uuid;not null;index"`
+	ProjectID    uuid.UUID `json:"project_id" gorm:"type:uuid;not null;index"`
 }
+
+// ----------------------------
+// StatusStatement Model - represents progress status statements for contracts
+// ----------------------------
+type StatementStatus string
+
+const (
+	StatusDraft     StatementStatus = "draft"
+	StatusSubmitted StatementStatus = "submitted"
+	StatusApproved  StatementStatus = "approved"
+	StatusRejected  StatementStatus = "rejected"
+)
 
 type StatusStatement struct {
 	BaseModel
-	ContractID   uuid.UUID `json:"contract_id" gorm:"type:char(36);not null;index"`
-	ContractorID uuid.UUID `json:"contractor_id" gorm:"type:char(36);not null;index"`
-	ProjectID    uuid.UUID `json:"project_id" gorm:"type:char(36);not null;index"`
+	ContractID uuid.UUID `gorm:"type:uuid;not null;index;uniqueIndex:idx_contract_statement_number"`
+	Contract   Contract  `gorm:"constraint:OnDelete:CASCADE;"`
+	CompanyID  uuid.UUID `gorm:"type:uuid;not null;index"`
 
-	ProgressPercent    float32   `json:"progress_percent" gorm:"type:decimal(5,2)"`
-	StatementDateStart time.Time `json:"statement_date_start" gorm:"not null"`
-	StatementDateEnd   time.Time `json:"statement_date_end" gorm:"not null"`
-	Status             string    `json:"status" gorm:"size:20;not null;index"`
-	Number             uint16    `json:"number" gorm:"not null"`
-	ApprovedBy         string    `json:"approved_by,omitempty" gorm:"size:100"`
-	ApprovedAt         time.Time `json:"approved_at"`
+	ProgressPercent    decimal.Decimal `json:"progress_percent" gorm:"type:decimal(5,2)"`
+	StatementDateStart time.Time       `json:"statement_date_start" gorm:"not null"`
+	StatementDateEnd   time.Time       `json:"statement_date_end" gorm:"not null"`
+	Status             StatementStatus `gorm:"type:varchar(20);not null;index"`
+	Number             uint16          `gorm:"not null;uniqueIndex:idx_contract_statement_number"`
+	ApprovedByID       *uuid.UUID      `gorm:"type:uuid;index"`
+	ApprovedAt         *time.Time
 }
 
 type TasksPerformed struct {
 	BaseModel
-	StatusStatementID uuid.UUID `json:"status_statement_id" gorm:"type:char(36);index"`
+	StatusStatementID uuid.UUID       `gorm:"type:uuid;not null;index"`
+	StatusStatement   StatusStatement `gorm:"foreignKey:StatusStatementID;constraint:OnDelete:CASCADE;"`
+	CompanyID         uuid.UUID       `gorm:"type:uuid;not null;index"`
 
-	Description string  `json:"description" gorm:"type:varchar(500);not null"`
-	Unit        string  `json:"unit" gorm:"size:100;not null"`
-	Quantity    float64 `json:"quantity" gorm:"type:decimal(20,2);not null"`
-	UnitPrice   float64 `json:"unit_price" gorm:"type:decimal(30,2);not null"`
-	TotalPrice  float64 `json:"total_price" gorm:"type:decimal(40,2);not null"`
+	Description string          `json:"description" gorm:"type:varchar(500);not null"`
+	Unit        string          `json:"unit" gorm:"size:100;not null"`
+	Quantity    decimal.Decimal `json:"quantity" gorm:"type:decimal(22,4);not null"`
+	UnitPrice   decimal.Decimal `json:"unit_price" gorm:"type:decimal(22,4);not null"`
+	TotalPrice  decimal.Decimal `json:"total_price" gorm:"type:decimal(22,2);not null"`
+}
+
+func (w *TasksPerformed) BeforeSave(tx *gorm.DB) error {
+	w.TotalPrice = w.Quantity.Mul(w.UnitPrice)
+	return nil
 }
 
 type AdditionalWorks struct {
 	BaseModel
-	StatusStatementID uuid.UUID `json:"status_statement_id" gorm:"type:char(36);index"`
+	StatusStatementID uuid.UUID       `gorm:"type:uuid;not null;index"`
+	StatusStatement   StatusStatement `gorm:"foreignKey:StatusStatementID;constraint:OnDelete:CASCADE;"`
+	CompanyID         uuid.UUID       `gorm:"type:uuid;not null;index"`
 
-	Description string  `json:"description" gorm:"type:varchar(500);not null"`
-	Unit        string  `json:"unit" gorm:"size:100;not null"`
-	Quantity    float64 `json:"quantity" gorm:"type:decimal(20,2);not null"`
-	UnitPrice   float64 `json:"unit_price" gorm:"type:decimal(30,2);not null"`
-	TotalPrice  float64 `json:"total_price" gorm:"type:decimal(40,2);not null"`
+	Description string          `json:"description" gorm:"type:varchar(500);not null"`
+	Unit        string          `json:"unit" gorm:"size:100;not null"`
+	Quantity    decimal.Decimal `json:"quantity" gorm:"type:decimal(22,4);not null"`
+	UnitPrice   decimal.Decimal `json:"unit_price" gorm:"type:decimal(22,4);not null"`
+	TotalPrice  decimal.Decimal `json:"total_price" gorm:"type:decimal(22,2);not null"`
 }
 
-// todo  /> ######################## |>
+func (w *AdditionalWorks) BeforeSave(tx *gorm.DB) error {
+	w.TotalPrice = w.Quantity.Mul(w.UnitPrice)
+	return nil
+}
+
 type Deductions struct {
 	BaseModel
-	StatusStatementID uuid.UUID `json:"status_statement_id" gorm:"type:char(36);index"`
+	StatusStatementID uuid.UUID       `gorm:"type:uuid;not null;index"`
+	StatusStatement   StatusStatement `gorm:"foreignKey:StatusStatementID;constraint:OnDelete:CASCADE;"`
+	CompanyID         uuid.UUID       `gorm:"type:uuid;not null;index"`
 
-	Description string  `json:"description" gorm:"type:varchar(500);not null"`
-	Unit        string  `json:"unit" gorm:"size:100;not null"`
-	Quantity    float64 `json:"quantity" gorm:"type:decimal(20,2);not null"`
-	UnitPrice   float64 `json:"unit_price" gorm:"type:decimal(30,2);not null"`
-	TotalPrice  float64 `json:"total_price" gorm:"type:decimal(40,2);not null"`
+	Description string          `json:"description" gorm:"type:varchar(500);not null"`
+	Unit        string          `json:"unit" gorm:"size:100;not null"`
+	Quantity    decimal.Decimal `json:"quantity" gorm:"type:decimal(22,4);not null"`
+	UnitPrice   decimal.Decimal `json:"unit_price" gorm:"type:decimal(22,4);not null"`
+	TotalPrice  decimal.Decimal `json:"total_price" gorm:"type:decimal(22,2);not null"`
 }
 
-// * tasksperformed + additionalworks - deductions
-type CumulativeTasksPerformed struct {
-	BaseModel
-	StatusStatementID uuid.UUID `json:"status_statement_id" gorm:"type:char(36);index"`
-	CumulativePrice   float64   `json:"cumulative_price" gorm:"type:decimal(40,2);not null"`
-}
-
-type StatusStatmentComm struct {
-	BaseModel
-	StatusStatementID uuid.UUID `json:"status_statement_id" gorm:"type:char(36);index"`
-
-	TechStatus    string `json:"tech_status" gorm:"type:varchar(100);not null"`
-	FinanceStatus string `json:"finance_status" gorm:"type:varchar(100);not null"`
-	LegalStatus   string `json:"legal_status" gorm:"type:varchar(100);not null"`
+func (w *Deductions) BeforeSave(tx *gorm.DB) error {
+	w.TotalPrice = w.Quantity.Mul(w.UnitPrice)
+	return nil
 }

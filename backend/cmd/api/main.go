@@ -94,12 +94,12 @@ func main() {
 
 	//! 3. Middleware
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000, http://127.0.0.1:3000, http://192.168.1.11:3000, http://192.168.1.14:3000, http://192.168.1.10:3000",
-		AllowHeaders:     "Origin, Content-Type, Accept, Access-Control-Allow-Credentials, Authorization",
-		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
-		AllowCredentials: true,
-		MaxAge:           24 * 86400, // 24 hours
-		ExposeHeaders:    "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Authorization",
+		AllowOrigins: "*",
+		AllowHeaders: "Origin, Content-Type, Accept, Access-Control-Allow-Credentials, Authorization",
+		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
+		// AllowCredentials: true,
+		MaxAge:        24 * 86400, // 24 hours
+		ExposeHeaders: "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Authorization",
 	}))
 
 	if debugMode {
