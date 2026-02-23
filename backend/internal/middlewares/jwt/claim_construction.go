@@ -16,7 +16,6 @@ func BuildJWTClaims(user *models.Employee, jwtIssuer, jwtAudience string, ttl ti
 	return schemas.JWTClaims{
 		UserID:   user.ID.String(),
 		UserName: user.UserName,
-		Role:     user.Role, // or user.Roles if multi-role
 
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    jwtIssuer,

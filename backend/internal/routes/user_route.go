@@ -6,21 +6,21 @@ import (
 	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"
 )
 
-func SetupUserRoutes(router fiber.Router, h *handlers.UserHandler) {
+func SetupUserRoutes(router fiber.Router, h *handlers.UserHandler, authorizer *middlewares.Authorizer) {
 
-	// ---- Public User Routes ----
-	auth := router.Group("/users")
-	auth.Post("/signup", h.CreateEmployee)
+	// global Routes
+	users := router.Group("/users")
+
+	// ---- Signin Route (Public) ----
+	auth := users.Group("/users")
 	auth.Post("/signin", h.SigninEmployee)
 
-	// ---- Protected User Routes ----
-	users := router.Group(
-		"/users",
-		middlewares.Authenticate(),
-	)
+	// ---- Protected Routes (Developer/Admin) ----
+	// sudoer := users.Group("/sudoer")
 
-	users.Get("/", h.GetAllEmployee)
-	users.Get("/:id", h.GetEmployee)
-	users.Put("/:id", h.UpdateEmployee)
-	users.Delete("/:id", h.DeleteEmployee)
+	// ---- Protected User Routes ----
+	employees := users.Group("/employees", middlewares.Authenticate())
+	employees.Post("/create",
+		authorizer.RequireRole("sudoer"),
+		h.CreateEmployee)
 }

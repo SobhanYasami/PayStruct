@@ -28,36 +28,36 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 
 // ------------------------------------------------------------------------
 
-// ! @post /users/signup ----
+// ! @Route POST /users/employee/create
+// ! @Summary Create a new employee
+// ! @Description Create a new employee with specified role and permissions
+// ! @Tags User Management
+// ! @Accept json
+// ! @Produce json
+// ! @Success 201 {object} SuccessResponse{data} "user created successfully"
+// ! @Failure 400 {object} ErrorResponse "Invalid request"
+// ! @Failure 401 {object} ErrorResponse "Unauthorized"
+// ! @Failure 409 {object} ErrorResponse "Conflict (e.g., duplicate name)"
+// ! @Failure 500 {object} ErrorResponse "Internal server error"
+// ! @Security ApiKeyAuth
 func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
-	type Submission struct {
-		FirstName   string   `json:"first_name"`
-		LastName    string   `json:"last_name"`
-		UserName    string   `json:"user_name"`
-		Password    string   `json:"password"`
-		Phone       string   `json:"phone,omitempty"`
-		Role        string   `json:"role"`
-		Permissions []string `json:"permissions,omitempty"`
+	type ReqBody struct {
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		UserName  string `json:"user_name"`
+		Password  string `json:"password"`
+		Phone     string `json:"phone,omitempty"`
+		Role      string `json:"role"`
 	}
 
-	var submission Submission
+	var req ReqBody
 
 	//* 1) Parse and validate input
-	if err := c.BodyParser(&submission); err != nil {
+	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
 	}
 
 	//* 2) Call service layer
-	req := services.CreateEmployeeRequest{
-		FirstName:   submission.FirstName,
-		LastName:    submission.LastName,
-		UserName:    submission.UserName,
-		Password:    submission.Password,
-		Phone:       submission.Phone,
-		Role:        submission.Role,
-		Permissions: submission.Permissions,
-	}
-
 	_, err := handler.userService.CreateEmployee(req)
 	if err != nil {
 		serviceErr, ok := err.(*services.ServiceError)
@@ -117,7 +117,6 @@ func (handler *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 	//? 4. Return the signed token
 	return c.JSON(SuccessResponse(fiber.Map{
 		"token": signed,
-		"role":  user.Role,
 	}, "Login successful"))
 }
 

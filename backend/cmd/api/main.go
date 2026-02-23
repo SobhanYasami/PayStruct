@@ -14,6 +14,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sobhan-yasami/docs-db-panel/internal/database"
 	"github.com/sobhan-yasami/docs-db-panel/internal/handlers"
+	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"
 	"github.com/sobhan-yasami/docs-db-panel/internal/routes"
 )
 
@@ -60,6 +61,11 @@ func main() {
 	db, err := database.Connect()
 	if err != nil {
 		log.Fatalf("%s❌ Database connection failed:%s %v", colorRed, colorReset, err)
+	}
+
+	//! 1.1 Run Seeder
+	if err := database.Seed(db); err != nil {
+		log.Fatalf("❌Database seed failed: %v", err)
 	}
 
 	//! 2. Create Fiber app
@@ -119,7 +125,8 @@ func main() {
 	v1 := api.Group("/v1")
 	//? User routes
 	userHandler := handlers.NewUserHandler(db)
-	routes.SetupUserRoutes(v1, userHandler)
+	authorizer := middlewares.NewAuthorizer(db)
+	routes.SetupUserRoutes(v1, userHandler, authorizer)
 
 	//? Contractor routes
 	contractorHandler := handlers.NewContractHandler(db)

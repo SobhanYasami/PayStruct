@@ -30,16 +30,20 @@ func (b *BaseInfoModel) BeforeCreate(tx *gorm.DB) error {
 }
 
 // -----
-//
+// Company Model
 // ---------
 type Company struct {
 	BaseInfoModel
 	Name     string     `json:"name" gorm:"type:varchar(200);not null"`
 	ParentID *uuid.UUID `json:"parent_id" gorm:"type:uuid;index"` // NULL = mother company
 	IsActive bool       `json:"is_active" gorm:"default:true"`
+
+	CreatedBy *uuid.UUID `gorm:"type:uuid;index"`
+	UpdatedBy *uuid.UUID `gorm:"type:uuid;index"`
+	DeletedBy *uuid.UUID `gorm:"type:uuid;index"`
 }
 
-// ----------------------------
+// ------------------------
 // Employee Model
 // ----------------------------
 type Employee struct {
@@ -60,22 +64,44 @@ type Employee struct {
 // ----
 // Role Model for employees
 // -----
-// values: sudoer - manager_user - technical_user - hr_user - finance_user - lawyer_user
+type RoleCode string
+
+const (
+	RoleSudoer        RoleCode = "sudoer"
+	RoleManagerUser   RoleCode = "manager_user"
+	RoleTechnicalUser RoleCode = "technical_user"
+	RoleHRUser        RoleCode = "hr_user"
+	RoleFinanceUser   RoleCode = "finance_user"
+	RoleLawyerUser    RoleCode = "lawyer_user"
+)
+
+type RoleDefinition string
+
+const (
+	RoleDefSudoer        RoleDefinition = "Full access to all resources and actions."
+	RoleDefManagerUser   RoleDefinition = "Can manage employees, view reports, and oversee operations."
+	RoleDefTechnicalUser RoleDefinition = "Can access technical resources, manage infrastructure, and deploy applications."
+	RoleDefHRUser        RoleDefinition = "Can manage employee records, handle recruitment, and oversee HR policies."
+	RoleDefFinanceUser   RoleDefinition = "Can manage financial records, process transactions, and generate financial reports."
+	RoleDefLawyerUser    RoleDefinition = "Can access legal documents, manage contracts, and provide legal advice."
+)
+
 type Role struct {
 	BaseInfoModel
-	Name        string `gorm:"type:varchar(50);not null;uniqueIndex:idx_company_role"`
-	Description string `json:"description" gorm:"type:text"`
+	Code       RoleCode       `json:"code" gorm:"type:varchar(50);not null;uniqueIndex:idx_company_role"`
+	Definition RoleDefinition `json:"definition" gorm:"type:text"`
 
 	CompanyID *uuid.UUID `gorm:"type:uuid;uniqueIndex:idx_company_role"`
 }
 
-// ---
+// ----------------
 // Permissions
-// ---
+// -----------------
+
 type Permission struct {
 	BaseInfoModel
-	Resource string `gorm:"type:varchar(100);uniqueIndex:idx_resource_action"`
-	Action   string `gorm:"type:varchar(50);uniqueIndex:idx_resource_action"`
+	Resource string `gorm:"uniqueIndex:idx_resource_action"`
+	Action   string `gorm:"uniqueIndex:idx_resource_action"`
 }
 
 // ---

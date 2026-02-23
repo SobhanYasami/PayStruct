@@ -84,7 +84,6 @@ func (handler *ContractHandler) CreateProject(c *fiber.Ctx) error {
 		"Project_Name": req.ProjectName,
 		"Phase":        phase,
 	}, "Project created successfully"))
-
 }
 
 // ! @Router /management/projects [get]
