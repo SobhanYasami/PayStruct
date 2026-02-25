@@ -1,13 +1,8 @@
 package handlers
 
 import (
-	"os"
-	"time"
-
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
-	jwtUtils "github.com/sobhan-yasami/docs-db-panel/internal/middlewares/jwt"
-	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/config"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
 
 	"gorm.io/gorm"
@@ -17,16 +12,69 @@ import (
 type UserHandler struct {
 	db          *gorm.DB
 	userService *services.UserService
+	tokenSvc    *services.TokenService
 }
 
-func NewUserHandler(db *gorm.DB) *UserHandler {
+func NewUserHandler(
+	db *gorm.DB,
+) *UserHandler {
 	return &UserHandler{
-		db:          db,
 		userService: services.NewUserService(db),
+		tokenSvc:    services.NewTokenService(config.Load()),
 	}
 }
 
 // ------------------------------------------------------------------------
+//
+//	public handler methods
+//
+// ----------------
+// ! @Route POST /users/signin
+// ! @Summary Sign in an employee
+// ! @Description Authenticate an employee and return a JWT token
+// ! @Tags Authentication
+// ! @Accept json
+// ! @Produce json
+// ! @Param credentials body SigninRequest true "Employee credentials"
+// ! @Success 200 {object} SigninResponse "Authentication successful"
+// ! @Failure 400 {object} ErrorResponse "Invalid request"
+// ! @Failure 401 {object} ErrorResponse "Unauthorized"
+// ! @Failure 500 {object} ErrorResponse "Internal server error"
+// ! @post /users/signin ----
+func (h *UserHandler) SigninEmployee(c *fiber.Ctx) error {
+
+	type LoginRequest struct {
+		UserName string `json:"user_name"`
+		Password string `json:"password"`
+	}
+
+	var req LoginRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+
+	user, err := h.userService.SigninEmployee(req.UserName, req.Password)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).
+			JSON(ErrorResponse(Unauthorized, "Invalid credentials"))
+	}
+
+	token, err := h.tokenSvc.Generate(user)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(ErrorResponse(InternalError, "Token generation failed"))
+	}
+
+	return c.JSON(SuccessResponse(fiber.Map{
+		"token": token,
+	}, "Login successful"))
+}
+
+// --------------
+// Protected handler methods (require authentication/authorization)
+// --------------
 
 // ! @Route POST /users/employee/create
 // ! @Summary Create a new employee
@@ -42,12 +90,14 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 // ! @Security ApiKeyAuth
 func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 	type ReqBody struct {
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		UserName  string `json:"user_name"`
-		Password  string `json:"password"`
-		Phone     string `json:"phone,omitempty"`
-		Role      string `json:"role"`
+		FirstName   string   `json:"first_name"`
+		LastName    string   `json:"last_name"`
+		UserName    string   `json:"user_name"`
+		Password    string   `json:"password"`
+		Phone       string   `json:"phone,omitempty"`
+		Role        string   `json:"role"`
+		CompanyID   string   `json:"company_id"`
+		Permissions []string `json:"permissions"`
 	}
 
 	var req ReqBody
@@ -58,7 +108,16 @@ func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 	}
 
 	//* 2) Call service layer
-	_, err := handler.userService.CreateEmployee(req)
+	_, err := handler.userService.CreateEmployee(
+		req.FirstName,
+		req.LastName,
+		req.UserName,
+		req.Password,
+		req.Phone,
+		req.Role,
+		req.CompanyID,
+		req.Permissions,
+	)
 	if err != nil {
 		serviceErr, ok := err.(*services.ServiceError)
 		if ok {
@@ -71,118 +130,135 @@ func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(Created, "Employee created successfully"))
 }
 
-// ! @post /users/signin ----
-func (handler *UserHandler) SigninEmployee(c *fiber.Ctx) error {
-	// 0. Get JWT secret from environment
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "token secret not configured"))
-	}
-	jwtIssuer := os.Getenv("JWT_ISSUER")
-	if jwtIssuer == "" {
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "token issuer not configured"))
-	}
-	jwtAudience := os.Getenv("JWT_AUDIENCE")
-	if jwtAudience == "" {
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "token audience not configured"))
-	}
-	// Define request structure
-	type LoginRequest struct {
-		UserName string `json:"user_name" validate:"required,email"`
-		Password string `json:"password" validate:"required,min=6"`
-	}
-
-	var req LoginRequest
-	//? 1. Parse and validate request
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-	}
-
-	//? 2. Authorize user
-	user, err := handler.userService.SigninEmployee(req.UserName, req.Password)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "نام کاربری یا رمز عبور نامعتبر است"))
-	}
-
-	//? 3. Create JWT token
-	claims := jwtUtils.BuildJWTClaims(user, jwtIssuer, jwtAudience, time.Hour*24)
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(jwtSecret))
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "error generating token"))
-
-	}
-
-	//? 4. Return the signed token
-	return c.JSON(SuccessResponse(fiber.Map{
-		"token": signed,
-	}, "Login successful"))
-}
-
-// ! @put /users/:id ----
+// ! @Route PUT /users/employee/:id
+// ! @Summary Update an existing employee
+// ! @Description Update employee details by ID
+// ! @Tags User Management
+// ! @Accept json
+// ! @Produce json
+// ! @Param id path string true "Employee ID"
+// ! @Param employee body Employee true "Employee details to update"
+// ! @Success 200 {object} SuccessResponse{data} "Employee updated successfully"
+// ! @Failure 400 {object} ErrorResponse "Invalid request"
+// ! @Failure 401 {object} ErrorResponse "Unauthorized"
+// ! @Failure 404 {object} ErrorResponse "Employee not found"
+// ! @Failure 500 {object} ErrorResponse "Internal server error"
+// ! @Security ApiKeyAuth
 func (handler *UserHandler) UpdateEmployee(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	var user models.User
-	if err := handler.db.First(&user, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return c.Status(fiber.StatusNotFound).JSON(ErrorResponse(NotFound, "User not found!"))
+	var req services.UpdateEmployeeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(ErrorResponse(BadRequest, "Invalid Request"))
+	}
+
+	resp, err := handler.userService.UpdateEmployee(id, req)
+	if err != nil {
+		if serviceErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(serviceErr.Code).
+				JSON(ErrorResponse(InternalError, serviceErr.Message, serviceErr.Details))
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to retrieve users", err.Error()))
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(ErrorResponse(InternalError, "Failed to update employee"))
 	}
 
-	if err := c.BodyParser(&user); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-	}
-
-	if err := handler.db.Save(&user).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to update user", err.Error()))
-	}
-
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(user, "User successfully updated"))
+	return c.Status(fiber.StatusOK).
+		JSON(SuccessResponse(resp, "Employee successfully updated"))
 }
 
-// ! @get /users/:id ----
+// ! @Route GET /users/employee/:id
+// ! @Summary Get employee details
+// ! @Description Retrieve employee information by ID
+// ! @Tags User Management
+// ! @Accept json
+// ! @Produce json
+// ! @Param id path string true "Employee ID"
+// ! @Success 200 {object} SuccessResponse{data} "Employee retrieved successfully"
+// ! @Failure 400 {object} ErrorResponse "Invalid request"
+// ! @Failure 401 {object} ErrorResponse "Unauthorized"
+// ! @Failure 404 {object} ErrorResponse "Employee not found"
+// ! @Failure 500 {object} ErrorResponse "Internal server error"
+// ! @Security ApiKeyAuth
 func (handler *UserHandler) GetEmployee(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	var user models.User
-	if err := handler.db.First(&user, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return c.Status(fiber.StatusNotFound).JSON(
-				ErrorResponse(NotFound, "User not found!"))
+	resp, err := handler.userService.GetEmployee(id)
+	if err != nil {
+		if serviceErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(serviceErr.Code).
+				JSON(ErrorResponse(InternalError, serviceErr.Message, serviceErr.Details))
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to fetch user", err.Error()))
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(ErrorResponse(InternalError, "Unexpected error"))
 	}
 
-	return c.JSON(SuccessResponse(user, "User successfully retrieved"))
+	return c.JSON(SuccessResponse(resp, "Employee successfully retrieved"))
 }
 
-// ! @get /users ----
+// ! @Route GET /users/employee
+// ! @Summary Get all employees
+// ! @Description Retrieve a paginated list of all employees
+// ! @Tags User Management
+// ! @Accept json
+// ! @Produce json
+// ! @Param page query int false "Page number (default: 1)"
+// ! @Param limit query int false "Number of items per page (default: 10)"
+// ! @Success 200 {object} SuccessResponse{data} "Employees retrieved successfully"
+// ! @Failure 400 {object} ErrorResponse "Invalid request"
+// ! @Failure 401 {object} ErrorResponse "Unauthorized"
+// ! @Failure 500 {object} ErrorResponse "Internal server error"
+// ! @Security ApiKeyAuth
 func (handler *UserHandler) GetAllEmployee(c *fiber.Ctx) error {
+
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)
-	offset := (page - 1) * limit
 
-	var users []models.User
-	if err := handler.db.Offset(offset).Limit(limit).Find(&users).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(
-			ErrorResponse(InternalError, "Failed to fetch users", err.Error()))
+	if page < 1 {
+		page = 1
 	}
 
-	return c.JSON(SuccessResponse(users, "users successfully retrieved"))
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+
+	resp, err := handler.userService.GetEmployees(c.Context(), page, limit)
+	if err != nil {
+		if serviceErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(serviceErr.Code).
+				JSON(ErrorResponse(InternalError, serviceErr.Message))
+		}
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(ErrorResponse(InternalError, "Unexpected error"))
+	}
+
+	return c.JSON(SuccessResponse(resp, "Employees retrieved successfully"))
 }
 
-// ! @delete /users/:id ----
+// ! @Route DELETE /users/employee/:id
+// ! @Summary Delete an employee
+// ! @Description Remove an employee from the system by ID
+// ! @Tags User Management
+// ! @Accept json
+// ! @Produce json
+// ! @Param id path string true "Employee ID"
+// ! @Success 204 "No Content - Employee deleted successfully"
+// ! @Failure 400 {object} ErrorResponse "Invalid request"
+// ! @Failure 401 {object} ErrorResponse "Unauthorized"
+// ! @Failure 404 {object} ErrorResponse "Employee not found"
+// ! @Failure 500 {object} ErrorResponse "Internal server error"
+// ! @Security ApiKeyAuth
 func (handler *UserHandler) DeleteEmployee(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	if err := handler.db.Delete(&models.User{}, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return c.Status(fiber.StatusNotFound).JSON(ErrorResponse(NotFound, "User not found!"))
+	err := handler.userService.DeleteEmployee(id)
+	if err != nil {
+		if serviceErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(serviceErr.Code).
+				JSON(ErrorResponse(InternalError, serviceErr.Message))
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to delete user", err.Error()))
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(ErrorResponse(InternalError, "Unexpected error"))
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)

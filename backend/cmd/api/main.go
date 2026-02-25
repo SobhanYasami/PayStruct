@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
+
 	"github.com/sobhan-yasami/docs-db-panel/internal/database"
 	"github.com/sobhan-yasami/docs-db-panel/internal/handlers"
 	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"

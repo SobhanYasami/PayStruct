@@ -41,7 +41,7 @@ func (s *ContractService) CreateProject(ctx context.Context, userID uuid.UUID, n
 		Model(&models.Project{}).
 		Where("name = ? AND phase = ?", name, phase).
 		Count(&existingCount).Error; err != nil {
-		return err // Return database errors to the handler
+		return err
 	}
 
 	// 2. Create if it doesn't exist

@@ -15,12 +15,21 @@ func SetupUserRoutes(router fiber.Router, h *handlers.UserHandler, authorizer *m
 	auth := users.Group("/users")
 	auth.Post("/signin", h.SigninEmployee)
 
-	// ---- Protected Routes (Developer/Admin) ----
-	// sudoer := users.Group("/sudoer")
-
 	// ---- Protected User Routes ----
 	employees := users.Group("/employees", middlewares.Authenticate())
 	employees.Post("/create",
 		authorizer.RequireRole("sudoer"),
 		h.CreateEmployee)
+	employees.Get("/list",
+		authorizer.RequireRole("sudoer"),
+		h.GetAllEmployee)
+	employees.Get("/:id",
+		authorizer.RequireRole("sudoer"),
+		h.GetEmployee)
+	employees.Put("/:id",
+		authorizer.RequireRole("sudoer"),
+		h.UpdateEmployee)
+	employees.Delete("/:id",
+		authorizer.RequireRole("sudoer"),
+		h.DeleteEmployee)
 }
