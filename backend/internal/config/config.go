@@ -27,7 +27,7 @@ func mustEnv(key string) string {
 	return v
 }
 
-// ----------------
+// -----------------
 // Load configuration from environment variables
 // ----------------
 func Load() *AppConfig {
