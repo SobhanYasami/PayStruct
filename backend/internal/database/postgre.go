@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	model "github.com/sobhan-yasami/docs-db-panel/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -96,44 +96,10 @@ func Connect() (*gorm.DB, error) {
 
 	DB = db
 
-	if err := migrate(); err != nil {
+	if err := model.AutoMigrate(DB); err != nil {
 		return nil, fmt.Errorf("migration failed: %w", err)
 	}
 
 	log.Println("Database connection established and models migrated successfully")
 	return DB, nil
-}
-
-func migrate() error {
-	models := []interface{}{
-		&models.Company{},
-		&models.Address{},
-		&models.Contact{},
-
-		&models.Employee{},
-		&models.Role{},
-		&models.Permission{},
-		&models.RolePermission{},
-		&models.RoleEmployee{},
-		&models.RoleCompany{},
-
-		&models.Contractor{},
-
-		&models.Project{},
-		&models.Contract{},
-		&models.ContractorProject{},
-		&models.WBS{},
-
-		&models.StatusStatement{},
-		&models.TasksPerformed{},
-		&models.ExtraTasksPerformed{},
-		&models.Deductions{},
-	}
-
-	for _, model := range models {
-		if err := DB.AutoMigrate(model); err != nil {
-			return fmt.Errorf("failed to migrate model %T: %w", model, err)
-		}
-	}
-	return nil
 }

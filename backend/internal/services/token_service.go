@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/sobhan-yasami/docs-db-panel/internal/config"
 	jwtUtils "github.com/sobhan-yasami/docs-db-panel/internal/middlewares/jwt"
-	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	model "github.com/sobhan-yasami/docs-db-panel/internal/models"
 )
 
 type TokenService struct {
@@ -26,24 +26,19 @@ func NewTokenService(cfg *config.AppConfig) *TokenService {
 }
 
 func (t *TokenService) Generate(
-	user *models.Employee,
+	user *model.Employee,
 	companyID string,
-	role string,
-	permissions []models.Permission,
-	// isSuperAdmin bool,
+	roles []string,
 ) (string, error) {
-
 	claims := jwtUtils.BuildJWTClaims(
 		user,
 		companyID,
-		role,
-		permissions,
+		roles,
 		t.issuer,
 		t.audience,
 		t.expiry,
 	)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
 	return token.SignedString(t.secret)
 }

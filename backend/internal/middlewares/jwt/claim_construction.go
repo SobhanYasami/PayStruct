@@ -5,29 +5,24 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	model "github.com/sobhan-yasami/docs-db-panel/internal/models"
 	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
 )
 
 func BuildJWTClaims(
-	user *models.Employee,
+	user *model.Employee,
 	companyID string,
-	role string,
-	permissions []models.Permission,
+	roles []string,
 	jwtIssuer string,
 	jwtAudience string,
 	ttl time.Duration,
 ) schemas.JWTClaims {
-
 	now := time.Now().UTC()
-
 	return schemas.JWTClaims{
-		UserID:      user.ID.String(),
-		UserName:    user.UserName,
-		CompanyID:   companyID,
-		Role:        role,
-		Permissions: permissions,
-
+		UserID:    user.ID.String(),
+		UserName:  user.Email,
+		CompanyID: companyID,
+		Roles:     roles,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    jwtIssuer,
 			Audience:  []string{jwtAudience},

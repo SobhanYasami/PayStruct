@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -31,9 +30,6 @@ func Authenticate(secret string) fiber.Handler {
 				JSON(fiber.Map{"error": "Invalid or expired token"})
 		}
 
-		// debug:
-		fmt.Println("parsed claims:", claims)
-		fmt.Println("===================================")
 		c.Locals("claims", claims)
 
 		return c.Next()
