@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/sobhan-yasami/docs-db-panel/internal/config"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
@@ -55,13 +57,25 @@ func (h *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 			JSON(ErrorResponse(BadRequest, "Invalid request body"))
 	}
 
-	user, err := h.userService.SigninEmployee(req.UserName, req.Password)
+	authenticated_user_res, err := h.userService.SigninEmployee(req.UserName, req.Password)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).
 			JSON(ErrorResponse(Unauthorized, "Invalid credentials"))
 	}
 
-	token, err := h.tokenSvc.Generate(user)
+	// todo: take care of user permission and role and
+	authenticated_user := authenticated_user_res.Employee
+	authenticated_user_companyID := authenticated_user_res.Employee.CompanyID.String()
+	authenticated_user_role := authenticated_user_res.Role.Code
+	authenticated_user_permissions := authenticated_user_res.Permissions
+
+	// // debug:
+	// fmt.Println("auth user", authenticated_user)
+	// fmt.Println("auth user company id", authenticated_user_companyID)
+	// fmt.Println("auth user roles ", authenticated_user_role)
+	// fmt.Println("auth user permissions", authenticated_user_permissions)
+
+	token, err := h.tokenSvc.Generate(authenticated_user, authenticated_user_companyID, string(authenticated_user_role), authenticated_user_permissions)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).
 			JSON(ErrorResponse(InternalError, "Token generation failed"))
@@ -89,18 +103,8 @@ func (h *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 // ! @Failure 500 {object} ErrorResponse "Internal server error"
 // ! @Security ApiKeyAuth
 func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
-	type ReqBody struct {
-		FirstName   string   `json:"first_name"`
-		LastName    string   `json:"last_name"`
-		UserName    string   `json:"user_name"`
-		Password    string   `json:"password"`
-		Phone       string   `json:"phone,omitempty"`
-		Role        string   `json:"role"`
-		CompanyID   string   `json:"company_id"`
-		Permissions []string `json:"permissions"`
-	}
-
-	var req ReqBody
+	//* 0.
+	var req services.CreateEmployeeReq
 
 	//* 1) Parse and validate input
 	if err := c.BodyParser(&req); err != nil {
@@ -108,16 +112,7 @@ func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 	}
 
 	//* 2) Call service layer
-	_, err := handler.userService.CreateEmployee(
-		req.FirstName,
-		req.LastName,
-		req.UserName,
-		req.Password,
-		req.Phone,
-		req.Role,
-		req.CompanyID,
-		req.Permissions,
-	)
+	_, err := handler.userService.CreateEmployee(req)
 	if err != nil {
 		serviceErr, ok := err.(*services.ServiceError)
 		if ok {
@@ -147,13 +142,17 @@ func (handler *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 func (handler *UserHandler) UpdateEmployee(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	var req services.UpdateEmployeeRequest
+	var req services.UpdateEmployeeReq
+	req.ID = id
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).
 			JSON(ErrorResponse(BadRequest, "Invalid Request"))
 	}
 
-	resp, err := handler.userService.UpdateEmployee(id, req)
+	// debug:
+	fmt.Println("update req:", req)
+
+	resp, err := handler.userService.UpdateEmployee(req)
 	if err != nil {
 		if serviceErr, ok := err.(*services.ServiceError); ok {
 			return c.Status(serviceErr.Code).

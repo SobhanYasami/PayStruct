@@ -1,97 +1,169 @@
 package routes
 
-import (
-	"github.com/gofiber/fiber/v2"
-	"github.com/sobhan-yasami/docs-db-panel/internal/handlers"
-	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"
-)
+// import (
+// 	"github.com/gofiber/fiber/v2"
+// 	"github.com/sobhan-yasami/docs-db-panel/internal/handlers"
+// 	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"
+// )
 
-func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler) {
-	//! Base management group with authentication
-	management := router.Group(
-		"/management",
-		middlewares.Authenticate(),
-	)
+// func SetupContractsRoutes(router fiber.Router, h *handlers.ContractHandler, authz *middlewares.Authorizer, jwtSecret string) {
+// 	//! ===============================
+// 	//! Base Management Group
+// 	//! ===============================
+// 	management := router.Group(
+// 		"/management",
+// 		middlewares.Authenticate(jwtSecret),
+// 	)
 
-	//! ---- Project Routes ----
-	projects := management.Group("/projects")
-	projects.Post("/", h.CreateProject)
-	projects.Get("/", h.GetAllProject)
-	projects.Get("/:id", h.GetProjectByID)
-	projects.Put("/:id", h.UpdateProject)
-	projects.Delete("/:id", h.DeleteProject)
+// 	//! ==========================================================
+// 	//! PROJECTS
+// 	//! ==========================================================
+// 	projects := management.Group(
+// 		"/projects",
+// 		middlewares.RequirePermission("project", "read"),
+// 	)
 
-	//! Contractor Management Routes
-	contractors := management.Group("/contractors")
-	contractors.Post("/", h.CreateContractor)
-	contractors.Get("/", h.GetAllContractor)
-	contractors.Get("/:id", h.GetContractorByID)
-	contractors.Put("/:id", h.UpdateContractor)
-	contractors.Delete("/:id", h.DeleteContractor)
+// 	projects.Get("/", h.GetAllProject)
+// 	projects.Get("/:id", h.GetProjectByID)
 
-	//! Contract Management Routes
-	contracts := management.Group("/contracts")
-	contracts.Post("/", h.CreateContract)
-	contracts.Get("/", h.GetAllContracts)
-	contracts.Get("/:id", h.GetContractByID)
-	contracts.Put("/:id", h.UpdateContract)
-	contracts.Delete("/:id", h.DeleteContract)
+// 	projects.Post("/",
+// 		middlewares.RequirePermission("project", "create"),
+// 		h.CreateProject,
+// 	)
 
-	// WBS
-	wbs := management.Group("/wbs")
-	wbs.Post("/", h.CreateWBS)
-	wbs.Get("/:cnum", h.GetContractWBS)
+// 	projects.Put("/:id",
+// 		middlewares.RequirePermission("project", "update"),
+// 		h.UpdateProject,
+// 	)
 
-	// StatusStatement
-	statusStatement := management.Group("/status-statement")
-	statusStatement.Post("/", h.CreateStatusStatement)
-	statusStatement.Get("/get-by-contract/:cid", h.GetLast2StatusStatements)
-	statusStatement.Post("/submit/:ssid", h.SubmitStatusStatement)
+// 	projects.Delete("/:id",
+// 		middlewares.RequirePermission("project", "delete"),
+// 		h.DeleteProject,
+// 	)
 
-	// task performed
-	tasks := statusStatement.Group("/tasks-performed")
-	tasks.Post("/new-task", h.CreateTasksPerformed)
-	tasks.Get("/get-by-contract/:cid", h.GetLastTasksPerformed)
+// 	//! ==========================================================
+// 	//! CONTRACTORS
+// 	//! ==========================================================
+// 	contractors := management.Group("/contractors")
 
-	// todo: extra works
-	extraWorks := statusStatement.Group("/extra-works")
-	extraWorks.Post("/new-extra-work", h.CreateExtraWorks)
-	// extraWorks.Get("/get-by-contract/:cid", h.GetLastExtraWorks)
+// 	contractors.Get("/",
+// 		middlewares.RequirePermission("contractor", "read"),
+// 		h.GetAllContractor,
+// 	)
 
-	// todo: deductions
-	// deductions := statusStatement.Group("/deductions")
-	// deductions.Post("/new-deduction", h.CreateDeductions)
-	// deductions.Get("/get-by-contract/:cid", h.GetLastDeductions)
+// 	contractors.Get("/:id",
+// 		middlewares.RequirePermission("contractor", "read"),
+// 		h.GetContractorByID,
+// 	)
 
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//! Trading System Routes
-	// router.Get("/contractors/contractor-projects", middlewares.Authenticate(), contractHandler.GetContractorProjects)
-	// router.Get("/contractors/get-last-status-statement", middlewares.Authenticate(), contractHandler.GetLastStatusStatement)
-	// router.Post("/contractors/new-status-statement", middlewares.Authenticate(), contractHandler.CreateNewStatusStatement)
-	// router.Get("/contractors/get-status-statement", middlewares.Authenticate(), contractHandler.Get
+// 	contractors.Post("/",
+// 		middlewares.RequirePermission("contractor", "create"),
+// 		h.CreateContractor,
+// 	)
 
-	//! Tax System Routes
-	// router.Post("/contractors/new-task-performed", middlewares.Authenticate(), contractorHandler.CreateNewTaskPerformed)
-	// router.Get("/contractors/new-task-performed", middlewares.Authenticate(), contractorHandler.GetSttsTaskPerformed)
-	// router.Post("/contractors/new-extra-works", middlewares.Authenticate(), contractorHandler.CreateNewExtraWorks)
-	// router.Get("/contractors/new-extra-works", middlewares.Authenticate(), contractorHandler.GetSttsExtraWorks)
+// 	contractors.Put("/:id",
+// 		middlewares.RequirePermission("contractor", "update"),
+// 		h.UpdateContractor,
+// 	)
 
-	// router.Post("/contractors/new-deductions", middlewares.Authenticate(), contractorHandler.CreateNewDeductions)
-	// router.Get("/contractors/new-deductions", middlewares.Authenticate(), contractorHandler.GetSttsDeductions)
+// 	contractors.Delete("/:id",
+// 		middlewares.RequirePermission("contractor", "delete"),
+// 		h.DeleteContractor,
+// 	)
 
-	// router.Get("/contractors/finance-summary", middlewares.Authenticate(), contractorHandler.GetSttsFinanceSummary)
-	// router.Get("/contractors/legal-reductions", middlewares.Authenticate(), contractorHandler.GetSttsLegalReductions)
-	// router.Get("/contractors/other-reductions", middlewares.Authenticate(), contractorHandler.GetSttsOtherReductions)
-	//! Internal Routes
-	// Todo: Remaining files
-	// router.Post("/contractors/print-status", middlewares.Authenticate(), contractorController.PrintStatusSttmnt)
+// 	//! ==========================================================
+// 	//! CONTRACTS
+// 	//! ==========================================================
+// 	contracts := management.Group("/contracts")
 
-}
+// 	contracts.Get("/",
+// 		middlewares.RequirePermission("contract", "read"),
+// 		h.GetAllContracts,
+// 	)
+
+// 	contracts.Get("/:id",
+// 		middlewares.RequirePermission("contract", "read"),
+// 		h.GetContractByID,
+// 	)
+
+// 	contracts.Post("/",
+// 		middlewares.RequirePermission("contract", "create"),
+// 		h.CreateContract,
+// 	)
+
+// 	contracts.Put("/:id",
+// 		middlewares.RequirePermission("contract", "update"),
+// 		h.UpdateContract,
+// 	)
+
+// 	contracts.Delete("/:id",
+// 		middlewares.RequirePermission("contract", "delete"),
+// 		h.DeleteContract,
+// 	)
+
+// 	//! ==========================================================
+// 	//! WBS (Nested under contract)
+// 	//! ==========================================================
+// 	wbs := contracts.Group("/:contractID/wbs")
+
+// 	wbs.Post("/",
+// 		middlewares.RequirePermission("wbs", "create"),
+// 		h.CreateWBS,
+// 	)
+
+// 	wbs.Get("/",
+// 		middlewares.RequirePermission("wbs", "read"),
+// 		h.GetContractWBS,
+// 	)
+
+// 	//! ==========================================================
+// 	//! STATUS STATEMENTS (Nested under contract)
+// 	//! ==========================================================
+// 	status := contracts.Group("/:contractID/status-statements")
+
+// 	status.Post("/",
+// 		middlewares.RequirePermission("status_statement", "create"),
+// 		h.CreateStatusStatement,
+// 	)
+
+// 	status.Get("/latest",
+// 		middlewares.RequirePermission("status_statement", "read"),
+// 		h.GetLast2StatusStatements,
+// 	)
+
+// 	status.Post("/:statusID/submit",
+// 		middlewares.RequirePermission("status_statement", "submit"),
+// 		h.SubmitStatusStatement,
+// 	)
+
+// 	//! ==========================================================
+// 	//! TASKS PERFORMED (Nested under status)
+// 	//! ==========================================================
+// 	tasks := status.Group("/:statusID/tasks")
+
+// 	tasks.Post("/",
+// 		middlewares.RequirePermission("task", "create"),
+// 		h.CreateTasksPerformed,
+// 	)
+
+// 	tasks.Get("/",
+// 		middlewares.RequirePermission("task", "read"),
+// 		h.GetLastTasksPerformed,
+// 	)
+
+// 	//! ==========================================================
+// 	//! EXTRA WORKS
+// 	//! ==========================================================
+// 	extraWorks := status.Group("/:statusID/extra-works")
+
+// 	extraWorks.Post("/",
+// 		middlewares.RequirePermission("extra_work", "create"),
+// 		h.CreateExtraWorks,
+// 	)
+
+// 	// todo: deductions
+// 	// deductions := statusStatement.Group("/deductions")
+// 	// deductions.Post("/new-deduction", h.CreateDeductions)
+// 	// deductions.Get("/get-by-contract/:cid", h.GetLastDeductions)
+
+// }

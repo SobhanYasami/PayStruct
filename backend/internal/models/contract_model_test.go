@@ -7,33 +7,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func TestContractWBS_BeforeSaveHook(t *testing.T) {
-	db, err := SetupTestDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = db.AutoMigrate(&ContractWBS{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wbs := ContractWBS{
-		Quantity:  decimal.NewFromInt(10),
-		UnitPrice: decimal.NewFromInt(50),
-	}
-
-	if err := db.Create(&wbs).Error; err != nil {
-		t.Fatal(err)
-	}
-
-	expected := decimal.NewFromInt(500)
-
-	if !wbs.TotalPrice.Equal(expected) {
-		t.Errorf("expected %s, got %s", expected, wbs.TotalPrice)
-	}
-}
-
 func TestBaseModel_GeneratesUUIDOnCreate(t *testing.T) {
 	db, err := SetupTestDB()
 	if err != nil {

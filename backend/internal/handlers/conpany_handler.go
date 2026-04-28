@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
@@ -9,11 +10,15 @@ import (
 // CompanyHandler handles company endpoints
 type CompanyHandler struct {
 	companyService *services.CompanyService
+	validate       *validator.Validate
 }
 
 // NewCompanyHandler creates a new CompanyHandler
 func NewCompanyHandler(service *services.CompanyService) *CompanyHandler {
-	return &CompanyHandler{companyService: service}
+	return &CompanyHandler{
+		companyService: service,
+		validate:       validator.New(),
+	}
 }
 
 // CreateCompanyRequest defines the expected request body
@@ -61,8 +66,9 @@ func (h *CompanyHandler) CreateCompany(c *fiber.Ctx) error {
 	}
 
 	//? 3. Validate request (using validator)
-	if err := validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Validation failed"))
+	if err := h.validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(ErrorResponse(BadRequest, err.Error()))
 	}
 
 	//? 4. Convert ParentID
@@ -178,8 +184,9 @@ func (h *CompanyHandler) UpdateCompany(c *fiber.Ctx) error {
 	}
 
 	//? 3. Validate request (using validator)
-	if err := validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Validation failed"))
+	if err := h.validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(ErrorResponse(BadRequest, err.Error()))
 	}
 
 	//? 4. Convert ParentID

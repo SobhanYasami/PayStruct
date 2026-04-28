@@ -13,10 +13,10 @@ import (
 func Seed(db *gorm.DB) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 
-		// 1️⃣ Check if any sudoer exists
+		//? 1) Check if any sudoer exists
 		var count int64
-		err := tx.Model(&models.EmployeeRole{}).
-			Joins("JOIN roles ON roles.id = employee_roles.role_id").
+		err := tx.Model(&models.RoleEmployee{}).
+			Joins("JOIN roles ON roles.id = role_employees.role_id").
 			Where("roles.code = ?", models.RoleSudoer).
 			Count(&count).Error
 
@@ -31,28 +31,51 @@ func Seed(db *gorm.DB) error {
 
 		log.Println("🚀 No sudoer found. Bootstrapping system...")
 
-		// 2️⃣ Create default company
-		company := models.Company{
-			Name:     "System Company",
-			IsActive: true,
+		//? 2) Create default address
+		address := models.Address{
+			Street:     "System Street 1",
+			City:       "System City",
+			State:      "System State",
+			Country:    "System Country",
+			PostalCode: "00000",
+		}
+		if err := tx.Create(&address).Error; err != nil {
+			return err
 		}
 
+		//? 3) Create default contact
+		contact := models.Contact{
+			PhoneNumber: "",
+			Email:       "admin@system.local",
+			Website:     "",
+		}
+		if err := tx.Create(&contact).Error; err != nil {
+			return err
+		}
+		//? 4) Create default company
+		company := models.Company{
+			Name:               "System Company",
+			RegistrationNumber: "SYS-0001",
+			TaxIdNumber:        "TAX-0001",
+			IsActive:           true,
+			AddressID:          address.ID,
+			ContactID:          contact.ID,
+		}
 		if err := tx.Create(&company).Error; err != nil {
 			return err
 		}
 
-		// 3️⃣ Create sudoer role
+		//? 6) Create sudoer role
 		role := models.Role{
-			Code:       models.RoleSudoer,
-			Definition: models.RoleDefSudoer,
-			CompanyID:  &company.ID,
+			Code:      models.RoleSudoer,
+			CompanyID: &company.ID,
 		}
 
 		if err := tx.Create(&role).Error; err != nil {
 			return err
 		}
 
-		// 4️⃣ Read bootstrap credentials from ENV
+		//? 7) Read bootstrap credentials from ENV
 		user_name := os.Getenv("BOOTSTRAP_USERNAME")
 		password := os.Getenv("BOOTSTRAP_PASSWORD")
 
@@ -68,26 +91,25 @@ func Seed(db *gorm.DB) error {
 			return err
 		}
 
-		// 5️⃣ Create sudoer employee
+		//? 8) Create sudoer employee
 		user := models.Employee{
-			FirstName: "System",
-			LastName:  "Administrator",
-			UserName:  user_name,
-			Password:  string(hashed),
-			CompanyID: company.ID,
-			IsActive:  true,
+			FirstName:       "System",
+			LastName:        "Administrator",
+			UserName:        user_name,
+			Password:        string(hashed),
+			RegisterationID: "SYS-ADMIN",
+			CompanyID:       company.ID,
+			IsActive:        true,
 		}
-
 		if err := tx.Create(&user).Error; err != nil {
 			return err
 		}
 
-		// 6️⃣ Assign role
-		empRole := models.EmployeeRole{
+		//? 9) Assign role
+		empRole := models.RoleEmployee{
 			EmployeeID: user.ID,
 			RoleID:     role.ID,
 		}
-
 		if err := tx.Create(&empRole).Error; err != nil {
 			return err
 		}

@@ -107,24 +107,27 @@ func Connect() (*gorm.DB, error) {
 func migrate() error {
 	models := []interface{}{
 		&models.Company{},
+		&models.Address{},
+		&models.Contact{},
 
 		&models.Employee{},
 		&models.Role{},
 		&models.Permission{},
 		&models.RolePermission{},
-		&models.EmployeeRole{},
+		&models.RoleEmployee{},
+		&models.RoleCompany{},
 
 		&models.Contractor{},
-		&models.Customer{},
 
 		&models.Project{},
 		&models.Contract{},
 		&models.ContractorProject{},
-		&models.ContractWBS{},
+		&models.WBS{},
 
 		&models.StatusStatement{},
 		&models.TasksPerformed{},
-		&models.AdditionalWorks{},
+		&models.ExtraTasksPerformed{},
+		&models.Deductions{},
 	}
 
 	for _, model := range models {

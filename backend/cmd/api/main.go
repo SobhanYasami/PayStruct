@@ -57,6 +57,10 @@ func init() {
 func main() {
 	//! 0. Declare mode
 	debugMode := os.Getenv("DEBUG") == "true"
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatalf("%s❌ JWT_SECRET is not set in environment variables%s", colorRed, colorReset)
+	}
 
 	//! 1. Initialize database
 	db, err := database.Connect()
@@ -124,14 +128,17 @@ func main() {
 	//? Base API route
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
+	//? Authorizer
+	authorizer := middlewares.NewAuthorizer(db)
 	//? User routes
 	userHandler := handlers.NewUserHandler(db)
-	authorizer := middlewares.NewAuthorizer(db)
-	routes.SetupUserRoutes(v1, userHandler, authorizer)
+	routes.SetupUserRoutes(v1, userHandler, authorizer, jwtSecret)
 
-	//? Contractor routes
-	contractorHandler := handlers.NewContractHandler(db)
-	routes.SetupContractsRoutes(v1, contractorHandler)
+	//? Company routes
+	// companyHandler := handlers.NewCompanyHandler(db)
+	//? Contracts routes
+	// contractsHandler := handlers.NewContractHandler(db)
+	// routes.SetupContractsRoutes(v1, contractsHandler, authorizer, jwtSecret)
 
 	//! 6. Get port from environment
 	port := os.Getenv("SERVER_PORT")

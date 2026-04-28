@@ -25,14 +25,25 @@ func NewTokenService(cfg *config.AppConfig) *TokenService {
 	}
 }
 
-func (t *TokenService) Generate(user *models.Employee) (string, error) {
+func (t *TokenService) Generate(
+	user *models.Employee,
+	companyID string,
+	role string,
+	permissions []models.Permission,
+	// isSuperAdmin bool,
+) (string, error) {
+
 	claims := jwtUtils.BuildJWTClaims(
 		user,
+		companyID,
+		role,
+		permissions,
 		t.issuer,
 		t.audience,
 		t.expiry,
 	)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 	return token.SignedString(t.secret)
 }

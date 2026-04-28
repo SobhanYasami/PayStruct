@@ -6,11 +6,11 @@ import (
 	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"
 )
 
-func SetupCompanyRoutes(router fiber.Router, h *handlers.CompanyHandler) {
+func SetupCompanyRoutes(router fiber.Router, h *handlers.CompanyHandler, jwtSecret string) {
 	//! Base management group with authentication
 	company := router.Group(
 		"/company",
-		middlewares.Authenticate(),
+		middlewares.Authenticate(jwtSecret),
 	)
 
 	//! ---- Project Routes ----

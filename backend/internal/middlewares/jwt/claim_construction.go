@@ -9,13 +9,24 @@ import (
 	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
 )
 
-// BuildJWTClaims constructs secure, structured, extendable JWT claims.
-func BuildJWTClaims(user *models.Employee, jwtIssuer, jwtAudience string, ttl time.Duration) schemas.JWTClaims {
+func BuildJWTClaims(
+	user *models.Employee,
+	companyID string,
+	role string,
+	permissions []models.Permission,
+	jwtIssuer string,
+	jwtAudience string,
+	ttl time.Duration,
+) schemas.JWTClaims {
+
 	now := time.Now().UTC()
 
 	return schemas.JWTClaims{
-		UserID:   user.ID.String(),
-		UserName: user.UserName,
+		UserID:      user.ID.String(),
+		UserName:    user.UserName,
+		CompanyID:   companyID,
+		Role:        role,
+		Permissions: permissions,
 
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    jwtIssuer,
@@ -23,8 +34,8 @@ func BuildJWTClaims(user *models.Employee, jwtIssuer, jwtAudience string, ttl ti
 			Subject:   user.ID.String(),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now), // token valid immediately
-			ID:        uuid.New().String(),     // jti (useful for revocation lists)
+			NotBefore: jwt.NewNumericDate(now),
+			ID:        uuid.New().String(),
 		},
 	}
 }

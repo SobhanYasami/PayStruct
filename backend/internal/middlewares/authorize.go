@@ -1,11 +1,12 @@
 package middlewares
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/sobhan-yasami/docs-db-panel/internal/models"
+	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
 )
 
 type Authorizer struct {
@@ -16,32 +17,30 @@ func NewAuthorizer(db *gorm.DB) *Authorizer {
 	return &Authorizer{db: db}
 }
 
+// ! ------------------
+// ! Authorize for role
+// ! ------------------
 func (a *Authorizer) RequireRole(roleName string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		userID, ok := c.Locals("userID").(uuid.UUID)
+		//? 1. parse claims
+		claims, ok := c.Locals("claims").(*schemas.JWTClaims)
 		if !ok {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Unauthorized",
-			})
+			return c.Status(fiber.StatusUnauthorized).
+				JSON(fiber.Map{"error": "Unauthorized"})
 		}
 
-		var count int64
+		// debug:
+		fmt.Println("===================================")
+		fmt.Println("jwt claims userID:", claims.UserID)
+		fmt.Println("jwt claims userName:", claims.UserName)
+		fmt.Println("jwt claims CompanyID:", claims.CompanyID)
+		fmt.Println("jwt claims Role:", claims.Role)
+		fmt.Println("jwt claims Permissions:", claims.Permissions)
 
-		err := a.db.
-			Model(&models.EmployeeRole{}).
-			Joins("JOIN roles ON roles.id = employee_roles.role_id").
-			Where("employee_roles.employee_id = ? AND roles.name = ?", userID, roleName).
-			Count(&count).Error
-
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Authorization check failed",
-			})
-		}
-
-		if count == 0 {
+		//? 2. check for required role
+		if claims.Role != roleName {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"error": "Access denied",
+				"error": "access denied!",
 			})
 		}
 
@@ -49,37 +48,29 @@ func (a *Authorizer) RequireRole(roleName string) fiber.Handler {
 	}
 }
 
-func (a *Authorizer) RequirePermission(resource, action string) fiber.Handler {
+func RequirePermission(resource, action string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		userID, ok := c.Locals("userID").(uuid.UUID)
+
+		claims, ok := c.Locals("claims").(*schemas.JWTClaims)
 		if !ok {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Unauthorized",
-			})
+			return c.Status(fiber.StatusUnauthorized).
+				JSON(fiber.Map{"error": "Unauthorized"})
 		}
 
-		var count int64
-
-		err := a.db.
-			Model(&models.EmployeeRole{}).
-			Joins("JOIN role_permissions rp ON rp.role_id = employee_roles.role_id").
-			Joins("JOIN permissions p ON p.id = rp.permission_id").
-			Where("employee_roles.employee_id = ?", userID).
-			Where("p.resource = ? AND p.action = ?", resource, action).
-			Count(&count).Error
-
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Authorization check failed",
-			})
+		if claims.Role == "sudoer" {
+			return c.Next()
 		}
 
-		if count == 0 {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"error": "Insufficient permissions",
-			})
+		required := resource + ":" + action
+
+		for _, pr := range claims.Permissions {
+			candiate_perms := pr.Resource + ":" + pr.Action
+			if candiate_perms == required {
+				return c.Next()
+			}
 		}
 
-		return c.Next()
+		return c.Status(fiber.StatusForbidden).
+			JSON(fiber.Map{"error": "Insufficient permissions"})
 	}
 }
