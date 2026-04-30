@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
 import TanstakProvider from "@/providers/TanstakProvider";
 
 export const metadata: Metadata = {
@@ -15,13 +14,10 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang='en'>
-			<body className={`relative`}>
-				<Toaster />
-				<TanstakProvider>
-					<Navbar />
-					{children}
-				</TanstakProvider>
+		<html lang='fa' dir='rtl'>
+			<body>
+				<Toaster position='top-center' />
+				<TanstakProvider>{children}</TanstakProvider>
 			</body>
 		</html>
 	);

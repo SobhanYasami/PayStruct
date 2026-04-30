@@ -6,7 +6,7 @@ interface ButtonProps {
 	className?: string;
 	onClick?: () => void;
 	type?: "button" | "submit" | "reset";
-	variant?: "primary" | "secondary" | "outline" | "text";
+	variant?: "primary" | "secondary" | "outline" | "text" | "danger";
 	size?: "small" | "medium" | "large";
 	disabled?: boolean;
 	loading?: boolean;

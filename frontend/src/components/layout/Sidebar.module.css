@@ -1,0 +1,111 @@
+.sidebar {
+	width: var(--sidebar-w);
+	height: 100vh;
+	background: var(--c-primary);
+	display: flex;
+	flex-direction: column;
+	flex-shrink: 0;
+	overflow-y: auto;
+	position: sticky;
+	top: 0;
+}
+
+.brand {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-3);
+	padding: var(--sp-5) var(--sp-4);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	flex-shrink: 0;
+}
+
+.brandIcon {
+	width: 36px;
+	height: 36px;
+	background: var(--c-accent);
+	border-radius: var(--radius-sm);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	flex-shrink: 0;
+}
+
+.brandText {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.brandTitle {
+	font-size: var(--text-md);
+	font-weight: 700;
+	color: white;
+	line-height: 1.2;
+}
+
+.brandSub {
+	font-size: var(--text-xs);
+	color: rgba(255, 255, 255, 0.5);
+	line-height: 1.2;
+}
+
+.nav {
+	flex: 1;
+	padding: var(--sp-4) var(--sp-2);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.navItem {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-3);
+	padding: var(--sp-2) var(--sp-3);
+	border-radius: var(--radius-sm);
+	color: rgba(255, 255, 255, 0.65);
+	font-size: var(--text-md);
+	text-decoration: none;
+	transition: background var(--transition), color var(--transition),
+		border-color var(--transition);
+	border-right: 2px solid transparent;
+}
+
+.navItem:hover {
+	background: rgba(255, 255, 255, 0.08);
+	color: white;
+}
+
+.navItemActive {
+	background: rgba(255, 255, 255, 0.12);
+	color: white;
+	border-right-color: var(--c-accent);
+}
+
+.footer {
+	padding: var(--sp-4);
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	flex-shrink: 0;
+}
+
+.logoutBtn {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-2);
+	width: 100%;
+	padding: var(--sp-2) var(--sp-3);
+	background: none;
+	border: none;
+	color: rgba(255, 255, 255, 0.5);
+	font-size: var(--text-sm);
+	font-family: inherit;
+	cursor: pointer;
+	border-radius: var(--radius-sm);
+	transition: color var(--transition), background var(--transition);
+}
+
+.logoutBtn:hover {
+	color: white;
+	background: rgba(255, 255, 255, 0.08);
+}
