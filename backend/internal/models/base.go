@@ -54,6 +54,7 @@ func AllModels() []any {
 		&Project{},
 		&Contractor{},
 		&Contract{},
+		&WBS{},
 		&StatusStatement{},
 		&WorksDone{},
 		&ExtraWork{},

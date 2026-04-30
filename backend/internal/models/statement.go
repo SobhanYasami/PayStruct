@@ -46,10 +46,11 @@ type StatusStatement struct {
 	Status   StatementStatus `gorm:"type:varchar(16);not null;default:'draft';index;check:status IN ('draft','submitted','approved','rejected','paid')" json:"status"`
 	Currency string          `gorm:"size:3;not null;check:char_length(currency)=3"                                                                       json:"currency"`
 
-	GrossAmount     decimal.Decimal `gorm:"type:numeric(20,2);not null;default:0" json:"gross_amount"`
-	ExtraAmount     decimal.Decimal `gorm:"type:numeric(20,2);not null;default:0" json:"extra_amount"`
-	DeductionAmount decimal.Decimal `gorm:"type:numeric(20,2);not null;default:0" json:"deduction_amount"`
-	NetAmount       decimal.Decimal `gorm:"type:numeric(20,2);not null;default:0" json:"net_amount"`
+	GrossAmount     decimal.Decimal  `gorm:"type:numeric(20,2);not null;default:0" json:"gross_amount"`
+	ExtraAmount     decimal.Decimal  `gorm:"type:numeric(20,2);not null;default:0" json:"extra_amount"`
+	DeductionAmount decimal.Decimal  `gorm:"type:numeric(20,2);not null;default:0" json:"deduction_amount"`
+	NetAmount       decimal.Decimal  `gorm:"type:numeric(20,2);not null;default:0" json:"net_amount"`
+	ProgressPct     *decimal.Decimal `gorm:"type:numeric(5,2);check:progress_pct IS NULL OR (progress_pct >= 0 AND progress_pct <= 100)" json:"progress_pct,omitempty"`
 
 	Notes string `gorm:"type:text" json:"notes,omitempty"`
 
@@ -120,10 +121,10 @@ func (WorksDone) TableName() string { return "works_done" }
 // ApprovedByID when transitioning the parent statement to "approved".
 type ExtraWork struct {
 	BaseModel
-	StatementID uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_extra_works_stmt_line" json:"statement_id"`
-	LineNo      int             `gorm:"not null;uniqueIndex:idx_extra_works_stmt_line;check:line_no > 0" json:"line_no"`
-	Description string          `gorm:"type:text;not null"        json:"description"`
-	Reason      string          `gorm:"type:text"                  json:"reason,omitempty"`
+	StatementID  uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_extra_works_stmt_line" json:"statement_id"`
+	LineNo       int             `gorm:"not null;uniqueIndex:idx_extra_works_stmt_line;check:line_no > 0" json:"line_no"`
+	Description  string          `gorm:"type:text;not null"        json:"description"`
+	Reason       string          `gorm:"type:text"                  json:"reason,omitempty"`
 	ApprovedByID *uuid.UUID      `gorm:"type:uuid;index" json:"approved_by_id,omitempty"`
 	ApprovedAt   *time.Time      `json:"approved_at,omitempty"`
 	Amount       decimal.Decimal `gorm:"type:numeric(20,2);not null;default:0" json:"amount"`
@@ -141,10 +142,10 @@ func (ExtraWork) TableName() string { return "extra_works" }
 // any closed enum; lock it down per-tenant in the application layer.
 type Deduction struct {
 	BaseModel
-	StatementID uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_deductions_stmt_line" json:"statement_id"`
-	LineNo      int             `gorm:"not null;uniqueIndex:idx_deductions_stmt_line;check:line_no > 0" json:"line_no"`
-	Kind        DeductionKind   `gorm:"size:64;not null;index"     json:"kind"`
-	Description string          `gorm:"type:text;not null"          json:"description"`
+	StatementID uuid.UUID     `gorm:"type:uuid;not null;uniqueIndex:idx_deductions_stmt_line" json:"statement_id"`
+	LineNo      int           `gorm:"not null;uniqueIndex:idx_deductions_stmt_line;check:line_no > 0" json:"line_no"`
+	Kind        DeductionKind `gorm:"size:64;not null;index"     json:"kind"`
+	Description string        `gorm:"type:text;not null"          json:"description"`
 	// RatePct is optional when the deduction is a percentage of gross
 	// (tax %, retention %). NULL = flat amount.
 	RatePct *decimal.Decimal `gorm:"type:numeric(7,4);check:rate_pct IS NULL OR (rate_pct >= 0 AND rate_pct <= 100)" json:"rate_pct,omitempty"`

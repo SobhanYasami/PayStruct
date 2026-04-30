@@ -12,6 +12,7 @@ Thumbs.db
 *.swo
 *.log
 *.tmp
+.claude/
 
 # Environment files
 .env

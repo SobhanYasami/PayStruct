@@ -1,262 +1,200 @@
 package handlers
 
 import (
+	"math"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
+	"gorm.io/gorm"
 )
 
-// CompanyHandler handles company endpoints
 type CompanyHandler struct {
-	companyService *services.CompanyService
-	validate       *validator.Validate
+	companySvc *services.CompanyService
+	validate   *validator.Validate
 }
 
-// NewCompanyHandler creates a new CompanyHandler
-func NewCompanyHandler(service *services.CompanyService) *CompanyHandler {
+func NewCompanyHandler(db *gorm.DB) *CompanyHandler {
 	return &CompanyHandler{
-		companyService: service,
-		validate:       validator.New(),
+		companySvc: services.NewCompanyService(db),
+		validate:   validator.New(),
 	}
 }
 
-// CreateCompanyRequest defines the expected request body
-type CreateCompanyRequest struct {
-	Name     string `json:"name" validate:"required,max=100"`
-	ParentID string `json:"parent_id,omitempty"`
+// companyResponse is the shared JSON shape returned by all company endpoints.
+type companyResponse struct {
+	ID       uuid.UUID  `json:"id"`
+	Name     string     `json:"name"`
+	RegNum   string     `json:"reg_num"`
+	ParentID *uuid.UUID `json:"parent_id,omitempty"`
 }
 
-// ParseParentID validates and converts ParentID string to *uuid.UUID
-func (r *CreateCompanyRequest) ParseParentID() (*uuid.UUID, error) {
-	if r.ParentID == "" {
-		return nil, nil
+// actorID extracts the authenticated user's UUID from JWT claims.
+// Returns uuid.Nil + false when the claims are missing or malformed.
+func actorID(c *fiber.Ctx) (uuid.UUID, bool) {
+	claims, ok := c.Locals("claims").(*schemas.JWTClaims)
+	if !ok || claims == nil {
+		return uuid.Nil, false
 	}
-	id, err := uuid.Parse(r.ParentID)
+	id, err := uuid.Parse(claims.UserID)
 	if err != nil {
-		return nil, err
+		return uuid.Nil, false
 	}
-	return &id, nil
+	return id, true
 }
 
-// ! @Route POST /company/management
-// ! @Summary Create a new company
-// ! @Description Create a new company with optional parent company
-// ! @Tags Company Management
-// ! @Accept json
-// ! @Produce json
-// ! @Param company body CreateCompanyRequest true "Company details"
-// ! @Success 201 {object} SuccessResponse{data=CompanyResponse} "Company created successfully"
-// ! @Failure 400 {object} ErrorResponse "Invalid request"
-// ! @Failure 401 {object} ErrorResponse "Unauthorized"
-// ! @Failure 409 {object} ErrorResponse "Conflict (e.g., duplicate name)"
-// ! @Failure 500 {object} ErrorResponse "Internal server error"
-// ! @Security ApiKeyAuth
+// POST /company/management
 func (h *CompanyHandler) CreateCompany(c *fiber.Ctx) error {
-	//? 1. Get userID from context (middleware)
-	userID, ok := c.Locals("userID").(uuid.UUID)
-	if !ok {
+	if _, ok := actorID(c); !ok {
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Access denied"))
 	}
 
-	//? 2. Parse request
-	var req CreateCompanyRequest
-	if err := c.BodyParser(&req); err != nil {
+	type req struct {
+		Name     string  `json:"name"      validate:"required,max=255"`
+		RegNum   string  `json:"reg_num"   validate:"required,max=64"`
+		ParentID *string `json:"parent_id"`
+	}
+	var body req
+	if err := c.BodyParser(&body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
 	}
-
-	//? 3. Validate request (using validator)
-	if err := h.validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).
-			JSON(ErrorResponse(BadRequest, err.Error()))
+	if err := h.validate.Struct(body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, err.Error()))
 	}
 
-	//? 4. Convert ParentID
-	parentUUID, err := req.ParseParentID()
+	company, err := h.companySvc.CreateCompany(c.Context(), services.CreateCompanyReq{
+		Name:     body.Name,
+		RegNum:   body.RegNum,
+		ParentID: body.ParentID,
+	})
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid parent_id format"))
-	}
-
-	//? 5. Call service
-	company, err := h.companyService.CreateCompany(c.Context(), req.Name, parentUUID, userID)
-	if err != nil {
-		switch err.Error() {
-		case "parent company not found", "company with the same name already exists under this parent":
-			return c.Status(fiber.StatusConflict).JSON(ErrorResponse(BadRequest, err.Error()))
-		default:
-			return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to create company"))
+		if svcErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(svcErr.Code).JSON(ErrorResponse(BadRequest, svcErr.Message))
 		}
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to create company"))
 	}
 
-	//? 6. Build response
-	type CompanyResponse struct {
-		ID       uuid.UUID  `json:"id"`
-		Name     string     `json:"name"`
-		ParentID *uuid.UUID `json:"parent_id,omitempty"`
-	}
-
-	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(CompanyResponse{
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(companyResponse{
 		ID:       company.ID,
 		Name:     company.Name,
+		RegNum:   company.RegNum,
 		ParentID: company.ParentID,
 	}, "Company created successfully"))
 }
 
-// ! @Route GET /company/management/:id
-// ! @Summary Get company details
-// ! @Description Get details of a specific company by ID
-// ! @Tags Company Management
-// ! @Accept json
-// ! @Produce json
-// ! @Param id path string true "Company ID"
-// ! @Success 200 {object} SuccessResponse{data=CompanyResponse} "Company details retrieved successfully"
-// ! @Failure 400 {object} ErrorResponse "Invalid request"
-// ! @Failure 401 {object} ErrorResponse "Unauthorized"
-// ! @Failure 404 {object} ErrorResponse "Company not found"
-// ! @Failure 500 {object} ErrorResponse "Internal server error"
-// ! @Security ApiKeyAuth
-func (h *CompanyHandler) GetCompanyByID(c *fiber.Ctx) error {
-	//? 2. Parse company ID from path
-	companyID := c.Params("id")
-	companyUUID, err := uuid.Parse(companyID)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid company ID format"))
+// GET /company/management
+func (h *CompanyHandler) GetAllCompanies(c *fiber.Ctx) error {
+	search := c.Query("search")
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10
 	}
 
-	//? 3. Call service
-	company, err := h.companyService.GetCompanyDetails(c.Context(), companyUUID)
+	companies, total, err := h.companySvc.ListCompanies(c.Context(), search, page, limit)
 	if err != nil {
-		switch err.Error() {
-		case "company not found":
-			return c.Status(fiber.StatusNotFound).JSON(ErrorResponse(NotFound, "Company not found"))
-		default:
-			return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to get company details"))
+		if svcErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(svcErr.Code).JSON(ErrorResponse(InternalError, svcErr.Message))
 		}
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to list companies"))
 	}
 
-	//? 4. Build response
-	type CompanyResponse struct {
-		ID       uuid.UUID  `json:"id"`
-		Name     string     `json:"name"`
-		ParentID *uuid.UUID `json:"parent_id,omitempty"`
+	items := make([]companyResponse, 0, len(companies))
+	for _, co := range companies {
+		items = append(items, companyResponse{
+			ID:       co.ID,
+			Name:     co.Name,
+			RegNum:   co.RegNum,
+			ParentID: co.ParentID,
+		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(CompanyResponse{
-		ID:       company.ID,
-		Name:     company.Name,
-		ParentID: company.ParentID,
-	}, "Company details retrieved successfully"))
+	return c.JSON(SuccessResponse(fiber.Map{
+		"data":        items,
+		"total":       total,
+		"page":        page,
+		"limit":       limit,
+		"total_pages": int(math.Ceil(float64(total) / float64(limit))),
+	}, "Companies retrieved successfully"))
 }
 
-// ! @Route PUT /company/management/:id
-// ! @Summary Update company details
-// ! @Description Update the name or parent company of a specific company by ID
-// ! @Tags Company Management
-// ! @Accept json
-// ! @Produce json
-// ! @Param id path string true "Company ID"
-// ! @Param company body UpdateCompanyRequest true "Updated company details"
-// ! @Success 200 {object} SuccessResponse{data=CompanyResponse} "Company updated successfully"
-// ! @Failure 400 {object} ErrorResponse "Invalid request"
-// ! @Failure 401 {object} ErrorResponse "Unauthorized"
-// ! @Failure 404 {object} ErrorResponse "Company not found"
-// ! @Failure 409 {object} ErrorResponse "Conflict (e.g., duplicate name)"
-// ! @Failure 500 {object} ErrorResponse "Internal server error"
-// ! @Security ApiKeyAuth
-func (h *CompanyHandler) UpdateCompany(c *fiber.Ctx) error {
-	//? 2. Parse company ID from path
-	companyID := c.Params("id")
-	companyUUID, err := uuid.Parse(companyID)
+// GET /company/management/:id
+func (h *CompanyHandler) GetCompanyByID(c *fiber.Ctx) error {
+	companyUUID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid company ID format"))
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid company ID"))
 	}
 
-	//? 1. Get userID from context (middleware)
-	userUUID, ok := c.Locals("userID").(uuid.UUID)
-	if !ok {
+	company, err := h.companySvc.GetCompanyDetails(c.Context(), companyUUID)
+	if err != nil {
+		if svcErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(svcErr.Code).JSON(ErrorResponse(NotFound, svcErr.Message))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to get company"))
+	}
+
+	return c.JSON(SuccessResponse(companyResponse{
+		ID:       company.ID,
+		Name:     company.Name,
+		RegNum:   company.RegNum,
+		ParentID: company.ParentID,
+	}, "Company retrieved successfully"))
+}
+
+// PUT /company/management/:id
+func (h *CompanyHandler) UpdateCompany(c *fiber.Ctx) error {
+	if _, ok := actorID(c); !ok {
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Access denied"))
 	}
 
-	//? 2. Parse request
-	var req CreateCompanyRequest
+	companyUUID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid company ID"))
+	}
+
+	var req services.UpdateCompanyReq
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
 	}
 
-	//? 3. Validate request (using validator)
-	if err := h.validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).
-			JSON(ErrorResponse(BadRequest, err.Error()))
-	}
-
-	//? 4. Convert ParentID
-	parentUUID, err := req.ParseParentID()
+	company, err := h.companySvc.UpdateCompany(c.Context(), companyUUID, req)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid parent_id format"))
-	}
-
-	//? 5. Call service
-	company, err := h.companyService.UpdateCompany(c.Context(), companyUUID, req.Name, parentUUID, userUUID)
-	if err != nil {
-		switch err.Error() {
-		case "parent company not found", "company with the same name already exists under this parent":
-			return c.Status(fiber.StatusConflict).JSON(ErrorResponse(BadRequest, err.Error()))
-		default:
-			return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to update company"))
+		if svcErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(svcErr.Code).JSON(ErrorResponse(InternalError, svcErr.Message))
 		}
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to update company"))
 	}
 
-	//? 6. Build response
-	type CompanyResponse struct {
-		ID       uuid.UUID  `json:"id"`
-		Name     string     `json:"name"`
-		ParentID *uuid.UUID `json:"parent_id,omitempty"`
-	}
-
-	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(CompanyResponse{
+	return c.JSON(SuccessResponse(companyResponse{
 		ID:       company.ID,
 		Name:     company.Name,
+		RegNum:   company.RegNum,
 		ParentID: company.ParentID,
 	}, "Company updated successfully"))
-
 }
 
-// ! @Route DELETE /company/management/:id
-// ! @Summary Deactivate a company
-// ! @Description Soft delete (deactivate) a specific company by ID
-// ! @Tags Company Management
-// ! @Accept json
-// ! @Produce json
-// ! @Param id path string true "Company ID"
-// ! @Success 200 {object} SuccessResponse "Company deactivated successfully"
-// ! @Failure 400 {object} ErrorResponse "Invalid request"
-// ! @Failure 401 {object} ErrorResponse "Unauthorized"
-// ! @Failure 404 {object} ErrorResponse "Company not found"
-// ! @Failure 500 {object} ErrorResponse "Internal server error"
-// ! @Security ApiKeyAuth
+// DELETE /company/management/:id
 func (h *CompanyHandler) DeleteCompany(c *fiber.Ctx) error {
-	//? 2. Parse company ID from path
-	companyID := c.Params("id")
-	companyUUID, err := uuid.Parse(companyID)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid company ID format"))
-	}
-
-	//? 1. Get userID from context (middleware)
-	userUUID, ok := c.Locals("userID").(uuid.UUID)
-	if !ok {
+	if _, ok := actorID(c); !ok {
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Access denied"))
 	}
 
-	//? 2. Call service (soft delete)
-	if err := h.companyService.DeleteCompany(c.Context(), companyUUID, userUUID); err != nil {
-		switch err.Error() {
-		case "company not found":
-			return c.Status(fiber.StatusNotFound).JSON(ErrorResponse(NotFound, "Company not found"))
-		default:
-			return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to delete company"))
-		}
+	companyUUID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid company ID"))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Company deactivated successfully"))
+	if err := h.companySvc.DeleteCompany(c.Context(), companyUUID); err != nil {
+		if svcErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(svcErr.Code).JSON(ErrorResponse(InternalError, svcErr.Message))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to delete company"))
+	}
+
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Company deleted successfully"))
 }

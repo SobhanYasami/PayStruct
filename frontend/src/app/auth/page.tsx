@@ -13,20 +13,23 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const User_URL = `${API_URL}/users`;
 
 type SignInPayload = {
-	user_name: string;
+	email: string;
 	password: string;
 };
 
 type SignUpPayload = {
 	first_name: string;
 	last_name: string;
-	user_name: string;
+	email: string;
+	national_id: string;
 	password: string;
-	role: string;
+	roles: string[];
+	company_id: string;
+	employment_type: string;
 };
 
 async function signInRequest(payload: SignInPayload) {
-	const res = await fetch(`${User_URL}/signin`, {
+	const res = await fetch(`${User_URL}/auth/signin`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(payload),
@@ -156,16 +159,15 @@ export default function AuthPage() {
 // Sign In Form
 // -----------------------------
 function SignInForm() {
-	const [userName, setUserName] = useState("");
+	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const router = useRouter();
 
 	const mutation = useMutation({
 		mutationFn: signInRequest,
 		onSuccess: (data) => {
-			// Store in cookies (implement proper cookie storage)
 			localStorage.setItem("usr-token", data.data.token);
-			localStorage.setItem("usr-role", data.data.role);
+			localStorage.setItem("usr-roles", JSON.stringify(data.data.roles ?? []));
 
 			toast.success("ورود موفقیت‌آمیز بود");
 			router.push("/dashboard");
@@ -177,7 +179,7 @@ function SignInForm() {
 
 	const onSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-		mutation.mutate({ user_name: userName, password });
+		mutation.mutate({ email, password });
 	};
 
 	return (
@@ -194,17 +196,17 @@ function SignInForm() {
 
 			<div className={styles.inputGroup}>
 				<label className={styles.label}>
-					<span>نام کاربری</span>
+					<span>ایمیل</span>
 					<span className={styles.required}>*</span>
 				</label>
 				<div className={styles.inputWrapper}>
 					<input
-						type='text'
-						value={userName}
-						onChange={(e) => setUserName(e.target.value)}
+						type='email'
+						value={email}
+						onChange={(e) => setEmail(e.target.value)}
 						required
 						className={styles.input}
-						placeholder='نام کاربری خود را وارد کنید'
+						placeholder='ایمیل خود را وارد کنید'
 						disabled={mutation.isPending}
 					/>
 					<span className={styles.inputIcon}>👤</span>
@@ -293,11 +295,14 @@ function SignUpForm() {
 		}
 
 		mutation.mutate({
-			user_name: userName,
+			email: userName,
 			password,
 			first_name: firstName,
 			last_name: lastName,
-			role: "admin",
+			national_id: "",
+			roles: [],
+			company_id: "",
+			employment_type: "official",
 		});
 	};
 

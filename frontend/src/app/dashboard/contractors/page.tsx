@@ -1,844 +1,358 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import styles from "./page.module.css";
-import {
-	Building,
-	FileText,
-	DollarSign,
-	Users,
-	Calendar,
-	TrendingUp,
-	TrendingDown,
-	Clock,
-	CheckCircle,
-	AlertCircle,
-	ChevronRight,
-	Plus,
-	Search,
-	Filter,
-	Download,
-	MoreVertical,
-	Phone,
-	Mail,
-	MapPin,
-	Briefcase,
-	Shield,
-	Award,
-	BarChart3,
-	Eye,
-	Edit,
-	Trash2,
-	ExternalLink,
-} from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-const Contractor_URL = `${API_URL}/management/contractors/`;
 
-// Mock data types (replace with actual API response types)
-interface Contractor {
-	id: string;
-	name: string;
-	company: string;
-	email: string;
-	phone: string;
-	location: string;
-	status: "active" | "pending" | "suspended";
-	contractsCount: number;
-	totalValue: number;
-	completedProjects: number;
-	rating: number;
-	specialization: string[];
-	lastActivity: string;
-	joinDate: string;
+function authHeaders() {
+	const token = typeof window !== "undefined" ? localStorage.getItem("usr-token") : "";
+	return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 }
 
-interface Contract {
+// --------------- Types ---------------
+
+type Contractor = {
 	id: string;
-	contractorId: string;
-	title: string;
-	value: number;
-	status: "active" | "completed" | "pending" | "terminated";
-	startDate: string;
-	endDate: string;
-	progress: number;
-	documentsCount: number;
+	type: string;
+	first_name: string;
+	last_name: string;
+	detailed_id: string;
+	national_id: string;
+	phone?: string;
+	address?: string;
+	specialty?: string;
+	rating?: number;
+};
+
+type CreateContractorBody = {
+	type: string;
+	first_name: string;
+	last_name: string;
+	detailed_id: string;
+	national_id: string;
+	phone?: string;
+	address?: string;
+	specialty?: string;
+	rating?: number;
+};
+
+type ListResponse = {
+	data: { data: Contractor[]; total: number; page: number; limit: number };
+};
+
+// --------------- API ---------------
+
+async function fetchContractors(page: number, search: string): Promise<{ items: Contractor[]; total: number }> {
+	const params = new URLSearchParams({ page: String(page), limit: "15" });
+	if (search) params.set("search", search);
+	const res = await fetch(`${API_URL}/contractors?${params}`, { headers: authHeaders() });
+	if (!res.ok) throw new Error("Failed to fetch contractors");
+	const json: ListResponse = await res.json();
+	return { items: json.data.data ?? [], total: json.data.total ?? 0 };
 }
 
-interface StatusStatement {
-	id: string;
-	contractorId: string;
-	period: string;
-	amount: number;
-	status: "paid" | "pending" | "overdue";
-	dueDate: string;
-	submittedDate: string;
-}
-
-/* -------------------- API Functions -------------------- */
-async function getAllContractors() {
-	const token = localStorage.getItem("usr-token");
-	if (!token) throw new Error("UnAuthorized");
-
-	const res = await fetch(`${Contractor_URL}`, {
-		method: "GET",
-		headers: {
-			Authorization: `bearer ${token}`,
-		},
+async function createContractor(body: CreateContractorBody): Promise<Contractor> {
+	const res = await fetch(`${API_URL}/contractors`, {
+		method: "POST",
+		headers: authHeaders(),
+		body: JSON.stringify(body),
 	});
-
 	if (!res.ok) {
 		const err = await res.json();
-		throw new Error(err.message || "Failed to fetch contractors!");
+		throw new Error(err.message || "Failed to create contractor");
 	}
-
-	return res.json();
+	const json = await res.json();
+	return json.data;
 }
 
-async function getContractorStats() {
-	const token = localStorage.getItem("usr-token");
-	if (!token) throw new Error("UnAuthorized");
-
-	const res = await fetch(`${Contractor_URL}/stats`, {
-		method: "GET",
-		headers: {
-			Authorization: `bearer ${token}`,
-		},
+async function updateContractor({ id, body }: { id: string; body: Partial<CreateContractorBody> }): Promise<Contractor> {
+	const res = await fetch(`${API_URL}/contractors/${id}`, {
+		method: "PUT",
+		headers: authHeaders(),
+		body: JSON.stringify(body),
 	});
-
 	if (!res.ok) {
 		const err = await res.json();
-		throw new Error(err.message || "Failed to fetch statistics!");
+		throw new Error(err.message || "Failed to update contractor");
 	}
-
-	return res.json();
+	const json = await res.json();
+	return json.data;
 }
 
-/* -------------------- Stat Card Component -------------------- */
-function StatCard({
-	title,
-	value,
-	change,
-	icon: Icon,
-	color = "primary",
-	format = "default",
-}: {
-	title: string;
-	value: number | string;
-	change?: number;
-	icon: any;
-	color?: "primary" | "success" | "warning" | "danger" | "info";
-	format?: "default" | "currency" | "percentage";
-}) {
-	const formatValue = (val: number | string) => {
-		if (format === "currency") {
-			return new Intl.NumberFormat("fa-IR").format(Number(val)) + " تومان";
-		}
-		if (format === "percentage") {
-			return `${val}%`;
-		}
-		return new Intl.NumberFormat("fa-IR").format(Number(val));
+async function deleteContractor(id: string): Promise<void> {
+	const res = await fetch(`${API_URL}/contractors/${id}`, { method: "DELETE", headers: authHeaders() });
+	if (!res.ok) {
+		const err = await res.json();
+		throw new Error(err.message || "Failed to delete contractor");
+	}
+}
+
+// --------------- Empty form ---------------
+
+const emptyForm: CreateContractorBody = {
+	type: "individual", first_name: "", last_name: "", detailed_id: "", national_id: "",
+	phone: "", address: "", specialty: "",
+};
+
+// --------------- Page ---------------
+
+export default function ContractorsPage() {
+	const qc = useQueryClient();
+	const [page, setPage] = useState(1);
+	const [search, setSearch] = useState("");
+	const [searchInput, setSearchInput] = useState("");
+	const [showModal, setShowModal] = useState(false);
+	const [editingId, setEditingId] = useState<string | null>(null);
+	const [form, setForm] = useState<CreateContractorBody>(emptyForm);
+	const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+	const { data, isLoading } = useQuery({
+		queryKey: ["contractors", page, search],
+		queryFn: () => fetchContractors(page, search),
+	});
+
+	const createMut = useMutation({
+		mutationFn: createContractor,
+		onSuccess: () => {
+			toast.success("پیمانکار ایجاد شد");
+			closeModal();
+			qc.invalidateQueries({ queryKey: ["contractors"] });
+		},
+		onError: (e: Error) => toast.error(e.message),
+	});
+
+	const updateMut = useMutation({
+		mutationFn: updateContractor,
+		onSuccess: () => {
+			toast.success("پیمانکار به‌روزرسانی شد");
+			closeModal();
+			qc.invalidateQueries({ queryKey: ["contractors"] });
+		},
+		onError: (e: Error) => toast.error(e.message),
+	});
+
+	const deleteMut = useMutation({
+		mutationFn: deleteContractor,
+		onSuccess: () => {
+			toast.success("پیمانکار حذف شد");
+			setDeleteConfirm(null);
+			qc.invalidateQueries({ queryKey: ["contractors"] });
+		},
+		onError: (e: Error) => toast.error(e.message),
+	});
+
+	const openCreate = () => { setForm(emptyForm); setEditingId(null); setShowModal(true); };
+	const openEdit = (c: Contractor) => {
+		setForm({
+			type: c.type, first_name: c.first_name, last_name: c.last_name,
+			detailed_id: c.detailed_id, national_id: c.national_id,
+			phone: c.phone ?? "", address: c.address ?? "", specialty: c.specialty ?? "",
+			rating: c.rating,
+		});
+		setEditingId(c.id);
+		setShowModal(true);
+	};
+	const closeModal = () => { setShowModal(false); setEditingId(null); };
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		if (editingId) updateMut.mutate({ id: editingId, body: form });
+		else createMut.mutate(form);
 	};
 
-	const colors = {
-		primary: "var(--primary)",
-		success: "var(--success)",
-		warning: "var(--warning)",
-		danger: "var(--danger)",
-		info: "var(--info)",
+	const handleSearch = (e: React.FormEvent) => {
+		e.preventDefault();
+		setSearch(searchInput);
+		setPage(1);
 	};
+
+	const items = data?.items ?? [];
+	const total = data?.total ?? 0;
+	const totalPages = Math.ceil(total / 15) || 1;
+	const isPending = createMut.isPending || updateMut.isPending;
 
 	return (
-		<div className={styles.statCard}>
-			<div
-				className={styles.statIcon}
-				style={{ backgroundColor: colors[color] + "15" }}
-			>
-				<Icon
-					size={24}
-					style={{ color: colors[color] }}
-				/>
+		<div style={wrap} dir="rtl">
+			<div style={header}>
+				<h1 style={titleStyle}>پیمانکاران</h1>
+				<button style={primaryBtn} onClick={openCreate}>
+					<Plus size={16} /> افزودن پیمانکار
+				</button>
 			</div>
-			<div className={styles.statContent}>
-				<span className={styles.statValue}>{formatValue(value)}</span>
-				<span className={styles.statTitle}>{title}</span>
-				{change !== undefined && (
-					<div
-						className={`${styles.statChange} ${change >= 0 ? styles.positive : styles.negative}`}
-					>
-						{change >= 0 ? (
-							<TrendingUp size={14} />
-						) : (
-							<TrendingDown size={14} />
-						)}
-						<span>{Math.abs(change)}% نسبت به ماه قبل</span>
-					</div>
+
+			{/* Search bar */}
+			<form onSubmit={handleSearch} style={searchBar}>
+				<input
+					style={{ ...inputStyle, flex: 1 }}
+					placeholder="جستجو بر اساس نام، کدملی، تخصص..."
+					value={searchInput}
+					onChange={(e) => setSearchInput(e.target.value)}
+				/>
+				<button type="submit" style={primaryBtn}><Search size={16} /> جستجو</button>
+				{search && (
+					<button type="button" style={cancelBtn} onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}>
+						پاک کردن
+					</button>
 				)}
-			</div>
-		</div>
-	);
-}
+			</form>
 
-/* -------------------- Quick Access Card -------------------- */
-function QuickAccessCard({
-	title,
-	description,
-	icon: Icon,
-	color,
-	onClick,
-	count,
-}: {
-	title: string;
-	description: string;
-	icon: any;
-	color: string;
-	onClick: () => void;
-	count?: number;
-}) {
-	return (
-		<div
-			className={styles.quickAccessCard}
-			onClick={onClick}
-		>
-			<div
-				className={styles.quickAccessIcon}
-				style={{ backgroundColor: color + "15" }}
-			>
-				<Icon
-					size={24}
-					style={{ color }}
-				/>
-			</div>
-			<div className={styles.quickAccessContent}>
-				<div className={styles.quickAccessHeader}>
-					<h4>{title}</h4>
-					{count !== undefined && (
-						<span className={styles.quickAccessCount}>{count}</span>
-					)}
-				</div>
-				<p>{description}</p>
-				<div className={styles.quickAccessAction}>
-					<span>مشاهده و مدیریت</span>
-					<ChevronRight size={16} />
-				</div>
-			</div>
-		</div>
-	);
-}
-
-/* -------------------- Contractor Card -------------------- */
-function ContractorCard({ contractor }: { contractor: Contractor }) {
-	const getStatusColor = (status: string) => {
-		switch (status) {
-			case "active":
-				return "var(--success)";
-			case "pending":
-				return "var(--warning)";
-			case "suspended":
-				return "var(--danger)";
-			default:
-				return "var(--text-tertiary)";
-		}
-	};
-
-	const getStatusText = (status: string) => {
-		switch (status) {
-			case "active":
-				return "فعال";
-			case "pending":
-				return "در انتظار";
-			case "suspended":
-				return "تعلیق شده";
-			default:
-				return status;
-		}
-	};
-
-	return (
-		<div className={styles.contractorCard}>
-			<div className={styles.contractorHeader}>
-				<div className={styles.contractorAvatar}>
-					<Building size={24} />
-				</div>
-				<div className={styles.contractorInfo}>
-					<h4>{contractor.name}</h4>
-					<p>{contractor.company}</p>
-				</div>
-				<div className={styles.contractorStatus}>
-					<span style={{ backgroundColor: getStatusColor(contractor.status) }}>
-						{getStatusText(contractor.status)}
-					</span>
-				</div>
-			</div>
-
-			<div className={styles.contractorDetails}>
-				<div className={styles.detailRow}>
-					<div className={styles.detailItem}>
-						<Phone size={14} />
-						<span>{contractor.phone}</span>
-					</div>
-					<div className={styles.detailItem}>
-						<Mail size={14} />
-						<span>{contractor.email}</span>
-					</div>
-				</div>
-				<div className={styles.detailRow}>
-					<div className={styles.detailItem}>
-						<MapPin size={14} />
-						<span>{contractor.location}</span>
-					</div>
-					<div className={styles.detailItem}>
-						<Briefcase size={14} />
-						<span>{contractor.specialization[0]}</span>
-					</div>
-				</div>
-			</div>
-
-			<div className={styles.contractorStats}>
-				<div className={styles.contractorStat}>
-					<span className={styles.statLabel}>قراردادها</span>
-					<span className={styles.statValue}>{contractor.contractsCount}</span>
-				</div>
-				<div className={styles.contractorStat}>
-					<span className={styles.statLabel}>ارزش کل</span>
-					<span className={styles.statValue}>
-						{new Intl.NumberFormat("fa-IR").format(contractor.totalValue)} تومان
-					</span>
-				</div>
-				<div className={styles.contractorStat}>
-					<span className={styles.statLabel}>رتبه</span>
-					<span className={styles.statValue}>{contractor.rating}/5</span>
-				</div>
-			</div>
-
-			<div className={styles.contractorActions}>
-				<button className={styles.actionButton}>
-					<Eye size={16} />
-					<span>مشاهده</span>
-				</button>
-				<button className={styles.actionButton}>
-					<Edit size={16} />
-					<span>ویرایش</span>
-				</button>
-				<button className={styles.actionButton}>
-					<FileText size={16} />
-					<span>گزارش</span>
-				</button>
-			</div>
-		</div>
-	);
-}
-
-/* -------------------- Recent Activity -------------------- */
-function RecentActivity({ activities }: { activities: any[] }) {
-	const getActivityIcon = (type: string) => {
-		switch (type) {
-			case "contract":
-				return <FileText size={16} />;
-			case "payment":
-				return <DollarSign size={16} />;
-			case "meeting":
-				return <Calendar size={16} />;
-			case "status":
-				return <BarChart3 size={16} />;
-			default:
-				return <Clock size={16} />;
-		}
-	};
-
-	const getActivityColor = (type: string) => {
-		switch (type) {
-			case "contract":
-				return "var(--primary)";
-			case "payment":
-				return "var(--success)";
-			case "meeting":
-				return "var(--warning)";
-			case "status":
-				return "var(--info)";
-			default:
-				return "var(--text-tertiary)";
-		}
-	};
-
-	return (
-		<div className={styles.recentActivity}>
-			<div className={styles.sectionHeader}>
-				<h3>فعالیت‌های اخیر</h3>
-				<button className={styles.viewAllButton}>مشاهده همه</button>
-			</div>
-			<div className={styles.activityList}>
-				{activities.map((activity, index) => (
-					<div
-						key={index}
-						className={styles.activityItem}
-					>
-						<div
-							className={styles.activityIcon}
-							style={{
-								backgroundColor: getActivityColor(activity.type) + "15",
-							}}
-						>
-							{getActivityIcon(activity.type)}
-						</div>
-						<div className={styles.activityContent}>
-							<p>{activity.description}</p>
-							<div className={styles.activityMeta}>
-								<span className={styles.activityTime}>{activity.time}</span>
-								<span className={styles.activityContractor}>
-									{activity.contractor}
-								</span>
-							</div>
-						</div>
-					</div>
-				))}
-			</div>
-		</div>
-	);
-}
-
-/* -------------------- Status Statement Card -------------------- */
-function StatusStatementCard({ statement }: { statement: StatusStatement }) {
-	const getStatusColor = (status: string) => {
-		switch (status) {
-			case "paid":
-				return "var(--success)";
-			case "pending":
-				return "var(--warning)";
-			case "overdue":
-				return "var(--danger)";
-			default:
-				return "var(--text-tertiary)";
-		}
-	};
-
-	const getStatusText = (status: string) => {
-		switch (status) {
-			case "paid":
-				return "پرداخت شده";
-			case "pending":
-				return "در انتظار پرداخت";
-			case "overdue":
-				return "معوق";
-			default:
-				return status;
-		}
-	};
-
-	return (
-		<div className={styles.statementCard}>
-			<div className={styles.statementHeader}>
-				<h4>صورت وضعیت {statement.period}</h4>
-				<span
-					className={styles.statementStatus}
-					style={{ backgroundColor: getStatusColor(statement.status) }}
-				>
-					{getStatusText(statement.status)}
-				</span>
-			</div>
-			<div className={styles.statementDetails}>
-				<div className={styles.statementDetail}>
-					<span className={styles.detailLabel}>مبلغ:</span>
-					<span className={styles.detailValue}>
-						{new Intl.NumberFormat("fa-IR").format(statement.amount)} تومان
-					</span>
-				</div>
-				<div className={styles.statementDetail}>
-					<span className={styles.detailLabel}>تاریخ سررسید:</span>
-					<span className={styles.detailValue}>{statement.dueDate}</span>
-				</div>
-				<div className={styles.statementDetail}>
-					<span className={styles.detailLabel}>تاریخ ارسال:</span>
-					<span className={styles.detailValue}>{statement.submittedDate}</span>
-				</div>
-			</div>
-			<div className={styles.statementActions}>
-				<button className={styles.statementActionButton}>
-					<Eye size={16} />
-					مشاهده
-				</button>
-				<button className={styles.statementActionButton}>
-					<Download size={16} />
-					دانلود
-				</button>
-			</div>
-		</div>
-	);
-}
-
-/* -------------------- Main Component -------------------- */
-export default function Contractors() {
-	const [searchTerm, setSearchTerm] = useState("");
-	const [activeTab, setActiveTab] = useState("all");
-	const [showAddContractor, setShowAddContractor] = useState(false);
-
-	// Fetch contractors data
-	const { data: contractorsData, isLoading: isLoadingContractors } = useQuery({
-		queryKey: ["contractors"],
-		queryFn: getAllContractors,
-	});
-
-	// Fetch statistics
-	const { data: statsData, isLoading: isLoadingStats } = useQuery({
-		queryKey: ["contractorStats"],
-		queryFn: getContractorStats,
-	});
-
-	// Mock data (replace with actual API data)
-	const mockContractors: Contractor[] = [
-		{
-			id: "1",
-			name: "علی محمدی",
-			company: "سازه‌گستر ایرانیان",
-			email: "ali.mohammadi@sazegostar.com",
-			phone: "09123456789",
-			location: "تهران",
-			status: "active",
-			contractsCount: 12,
-			totalValue: 2500000000,
-			completedProjects: 8,
-			rating: 4.7,
-			specialization: ["اسکلت فلزی", "بتن ریزی"],
-			lastActivity: "2 ساعت پیش",
-			joinDate: "1402/05/15",
-		},
-		{
-			id: "2",
-			name: "رضا کریمی",
-			company: "آبادگران پایتخت",
-			email: "reza.karimi@abadgaran.com",
-			phone: "09129876543",
-			location: "مشهد",
-			status: "active",
-			contractsCount: 8,
-			totalValue: 1800000000,
-			completedProjects: 5,
-			rating: 4.5,
-			specialization: ["نقشه برداری", "عملیات خاکی"],
-			lastActivity: "1 روز پیش",
-			joinDate: "1402/03/22",
-		},
-		{
-			id: "3",
-			name: "محمد حسینی",
-			company: "ساختمان‌سازی نوین",
-			email: "m.hosseini@novin.com",
-			phone: "09361234567",
-			location: "اصفهان",
-			status: "pending",
-			contractsCount: 3,
-			totalValue: 750000000,
-			completedProjects: 2,
-			rating: 4.2,
-			specialization: ["نما کاری", "تاسیسات"],
-			lastActivity: "3 روز پیش",
-			joinDate: "1402/06/10",
-		},
-	];
-
-	const mockActivities = [
-		{
-			type: "contract",
-			description: "قرارداد جدید با پیمانکار علی محمدی منعقد شد",
-			time: "2 ساعت پیش",
-			contractor: "علی محمدی",
-		},
-		{
-			type: "payment",
-			description: "صورت وضعیت شماره ۴۵ پرداخت شد",
-			time: "1 روز پیش",
-			contractor: "رضا کریمی",
-		},
-		{
-			type: "status",
-			description: "صورت وضعیت ماهانه ارسال شد",
-			time: "2 روز پیش",
-			contractor: "محمد حسینی",
-		},
-		{
-			type: "meeting",
-			description: "جلسه هماهنگی پروژه برگزار شد",
-			time: "3 روز پیش",
-			contractor: "علی محمدی",
-		},
-	];
-
-	const mockStatements: StatusStatement[] = [
-		{
-			id: "1",
-			contractorId: "1",
-			period: "مهر ۱۴۰۲",
-			amount: 250000000,
-			status: "paid",
-			dueDate: "1402/07/15",
-			submittedDate: "1402/07/10",
-		},
-		{
-			id: "2",
-			contractorId: "2",
-			period: "مهر ۱۴۰۲",
-			amount: 180000000,
-			status: "pending",
-			dueDate: "1402/07/20",
-			submittedDate: "1402/07/12",
-		},
-		{
-			id: "3",
-			contractorId: "3",
-			period: "شهریور ۱۴۰۲",
-			amount: 75000000,
-			status: "overdue",
-			dueDate: "1402/06/30",
-			submittedDate: "1402/06/25",
-		},
-	];
-
-	const quickAccessLinks = [
-		{
-			title: "افزودن پیمانکار جدید",
-			description: "ثبت اطلاعات پیمانکار جدید در سیستم",
-			icon: Plus,
-			color: "var(--primary)",
-			onClick: () => setShowAddContractor(true),
-		},
-		{
-			title: "مدیریت قراردادها",
-			description: "مشاهده و مدیریت کلیه قراردادهای پیمانکاران",
-			icon: FileText,
-			color: "var(--success)",
-			onClick: () => toast.error("صفحه قراردادها به زودی اضافه خواهد شد"),
-			count: 24,
-		},
-		{
-			title: "صورت‌های وضعیت",
-			description: "ثبت و پیگیری صورت‌های وضعیت پیمانکاران",
-			icon: BarChart3,
-			color: "var(--warning)",
-			onClick: () => toast.error("صفحه صورت‌های وضعیت به زودی اضافه خواهد شد"),
-			count: 12,
-		},
-		{
-			title: "گزارش‌های مالی",
-			description: "گزارش‌های مالی و پرداخت‌های پیمانکاران",
-			icon: DollarSign,
-			color: "var(--info)",
-			onClick: () => toast.error("صفحه گزارش‌های مالی به زودی اضافه خواهد شد"),
-			count: 8,
-		},
-	];
-
-	const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setSearchTerm(e.target.value);
-	};
-
-	const handleExport = () => {
-		toast.success("گزارش با موفقیت آماده شد");
-	};
-
-	return (
-		<main className={styles.page}>
-			<div className={styles.container}>
-				{/* Header */}
-				<header className={styles.header}>
-					<div className={styles.headerContent}>
-						<div className={styles.headerTitle}>
-							<h1>مدیریت پیمانکاران</h1>
-							<p>سیستم جامع مدیریت پیمانکاران و قراردادهای پروژه</p>
-						</div>
-						<div className={styles.headerActions}>
-							<button
-								className={styles.exportButton}
-								onClick={handleExport}
-							>
-								<Download size={18} />
-								خروجی گزارش
-							</button>
-							<button
-								className={styles.addButton}
-								onClick={() => setShowAddContractor(true)}
-							>
-								<Plus size={18} />
-								افزودن پیمانکار
-							</button>
-						</div>
-					</div>
-
-					{/* Search and Filters */}
-					<div className={styles.searchSection}>
-						<div className={styles.searchBox}>
-							<Search
-								size={20}
-								className={styles.searchIcon}
-							/>
-							<input
-								type='text'
-								placeholder='جستجوی پیمانکار، شرکت یا تخصص...'
-								value={searchTerm}
-								onChange={handleSearch}
-								className={styles.searchInput}
-							/>
-						</div>
-						<div className={styles.filters}>
-							<button
-								className={`${styles.filterTab} ${activeTab === "all" ? styles.active : ""}`}
-								onClick={() => setActiveTab("all")}
-							>
-								همه پیمانکاران
-							</button>
-							<button
-								className={`${styles.filterTab} ${activeTab === "active" ? styles.active : ""}`}
-								onClick={() => setActiveTab("active")}
-							>
-								پیمانکاران فعال
-							</button>
-							<button
-								className={`${styles.filterTab} ${activeTab === "pending" ? styles.active : ""}`}
-								onClick={() => setActiveTab("pending")}
-							>
-								در انتظار تایید
-							</button>
-							<button className={styles.filterButton}>
-								<Filter size={18} />
-								فیلتر پیشرفته
-							</button>
-						</div>
-					</div>
-				</header>
-
-				{/* Content */}
-				<div className={styles.content}>
-					{/* Statistics Section */}
-					<section className={styles.statsSection}>
-						<StatCard
-							title='کل پیمانکاران'
-							value={24}
-							change={12}
-							icon={Users}
-							color='primary'
-						/>
-						<StatCard
-							title='قراردادهای فعال'
-							value={18}
-							change={8}
-							icon={FileText}
-							color='success'
-						/>
-						<StatCard
-							title='ارزش کل قراردادها'
-							value={12500000000}
-							change={15}
-							icon={DollarSign}
-							color='warning'
-							format='currency'
-						/>
-						<StatCard
-							title='میانگین رضایت'
-							value={4.6}
-							change={5}
-							icon={Award}
-							color='info'
-						/>
-					</section>
-
-					{/* Quick Access Section */}
-					<section className={styles.quickAccessSection}>
-						<h2>دسترسی سریع</h2>
-						<div className={styles.quickAccessGrid}>
-							{quickAccessLinks.map((link, index) => (
-								<QuickAccessCard
-									key={index}
-									{...link}
-								/>
+			{isLoading ? (
+				<p style={loadingStyle}>در حال بارگذاری...</p>
+			) : items.length === 0 ? (
+				<p style={emptyStyle}>هیچ پیمانکاری یافت نشد.</p>
+			) : (
+				<div style={tableWrap}>
+					<table style={table}>
+						<thead>
+							<tr>
+								{["نوع", "نام", "کد ملی / شناسه", "شناسه تفصیلی", "تلفن", "تخصص", "امتیاز", "عملیات"].map((h) => (
+									<th key={h} style={th}>{h}</th>
+								))}
+							</tr>
+						</thead>
+						<tbody>
+							{items.map((c) => (
+								<tr key={c.id}>
+									<td style={td}>
+										<span style={{ ...badge, background: c.type === "company" ? "#dbeafe" : "#dcfce7", color: c.type === "company" ? "#1e40af" : "#166534" }}>
+											{c.type === "company" ? "شرکتی" : "حقیقی"}
+										</span>
+									</td>
+									<td style={td}>{c.first_name} {c.last_name}</td>
+									<td style={td}><code style={{ fontSize: 12 }}>{c.national_id}</code></td>
+									<td style={td}><code style={{ fontSize: 12 }}>{c.detailed_id}</code></td>
+									<td style={td}>{c.phone || "—"}</td>
+									<td style={td}>{c.specialty || "—"}</td>
+									<td style={td}>{c.rating != null ? `${c.rating} / 5` : "—"}</td>
+									<td style={td}>
+										<div style={{ display: "flex", gap: 8 }}>
+											<button style={iconBtn} onClick={() => openEdit(c)} title="ویرایش">
+												<Pencil size={15} />
+											</button>
+											<button style={{ ...iconBtn, color: "#ef4444" }} onClick={() => setDeleteConfirm(c.id)} title="حذف">
+												<Trash2 size={15} />
+											</button>
+										</div>
+									</td>
+								</tr>
 							))}
-						</div>
-					</section>
+						</tbody>
+					</table>
+				</div>
+			)}
 
-					{/* Main Content Grid */}
-					<div className={styles.mainGrid}>
-						{/* Contractors List */}
-						<section className={styles.contractorsSection}>
-							<div className={styles.sectionHeader}>
-								<h2>پیمانکاران</h2>
-								<button className={styles.viewAllButton}>
-									مشاهده همه
-									<ChevronRight size={16} />
+			{/* Pagination */}
+			{totalPages > 1 && (
+				<div style={paginationStyle}>
+					<button style={pageBtn} disabled={page <= 1} onClick={() => setPage((p) => p - 1)}><ChevronRight size={16} /></button>
+					<span style={{ fontSize: 13, color: "#6b7280" }}>صفحه {page} از {totalPages}</span>
+					<button style={pageBtn} disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}><ChevronLeft size={16} /></button>
+				</div>
+			)}
+
+			{/* Create / Edit Modal */}
+			{showModal && (
+				<div style={overlay} onClick={closeModal}>
+					<div style={modal} onClick={(e) => e.stopPropagation()} dir="rtl">
+						<h2 style={{ margin: "0 0 20px", fontSize: 17, fontWeight: 700 }}>
+							{editingId ? "ویرایش پیمانکار" : "پیمانکار جدید"}
+						</h2>
+						<form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+							<div style={fieldGroup}>
+								<label style={labelStyle}>نوع</label>
+								<select style={inputStyle} value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}>
+									<option value="individual">حقیقی</option>
+									<option value="company">شرکتی</option>
+								</select>
+							</div>
+							<div style={grid2}>
+								<Field label="نام *" value={form.first_name} onChange={(v) => setForm((f) => ({ ...f, first_name: v }))} />
+								<Field label="نام خانوادگی *" value={form.last_name} onChange={(v) => setForm((f) => ({ ...f, last_name: v }))} />
+							</div>
+							<div style={grid2}>
+								<Field label="کد ملی *" value={form.national_id} onChange={(v) => setForm((f) => ({ ...f, national_id: v }))} />
+								<Field label="شناسه تفصیلی *" value={form.detailed_id} onChange={(v) => setForm((f) => ({ ...f, detailed_id: v }))} />
+							</div>
+							<div style={grid2}>
+								<Field label="تلفن" value={form.phone ?? ""} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} />
+								<Field label="تخصص" value={form.specialty ?? ""} onChange={(v) => setForm((f) => ({ ...f, specialty: v }))} />
+							</div>
+							<Field label="آدرس" value={form.address ?? ""} onChange={(v) => setForm((f) => ({ ...f, address: v }))} />
+							<Field
+								label="امتیاز (0 تا 5)"
+								value={form.rating != null ? String(form.rating) : ""}
+								onChange={(v) => setForm((f) => ({ ...f, rating: v ? parseFloat(v) : undefined }))}
+								type="number"
+							/>
+							<div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+								<button type="button" style={cancelBtn} onClick={closeModal}>انصراف</button>
+								<button type="submit" style={primaryBtn} disabled={isPending}>
+									{isPending ? "در حال ذخیره..." : editingId ? "ذخیره تغییرات" : "ایجاد پیمانکار"}
 								</button>
 							</div>
-							<div className={styles.contractorsGrid}>
-								{mockContractors.map((contractor) => (
-									<ContractorCard
-										key={contractor.id}
-										contractor={contractor}
-									/>
-								))}
-							</div>
-						</section>
-
-						{/* Right Sidebar */}
-						<aside className={styles.sidebar}>
-							{/* Recent Activity */}
-							<RecentActivity activities={mockActivities} />
-
-							{/* Status Statements */}
-							<div className={styles.statementsSection}>
-								<div className={styles.sectionHeader}>
-									<h3>صورت‌های وضعیت اخیر</h3>
-									<button className={styles.viewAllButton}>مشاهده همه</button>
-								</div>
-								<div className={styles.statementsList}>
-									{mockStatements.map((statement) => (
-										<StatusStatementCard
-											key={statement.id}
-											statement={statement}
-										/>
-									))}
-								</div>
-							</div>
-
-							{/* Performance Summary */}
-							<div className={styles.performanceSummary}>
-								<div className={styles.sectionHeader}>
-									<h3>خلاصه عملکرد</h3>
-								</div>
-								<div className={styles.performanceMetrics}>
-									<div className={styles.metric}>
-										<span className={styles.metricLabel}>تکمیل پروژه‌ها</span>
-										<div className={styles.metricBar}>
-											<div
-												className={styles.metricFill}
-												style={{ width: "85%" }}
-											></div>
-										</div>
-										<span className={styles.metricValue}>85%</span>
-									</div>
-									<div className={styles.metric}>
-										<span className={styles.metricLabel}>پرداخت به موقع</span>
-										<div className={styles.metricBar}>
-											<div
-												className={styles.metricFill}
-												style={{ width: "92%" }}
-											></div>
-										</div>
-										<span className={styles.metricValue}>92%</span>
-									</div>
-									<div className={styles.metric}>
-										<span className={styles.metricLabel}>رضایت مشتری</span>
-										<div className={styles.metricBar}>
-											<div
-												className={styles.metricFill}
-												style={{ width: "88%" }}
-											></div>
-										</div>
-										<span className={styles.metricValue}>88%</span>
-									</div>
-								</div>
-							</div>
-						</aside>
+						</form>
 					</div>
 				</div>
-			</div>
-		</main>
+			)}
+
+			{/* Delete confirm */}
+			{deleteConfirm && (
+				<div style={overlay} onClick={() => setDeleteConfirm(null)}>
+					<div style={{ ...modal, maxWidth: 380 }} onClick={(e) => e.stopPropagation()} dir="rtl">
+						<h3 style={{ margin: "0 0 12px", fontSize: 16 }}>حذف پیمانکار</h3>
+						<p style={{ margin: "0 0 20px", fontSize: 14, color: "#6b7280" }}>آیا مطمئن هستید؟ این عملیات قابل بازگشت نیست.</p>
+						<div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+							<button style={cancelBtn} onClick={() => setDeleteConfirm(null)}>انصراف</button>
+							<button
+								style={{ ...primaryBtn, background: "#ef4444" }}
+								disabled={deleteMut.isPending}
+								onClick={() => deleteMut.mutate(deleteConfirm!)}
+							>
+								{deleteMut.isPending ? "در حال حذف..." : "حذف"}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+		</div>
 	);
 }
+
+// --------------- Sub-components ---------------
+
+function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
+	return (
+		<div style={fieldGroup}>
+			<label style={labelStyle}>{label}</label>
+			<input type={type} value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
+		</div>
+	);
+}
+
+// --------------- Styles ---------------
+
+const wrap: React.CSSProperties = { padding: "24px", maxWidth: 1100, margin: "0 auto" };
+const header: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 };
+const titleStyle: React.CSSProperties = { fontSize: 22, fontWeight: 700, margin: 0 };
+const searchBar: React.CSSProperties = { display: "flex", gap: 10, marginBottom: 20, alignItems: "center" };
+const loadingStyle: React.CSSProperties = { textAlign: "center", color: "#6b7280", padding: 40 };
+const emptyStyle: React.CSSProperties = { textAlign: "center", color: "#6b7280", padding: 40 };
+const tableWrap: React.CSSProperties = { overflowX: "auto", background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb" };
+const table: React.CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
+const th: React.CSSProperties = { padding: "12px 16px", textAlign: "right", fontSize: 13, color: "#6b7280", fontWeight: 600, borderBottom: "1px solid #f3f4f6", background: "#f9fafb" };
+const td: React.CSSProperties = { padding: "12px 16px", borderBottom: "1px solid #f9fafb", verticalAlign: "middle" };
+const badge: React.CSSProperties = { padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600 };
+const iconBtn: React.CSSProperties = { background: "none", border: "none", cursor: "pointer", color: "#6b7280", padding: 4, display: "flex", alignItems: "center" };
+const paginationStyle: React.CSSProperties = { display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 };
+const pageBtn: React.CSSProperties = { background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 10px", cursor: "pointer" };
+const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 };
+const modal: React.CSSProperties = { background: "#fff", borderRadius: 12, padding: 28, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto" };
+const grid2: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 };
+const fieldGroup: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4 };
+const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: "#374151" };
+const inputStyle: React.CSSProperties = { padding: "8px 12px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 14, fontFamily: "inherit", outline: "none" };
+const primaryBtn: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, padding: "8px 18px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 14 };
+const cancelBtn: React.CSSProperties = { padding: "8px 18px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 14 };

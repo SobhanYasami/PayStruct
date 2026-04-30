@@ -33,13 +33,13 @@ import (
 //     application layer or a citext column on Postgres ≥ 9.1).
 type Employee struct {
 	BaseModel
-	CompanyID  uuid.UUID `gorm:"type:uuid;not null;index"             json:"company_id"`
-	NationalID string    `gorm:"size:32;not null;uniqueIndex"         json:"national_id"`
+	CompanyID  uuid.UUID `gorm:"type:uuid;not null;index" json:"company_id"`
+	NationalID string    `gorm:"size:32;not null;uniqueIndex" json:"national_id"`
 
-	FirstName string `gorm:"size:120;not null"             json:"first_name"`
-	LastName  string `gorm:"size:120;not null"             json:"last_name"`
-	Email     string `gorm:"size:320;uniqueIndex"          json:"email,omitempty"`
-	Phone     string `gorm:"size:32"                       json:"phone,omitempty"`
+	FirstName string `gorm:"size:120;not null" json:"first_name"`
+	LastName  string `gorm:"size:120;not null" json:"last_name"`
+	Email     string `gorm:"size:320;uniqueIndex" json:"email,omitempty"`
+	Phone     string `gorm:"size:32" json:"phone,omitempty"`
 
 	// Disjoint specialization. CHECK keeps the invariant even if the type
 	// is bypassed via raw SQL.
@@ -48,7 +48,7 @@ type Employee struct {
 	// Overlap specialization. Use a GIN index for `roles @> '{manager}'`
 	// and `roles && ARRAY[...]` queries; declared in MigrateIndexes below
 	// because GORM tags don't express GIN cleanly.
-	Roles pq.StringArray `gorm:"type:text[];not null;default:'{}'"   json:"roles"`
+	Roles pq.StringArray `gorm:"type:text[];not null;default:'{}'" json:"roles"`
 
 	// Argon2id hash + parameters, encoded per `argon2.IDKey` recommendation.
 	// Empty => SSO-only account.

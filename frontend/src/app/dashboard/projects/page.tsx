@@ -1,626 +1,397 @@
 "use client";
 
 import { useState } from "react";
-import styles from "./page.module.css";
-import Dialog from "@/components/ui/Dialog";
-import PageHeader from "@/components/layout/ProjectPageHeader";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import {
-	Plus,
-	Edit,
-	Trash2,
-	Calendar,
-	DollarSign,
-	Users,
-	ChevronLeft,
-	ChevronRight,
-	Building,
-	Clock,
-	CheckCircle,
-	AlertCircle,
-} from "lucide-react";
-import { toPersianDigits } from "@/utils/PersianNumberCoverter";
+import Link from "next/link";
+import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-const Project_URL = `${API_URL}/management/projects/`;
 
-/* -------------------- Types -------------------- */
-interface Contractor {
-	ID: string;
-	name: string;
-	share: number;
-	statusStatements: number;
+function authHeaders() {
+	const token = typeof window !== "undefined" ? localStorage.getItem("usr-token") : "";
+	return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 }
 
-interface Project {
-	ID: string;
+// --------------- Types ---------------
+
+type Project = {
+	id: string;
+	company_id: string;
+	code: string;
 	name: string;
-	phase: number;
-	contractors: Contractor[];
+	description?: string;
+	category?: string;
+	status: string;
+	priority: string;
+	start_date?: string;
+	end_date?: string;
+	budget_estimate: string;
+	budget_actual: string;
+	currency: string;
+	tags: string[];
+};
+
+type CreateProjectBody = {
+	code: string;
+	name: string;
+	description?: string;
+	category?: string;
+	status?: string;
+	priority?: string;
+	start_date?: string;
+	end_date?: string;
+	budget_estimate?: string;
+	currency?: string;
+	tags?: string[];
+};
+
+type ListResponse = {
+	data: { data: Project[]; total: number; page: number; limit: number };
+};
+
+// --------------- API ---------------
+
+async function fetchProjects(page: number, status: string): Promise<{ items: Project[]; total: number }> {
+	const params = new URLSearchParams({ page: String(page), limit: "15" });
+	if (status) params.set("status", status);
+	const res = await fetch(`${API_URL}/projects?${params}`, { headers: authHeaders() });
+	if (!res.ok) throw new Error("Failed to fetch projects");
+	const json: ListResponse = await res.json();
+	return { items: json.data.data ?? [], total: json.data.total ?? 0 };
 }
 
-interface ProjectCreationPayload {
-	name: string;
-	phase: string;
-}
-
-/* -------------------- API Functions -------------------- */
-async function projectCreationReq(payload: ProjectCreationPayload) {
-	const token = localStorage.getItem("usr-token");
-	if (!token) throw new Error("UnAuthorized");
-
-	const res = await fetch(`${Project_URL}`, {
+async function createProject(body: CreateProjectBody): Promise<Project> {
+	const res = await fetch(`${API_URL}/projects`, {
 		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `bearer ${token}`,
-		},
-		body: JSON.stringify(payload),
+		headers: authHeaders(),
+		body: JSON.stringify(body),
 	});
-
 	if (!res.ok) {
 		const err = await res.json();
-		throw new Error(err.message || "Creating project failed!");
+		throw new Error(err.message || "Failed to create project");
 	}
-
-	return res.json();
+	const json = await res.json();
+	return json.data;
 }
 
-async function getAllProjects() {
-	const token = localStorage.getItem("usr-token");
-	if (!token) throw new Error("UnAuthorized");
-
-	const res = await fetch(`${Project_URL}`, {
-		method: "GET",
-		headers: {
-			Authorization: `bearer ${token}`,
-		},
+async function updateProject({ id, body }: { id: string; body: Partial<CreateProjectBody> }): Promise<Project> {
+	const res = await fetch(`${API_URL}/projects/${id}`, {
+		method: "PUT",
+		headers: authHeaders(),
+		body: JSON.stringify(body),
 	});
-
 	if (!res.ok) {
 		const err = await res.json();
-		throw new Error(err.message || "Failed to fetch projects!");
+		throw new Error(err.message || "Failed to update project");
 	}
-
-	return res.json();
+	const json = await res.json();
+	return json.data;
 }
 
-/* -------------------- Project Card Component -------------------- */
-function ProjectCard({
-	project,
-	onEdit,
-	onDelete,
-}: {
-	project: Project;
-	onEdit: () => void;
-	onDelete: () => void;
-}) {
-	const getStatusColor = (status?: string) => {
-		switch (status) {
-			case "active":
-				return "var(--status-active)";
-			case "completed":
-				return "var(--status-completed)";
-			case "on-hold":
-				return "var(--status-onhold)";
-			default:
-				return "var(--status-default)";
-		}
-	};
-
-	const formatDate = (dateString: string) => {
-		try {
-			return new Date(dateString).toLocaleDateString("fa-IR");
-		} catch {
-			return dateString;
-		}
-	};
-
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat("fa-IR").format(amount) + " تومان";
-	};
-
-	return (
-		<div className={styles.projectCard}>
-			<div className={styles.projectCardHeader}>
-				<div className={styles.projectTitleSection}>
-					<Building
-						size={20}
-						className={styles.projectIcon}
-					/>
-					<h3 className={styles.projectName}>{project.name}</h3>
-				</div>
-				<div className={styles.projectActions}>
-					<button
-						className={`${styles.actionButton} ${styles.editButton}`}
-						onClick={onEdit}
-						title='ویرایش پروژه'
-						type='button'
-					>
-						<Edit size={18} />
-					</button>
-					<button
-						className={`${styles.actionButton} ${styles.deleteButton}`}
-						onClick={onDelete}
-						title='حذف پروژه'
-						type='button'
-					>
-						<Trash2 size={18} />
-					</button>
-				</div>
-			</div>
-
-			<div className={styles.projectDetails}>
-				<div className={styles.detailRow}>
-					<div className={styles.detailItem}>
-						<Calendar
-							size={16}
-							className={styles.detailIcon}
-						/>
-						<span className={styles.detailLabel}>تاریخ شروع:</span>
-						<span className={styles.detailValue}>--</span>
-					</div>
-					<div className={styles.detailItem}>
-						<Clock
-							size={16}
-							className={styles.detailIcon}
-						/>
-						<span className={styles.detailLabel}>تاریخ پایان:</span>
-						<span className={styles.detailValue}>--</span>
-					</div>
-				</div>
-
-				<div className={styles.detailRow}>
-					<div className={styles.detailItem}>
-						<DollarSign
-							size={16}
-							className={styles.detailIcon}
-						/>
-						<span className={styles.detailLabel}>بودجه:</span>
-						<span className={styles.detailValue}>--</span>
-					</div>
-					<div className={styles.detailItem}>
-						<Users
-							size={16}
-							className={styles.detailIcon}
-						/>
-						<span className={styles.detailLabel}>پیمانکاران:</span>
-						<span className={styles.detailValue}>
-							{(project.contractors &&
-								toPersianDigits(project.contractors?.length)) ||
-								toPersianDigits(0)}{" "}
-							نفر
-						</span>
-					</div>
-				</div>
-			</div>
-
-			<div className={styles.projectPhases}>
-				<span className={styles.phasesLabel}>فازها:</span>
-				<div className={styles.phasesList}>
-					<span className={styles.phaseBadge}>
-						فاز {project.phase && toPersianDigits(project.phase)}
-					</span>
-				</div>
-			</div>
-
-			<div className={styles.projectFooter}>
-				<div className={styles.turnover}>
-					<span className={styles.turnoverLabel}>گردش مالی:</span>
-					<span className={styles.turnoverValue}>--</span>
-				</div>
-				<div className={styles.lastUpdate}>آخرین بروزرسانی: --</div>
-			</div>
-		</div>
-	);
+async function deleteProject(id: string): Promise<void> {
+	const res = await fetch(`${API_URL}/projects/${id}`, { method: "DELETE", headers: authHeaders() });
+	if (!res.ok) {
+		const err = await res.json();
+		throw new Error(err.message || "Failed to delete project");
+	}
 }
 
-/* -------------------- Create Project Form -------------------- */
-function CreateProjectForm({ onCancel }: { onCancel: () => void }) {
-	const [formData, setFormData] = useState({
-		name: "",
-		phase: "",
-	});
-	const [errors, setErrors] = useState<{ name?: string; phase?: string }>({});
-	const queryClient = useQueryClient();
+// --------------- Labels ---------------
 
-	const mutation = useMutation({
-		mutationFn: projectCreationReq,
-		onSuccess: (data) => {
-			toast.success(data.message);
-			queryClient.invalidateQueries({ queryKey: ["Projects"] });
-			onCancel();
-		},
-		onError: (error) => {
-			toast.error(error.message);
-		},
+const statusLabel: Record<string, string> = {
+	planning: "برنامه‌ریزی",
+	active: "فعال",
+	on_hold: "معلق",
+	completed: "تکمیل‌شده",
+	cancelled: "لغو‌شده",
+};
+const statusColor: Record<string, { bg: string; color: string }> = {
+	planning: { bg: "#dbeafe", color: "#1e40af" },
+	active: { bg: "#dcfce7", color: "#166534" },
+	on_hold: { bg: "#fef3c7", color: "#92400e" },
+	completed: { bg: "#e0e7ff", color: "#3730a3" },
+	cancelled: { bg: "#fee2e2", color: "#991b1b" },
+};
+const priorityLabel: Record<string, string> = {
+	low: "پایین",
+	medium: "متوسط",
+	high: "بالا",
+	critical: "بحرانی",
+};
+
+// --------------- Empty form ---------------
+const emptyForm: CreateProjectBody = {
+	code: "", name: "", description: "", category: "",
+	status: "planning", priority: "medium", start_date: "", end_date: "",
+	budget_estimate: "", currency: "IRR",
+};
+
+// --------------- Page ---------------
+
+export default function ProjectsPage() {
+	const qc = useQueryClient();
+	const [page, setPage] = useState(1);
+	const [statusFilter, setStatusFilter] = useState("");
+	const [showModal, setShowModal] = useState(false);
+	const [editingId, setEditingId] = useState<string | null>(null);
+	const [form, setForm] = useState<CreateProjectBody>(emptyForm);
+	const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+	const { data, isLoading } = useQuery({
+		queryKey: ["projects", page, statusFilter],
+		queryFn: () => fetchProjects(page, statusFilter),
 	});
 
-	const validateForm = () => {
-		const newErrors: { name?: string; phase?: string } = {};
-		if (!formData.name.trim()) newErrors.name = "نام پروژه الزامی است";
-		if (!formData.phase.trim()) newErrors.phase = "شماره فاز الزامی است";
-		return newErrors;
+	const createMut = useMutation({
+		mutationFn: createProject,
+		onSuccess: () => {
+			toast.success("پروژه ایجاد شد");
+			closeModal();
+			qc.invalidateQueries({ queryKey: ["projects"] });
+		},
+		onError: (e: Error) => toast.error(e.message),
+	});
+
+	const updateMut = useMutation({
+		mutationFn: updateProject,
+		onSuccess: () => {
+			toast.success("پروژه به‌روزرسانی شد");
+			closeModal();
+			qc.invalidateQueries({ queryKey: ["projects"] });
+		},
+		onError: (e: Error) => toast.error(e.message),
+	});
+
+	const deleteMut = useMutation({
+		mutationFn: deleteProject,
+		onSuccess: () => {
+			toast.success("پروژه حذف شد");
+			setDeleteConfirm(null);
+			qc.invalidateQueries({ queryKey: ["projects"] });
+		},
+		onError: (e: Error) => toast.error(e.message),
+	});
+
+	const openCreate = () => { setForm(emptyForm); setEditingId(null); setShowModal(true); };
+	const openEdit = (p: Project) => {
+		setForm({
+			code: p.code, name: p.name, description: p.description ?? "",
+			category: p.category ?? "", status: p.status, priority: p.priority,
+			start_date: p.start_date ? p.start_date.slice(0, 10) : "",
+			end_date: p.end_date ? p.end_date.slice(0, 10) : "",
+			budget_estimate: p.budget_estimate, currency: p.currency,
+		});
+		setEditingId(p.id);
+		setShowModal(true);
 	};
+	const closeModal = () => { setShowModal(false); setEditingId(null); };
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-		const validationErrors = validateForm();
-
-		if (Object.keys(validationErrors).length > 0) {
-			setErrors(validationErrors);
-			return;
-		}
-
-		mutation.mutate({ name: formData.name, phase: formData.phase });
-	};
-
-	const handleInputChange = (field: string, value: string) => {
-		setFormData((prev) => ({ ...prev, [field]: value }));
-		if (errors[field as keyof typeof errors]) {
-			setErrors((prev) => ({ ...prev, [field]: undefined }));
+		if (editingId) {
+			updateMut.mutate({ id: editingId, body: form });
+		} else {
+			createMut.mutate(form);
 		}
 	};
 
+	const items = data?.items ?? [];
+	const total = data?.total ?? 0;
+	const totalPages = Math.ceil(total / 15) || 1;
+	const isPending = createMut.isPending || updateMut.isPending;
+
 	return (
-		<Dialog
-			title='ایجاد پروژه جدید'
-			onClose={onCancel}
-			size='medium'
-		>
-			<form
-				className={styles.dialogForm}
-				onSubmit={handleSubmit}
-			>
-				<div className={styles.formGroup}>
-					<label className={styles.formLabel}>
-						نام پروژه
-						<span className={styles.required}>*</span>
-					</label>
-					<input
-						type='text'
-						placeholder='مثال: پروژه مسکونی گلستان'
-						className={`${styles.dialogInput} ${errors.name ? styles.inputError : ""}`}
-						value={formData.name}
-						onChange={(e) => handleInputChange("name", e.target.value)}
-						disabled={mutation.isPending}
-					/>
-					{errors.name && (
-						<span className={styles.errorMessage}>{errors.name}</span>
-					)}
-				</div>
-
-				<div className={styles.formGroup}>
-					<label className={styles.formLabel}>
-						شماره فاز
-						<span className={styles.required}>*</span>
-					</label>
-					<input
-						type='number'
-						placeholder='مثال: ۱'
-						min='1'
-						className={`${styles.dialogInput} ${errors.phase ? styles.inputError : ""}`}
-						value={formData.phase}
-						onChange={(e) => handleInputChange("phase", e.target.value)}
-						disabled={mutation.isPending}
-					/>
-					{errors.phase && (
-						<span className={styles.errorMessage}>{errors.phase}</span>
-					)}
-				</div>
-
-				<div className={styles.dialogFooter}>
-					<button
-						type='button'
-						className={`${styles.dialogButton} ${styles.dialogButtonSecondary}`}
-						onClick={onCancel}
-						disabled={mutation.isPending}
+		<div style={wrap} dir="rtl">
+			<div style={header}>
+				<h1 style={title}>پروژه‌ها</h1>
+				<div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+					<select
+						value={statusFilter}
+						onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+						style={selectStyle}
 					>
-						لغو
-					</button>
-					<button
-						type='submit'
-						className={`${styles.dialogButton} ${styles.dialogButtonPrimary}`}
-						disabled={mutation.isPending}
-					>
-						{mutation.isPending ? (
-							<span className={styles.loadingText}>در حال ایجاد...</span>
-						) : (
-							<>
-								<Plus size={18} />
-								ایجاد پروژه
-							</>
-						)}
-					</button>
-				</div>
-			</form>
-		</Dialog>
-	);
-}
-
-/* -------------------- Delete Confirmation Dialog -------------------- */
-function DeleteConfirmationDialog({
-	projectName,
-	onConfirm,
-	onCancel,
-}: {
-	projectName?: string;
-	onConfirm: () => void;
-	onCancel: () => void;
-}) {
-	return (
-		<Dialog
-			title='تأیید حذف پروژه'
-			onClose={onCancel}
-			size='small'
-		>
-			<div className={styles.deleteDialogContent}>
-				<AlertCircle
-					size={48}
-					className={styles.warningIcon}
-				/>
-				<p className={styles.deleteMessage}>
-					آیا از حذف پروژه <strong>{projectName}</strong> مطمئن هستید؟
-				</p>
-				<p className={styles.deleteWarning}>
-					این عمل غیرقابل بازگشت است و تمامی اطلاعات مرتبط با پروژه حذف خواهند
-					شد.
-				</p>
-				<div className={styles.dialogFooter}>
-					<button
-						type='button'
-						className={`${styles.dialogButton} ${styles.dialogButtonSecondary}`}
-						onClick={onCancel}
-					>
-						لغو
-					</button>
-					<button
-						type='button'
-						className={`${styles.dialogButton} ${styles.dialogButtonDanger}`}
-						onClick={onConfirm}
-					>
-						<Trash2 size={18} />
-						حذف پروژه
+						<option value="">همه وضعیت‌ها</option>
+						{Object.entries(statusLabel).map(([v, l]) => (
+							<option key={v} value={v}>{l}</option>
+						))}
+					</select>
+					<button style={primaryBtn} onClick={openCreate}>
+						<Plus size={16} /> افزودن پروژه
 					</button>
 				</div>
 			</div>
-		</Dialog>
-	);
-}
 
-/* -------------------- Stats Card Component -------------------- */
-function StatCard({
-	icon: Icon,
-	value,
-	label,
-	type = "default",
-}: {
-	icon: any;
-	value: string | number;
-	label: string;
-	type?: "default" | "active" | "budget";
-}) {
-	return (
-		<div className={styles.statCard}>
-			<div className={`${styles.statIcon} ${styles[`${type}Icon`]}`}>
-				<Icon size={24} />
-			</div>
-			<div className={styles.statContent}>
-				<span className={styles.statValue}>{value}</span>
-				<span className={styles.statLabel}>{label}</span>
-			</div>
+			{isLoading ? (
+				<p style={loading}>در حال بارگذاری...</p>
+			) : items.length === 0 ? (
+				<p style={empty}>هیچ پروژه‌ای یافت نشد.</p>
+			) : (
+				<div style={tableWrap}>
+					<table style={table}>
+						<thead>
+							<tr>
+								{["کد", "نام", "وضعیت", "اولویت", "بودجه تخمینی", "ارز", "عملیات"].map((h) => (
+									<th key={h} style={th}>{h}</th>
+								))}
+							</tr>
+						</thead>
+						<tbody>
+							{items.map((p) => {
+								const sc = statusColor[p.status] ?? { bg: "#f3f4f6", color: "#374151" };
+								return (
+									<tr key={p.id} style={tr}>
+										<td style={td}><code style={{ fontSize: 12 }}>{p.code}</code></td>
+										<td style={td}>
+											<Link href={`/dashboard/projects/${p.id}`} style={{ color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>
+												{p.name}
+											</Link>
+										</td>
+										<td style={td}>
+											<span style={{ ...badge, background: sc.bg, color: sc.color }}>
+												{statusLabel[p.status] ?? p.status}
+											</span>
+										</td>
+										<td style={td}>{priorityLabel[p.priority] ?? p.priority}</td>
+										<td style={td}>{Number(p.budget_estimate).toLocaleString()}</td>
+										<td style={td}>{p.currency}</td>
+										<td style={td}>
+											<div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+											<Link href={`/dashboard/contracts?project_id=${p.id}`} style={{ ...iconBtn, color: "#2563eb", textDecoration: "none" }} title="قراردادها">
+												<FileText size={15} />
+											</Link>
+												<button style={iconBtn} onClick={() => openEdit(p)} title="ویرایش">
+													<Pencil size={15} />
+												</button>
+												<button style={{ ...iconBtn, color: "#ef4444" }} onClick={() => setDeleteConfirm(p.id)} title="حذف">
+													<Trash2 size={15} />
+												</button>
+											</div>
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</div>
+			)}
+
+			{/* Pagination */}
+			{totalPages > 1 && (
+				<div style={pagination}>
+					<button style={pageBtn} disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+						<ChevronRight size={16} />
+					</button>
+					<span style={{ fontSize: 13, color: "#6b7280" }}>صفحه {page} از {totalPages}</span>
+					<button style={pageBtn} disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+						<ChevronLeft size={16} />
+					</button>
+				</div>
+			)}
+
+			{/* Create / Edit Modal */}
+			{showModal && (
+				<div style={overlay} onClick={closeModal}>
+					<div style={modal} onClick={(e) => e.stopPropagation()} dir="rtl">
+						<h2 style={{ margin: "0 0 20px", fontSize: 17, fontWeight: 700 }}>
+							{editingId ? "ویرایش پروژه" : "پروژه جدید"}
+						</h2>
+						<form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+							<div style={grid2}>
+								<Field label="کد پروژه *" value={form.code} onChange={(v) => setForm((f) => ({ ...f, code: v }))} />
+								<Field label="نام پروژه *" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} />
+							</div>
+							<Field label="توضیحات" value={form.description ?? ""} onChange={(v) => setForm((f) => ({ ...f, description: v }))} />
+							<div style={grid2}>
+								<Field label="دسته‌بندی" value={form.category ?? ""} onChange={(v) => setForm((f) => ({ ...f, category: v }))} />
+								<div style={fieldGroup}>
+									<label style={labelStyle}>وضعیت</label>
+									<select style={inputStyle} value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
+										{Object.entries(statusLabel).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+									</select>
+								</div>
+							</div>
+							<div style={grid2}>
+								<div style={fieldGroup}>
+									<label style={labelStyle}>اولویت</label>
+									<select style={inputStyle} value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}>
+										{Object.entries(priorityLabel).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+									</select>
+								</div>
+								<Field label="ارز (3 حرف)" value={form.currency ?? "IRR"} onChange={(v) => setForm((f) => ({ ...f, currency: v }))} />
+							</div>
+							<div style={grid2}>
+								<Field label="تاریخ شروع" type="date" value={form.start_date ?? ""} onChange={(v) => setForm((f) => ({ ...f, start_date: v }))} />
+								<Field label="تاریخ پایان" type="date" value={form.end_date ?? ""} onChange={(v) => setForm((f) => ({ ...f, end_date: v }))} />
+							</div>
+							<Field label="بودجه تخمینی" value={form.budget_estimate ?? ""} onChange={(v) => setForm((f) => ({ ...f, budget_estimate: v }))} />
+							<div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+								<button type="button" style={cancelBtn} onClick={closeModal}>انصراف</button>
+								<button type="submit" style={primaryBtn} disabled={isPending}>
+									{isPending ? "در حال ذخیره..." : editingId ? "ذخیره تغییرات" : "ایجاد پروژه"}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
+
+			{/* Delete confirmation */}
+			{deleteConfirm && (
+				<div style={overlay} onClick={() => setDeleteConfirm(null)}>
+					<div style={{ ...modal, maxWidth: 380 }} onClick={(e) => e.stopPropagation()} dir="rtl">
+						<h3 style={{ margin: "0 0 12px", fontSize: 16 }}>حذف پروژه</h3>
+						<p style={{ margin: "0 0 20px", fontSize: 14, color: "#6b7280" }}>آیا مطمئن هستید؟ این عملیات قابل بازگشت نیست.</p>
+						<div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+							<button style={cancelBtn} onClick={() => setDeleteConfirm(null)}>انصراف</button>
+							<button
+								style={{ ...primaryBtn, background: "#ef4444" }}
+								disabled={deleteMut.isPending}
+								onClick={() => deleteMut.mutate(deleteConfirm!)}
+							>
+								{deleteMut.isPending ? "در حال حذف..." : "حذف"}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
 
-/* -------------------- Main Component -------------------- */
-export default function Projects() {
-	const [showCreate, setShowCreate] = useState(false);
-	const [showDelete, setShowDelete] = useState(false);
-	const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-	const [search, setSearch] = useState("");
-	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 6;
+// --------------- Sub-components ---------------
 
-	const {
-		isPending,
-		isError,
-		data: projectData,
-		error,
-	} = useQuery({
-		queryKey: ["Projects"],
-		queryFn: getAllProjects,
-	});
-
-	// Safely extract projects data
-	const projects: Project[] = projectData?.data || [];
-
-	const filteredProjects = projects.filter((project) =>
-		project.name.toLowerCase().includes(search.toLowerCase()),
-	);
-
-	const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
-	const paginatedProjects = filteredProjects.slice(
-		(currentPage - 1) * itemsPerPage,
-		currentPage * itemsPerPage,
-	);
-
-	const handleDeleteConfirm = () => {
-		// Implement delete logic here
-		toast.success(`پروژه ${selectedProject?.name} حذف شد`);
-		setShowDelete(false);
-		setSelectedProject(null);
-	};
-
-	const handleEditProject = (project: Project) => {
-		setSelectedProject(project);
-		// Implement edit logic
-		toast.error("قابلیت ویرایش به زودی اضافه خواهد شد");
-	};
-
-	const handleDeleteProject = (project: Project) => {
-		setSelectedProject(project);
-		setShowDelete(true);
-	};
-
-	// Calculate statistics
-	const totalBudget = filteredProjects.reduce((sum, project) => sum + 0, 0);
-
+function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
 	return (
-		<main className={styles.page}>
-			<div className={styles.container}>
-				<PageHeader
-					title='مدیریت پروژه‌ها'
-					subtitle='سیستم جامع مدیریت پروژه‌های ساخت و ساز'
-					searchValue={search}
-					onSearchChange={setSearch}
-					onCreateClick={() => setShowCreate(true)}
-				/>
-
-				<div className={styles.content}>
-					{isPending ? (
-						<div className={styles.loadingContainer}>
-							<div className={styles.loadingSpinner}></div>
-							<p>در حال بارگذاری پروژه‌ها...</p>
-						</div>
-					) : isError ? (
-						<div className={styles.errorContainer}>
-							<AlertCircle
-								size={48}
-								className={styles.errorIcon}
-							/>
-							<h3>خطا در بارگذاری داده‌ها</h3>
-							<p>{error.message}</p>
-							<button
-								type='button'
-								className={styles.retryButton}
-								onClick={() => window.location.reload()}
-							>
-								تلاش مجدد
-							</button>
-						</div>
-					) : (
-						<>
-							<div className={styles.statsContainer}>
-								<StatCard
-									icon={Building}
-									value={toPersianDigits(filteredProjects.length)}
-									label='پروژه کل'
-									type='default'
-								/>
-								<StatCard
-									icon={CheckCircle}
-									value={toPersianDigits(0)}
-									label='پروژه فعال'
-									type='active'
-								/>
-								<StatCard
-									icon={DollarSign}
-									value={new Intl.NumberFormat("fa-IR").format(totalBudget)}
-									label='بودجه کل'
-									type='budget'
-								/>
-							</div>
-
-							<div className={styles.projectGrid}>
-								{paginatedProjects.length > 0 ? (
-									paginatedProjects.map((project: Project) => (
-										<ProjectCard
-											key={`project-${project.ID}`}
-											project={project}
-											onEdit={() => handleEditProject(project)}
-											onDelete={() => handleDeleteProject(project)}
-										/>
-									))
-								) : (
-									<div className={styles.emptyState}>
-										<Building
-											size={64}
-											className={styles.emptyIcon}
-										/>
-										<h3>پروژه‌ای یافت نشد</h3>
-										<p>
-											{search
-												? "هیچ پروژه‌ای با این جستجو مطابقت ندارد"
-												: "هنوز پروژه‌ای ایجاد نشده است"}
-										</p>
-										{!search && (
-											<button
-												type='button'
-												className={styles.createFirstButton}
-												onClick={() => setShowCreate(true)}
-											>
-												<Plus size={18} />
-												ایجاد اولین پروژه
-											</button>
-										)}
-									</div>
-								)}
-							</div>
-
-							{filteredProjects.length > 0 && totalPages > 1 && (
-								<div className={styles.pagination}>
-									<button
-										type='button'
-										className={`${styles.pageButton} ${currentPage === 1 ? styles.disabled : ""}`}
-										onClick={() =>
-											setCurrentPage((prev) => Math.max(prev - 1, 1))
-										}
-										disabled={currentPage === 1}
-									>
-										<ChevronRight size={20} />
-										قبلی
-									</button>
-
-									<div className={styles.pageNumbers}>
-										{Array.from({ length: totalPages }, (_, i) => i + 1).map(
-											(page) => (
-												<button
-													key={`page-${page}`}
-													type='button'
-													className={`${styles.pageNumber} ${currentPage === page ? styles.active : ""}`}
-													onClick={() => setCurrentPage(page)}
-												>
-													{page}
-												</button>
-											),
-										)}
-									</div>
-
-									<button
-										type='button'
-										className={`${styles.pageButton} ${currentPage === totalPages ? styles.disabled : ""}`}
-										onClick={() =>
-											setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-										}
-										disabled={currentPage === totalPages}
-									>
-										بعدی
-										<ChevronLeft size={20} />
-									</button>
-								</div>
-							)}
-						</>
-					)}
-				</div>
-			</div>
-
-			{/* Dialogs */}
-			{showCreate && (
-				<CreateProjectForm onCancel={() => setShowCreate(false)} />
-			)}
-
-			{showDelete && selectedProject && (
-				<DeleteConfirmationDialog
-					projectName={selectedProject.name}
-					onConfirm={handleDeleteConfirm}
-					onCancel={() => {
-						setShowDelete(false);
-						setSelectedProject(null);
-					}}
-				/>
-			)}
-		</main>
+		<div style={fieldGroup}>
+			<label style={labelStyle}>{label}</label>
+			<input type={type} value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
+		</div>
 	);
 }
+
+// --------------- Styles ---------------
+
+const wrap: React.CSSProperties = { padding: "24px", maxWidth: 1100, margin: "0 auto" };
+const header: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
+const title: React.CSSProperties = { fontSize: 22, fontWeight: 700, margin: 0 };
+const loading: React.CSSProperties = { textAlign: "center", color: "#6b7280", padding: 40 };
+const empty: React.CSSProperties = { textAlign: "center", color: "#6b7280", padding: 40 };
+const tableWrap: React.CSSProperties = { overflowX: "auto", background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb" };
+const table: React.CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
+const th: React.CSSProperties = { padding: "12px 16px", textAlign: "right", fontSize: 13, color: "#6b7280", fontWeight: 600, borderBottom: "1px solid #f3f4f6", background: "#f9fafb" };
+const td: React.CSSProperties = { padding: "12px 16px", borderBottom: "1px solid #f9fafb", verticalAlign: "middle" };
+const tr: React.CSSProperties = {};
+const badge: React.CSSProperties = { padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600 };
+const iconBtn: React.CSSProperties = { background: "none", border: "none", cursor: "pointer", color: "#6b7280", padding: 4, display: "flex", alignItems: "center" };
+const pagination: React.CSSProperties = { display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 };
+const pageBtn: React.CSSProperties = { background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 10px", cursor: "pointer" };
+const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 };
+const modal: React.CSSProperties = { background: "#fff", borderRadius: 12, padding: 28, width: "100%", maxWidth: 580, maxHeight: "90vh", overflowY: "auto" };
+const grid2: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 };
+const fieldGroup: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4 };
+const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: "#374151" };
+const inputStyle: React.CSSProperties = { padding: "8px 12px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 14, fontFamily: "inherit", outline: "none" };
+const primaryBtn: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, padding: "8px 18px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 14 };
+const cancelBtn: React.CSSProperties = { padding: "8px 18px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 14 };
+const selectStyle: React.CSSProperties = { padding: "7px 12px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 14, fontFamily: "inherit" };

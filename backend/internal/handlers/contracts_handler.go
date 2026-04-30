@@ -1,2332 +1,281 @@
 package handlers
 
-// import (
-// 	// "errors"
-// 	// "mime/multipart"
-
-// 	"errors"
-// 	"log"
-// 	"os"
-// 	"path/filepath"
-// 	"strconv"
-// 	"strings"
-// 	"time"
-
-// 	"github.com/gofiber/fiber/v2"
-// 	"github.com/google/uuid"
-// 	"github.com/jackc/pgx/v5/pgconn"
-// 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
-// 	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
-// 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
-
-// 	"github.com/go-playground/validator/v10"
-// 	"gorm.io/gorm"
-// )
-
-// // ContractHandler handles contractor-related endpoints
-// type ContractHandler struct {
-// 	contractService *services.ContractService
-// }
-
-// func NewContractHandler(db *gorm.DB) *ContractHandler {
-// 	return &ContractHandler{
-// 		contractService: services.NewContractService(db),
-// 	}
-// }
-
-// // -----------------------------------------------------
-// var validate = validator.New()
-
-// // ==========================
-// // Project Handlers
-// // ==========================
-// //
-// //	helper function
-// func isUniqueConstraintError(err error) bool {
-// 	var pgErr *pgconn.PgError
-// 	if errors.As(err, &pgErr) {
-// 		return pgErr.Code == "23505"
-// 	}
-// 	return false
-// }
-
-// // ! @Router /management/projects [post]
-// // ! @Summary Create a new project
-// // ! @Description Create a new project with the given name and phase
-// // ! @Tags Projects
-// // ! @Accept json
-// // ! @Produce json
-// // ! @Param project body struct{ Name string `json:"name" validate:"required"`; Phase uint8 `json:"phase" validate:"required"` } true "Project data"
-// // ! @Success 201 {object} SuccessResponse
-// // ! @Failure 400 {object} ErrorResponse
-// // ! @Failure 500 {object} ErrorResponse
-// // ! @Security ApiKeyAuth
-// func (h *ContractHandler) CreateProject(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	claims, ok := c.Locals("claims").(*schemas.JWTClaims)
-// 	if !ok {
-// 		return c.Status(fiber.StatusUnauthorized).
-// 			JSON(ErrorResponse(Unauthorized, "Unauthorized"))
-// 	}
-
-// 	//? 2) Parse and userID and companyID from JWT claims
-// 	userUUID, err := uuid.Parse(claims.UserID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusUnauthorized).
-// 			JSON(ErrorResponse(Unauthorized, "Invalid token"))
-// 	}
-
-// 	companyUUID, err := uuid.Parse(claims.CompanyID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusUnauthorized).
-// 			JSON(ErrorResponse(Unauthorized, "Invalid token"))
-// 	}
-// 	//? 3) Parse Body request
-// 	var req services.CreateProjectRequest
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).
-// 			JSON(ErrorResponse(BadRequest, "Invalid request body"))
-// 	}
-// 	//? 4) Validate using struct tags
-// 	if err := validate.Struct(req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).
-// 			JSON(ErrorResponse(BadRequest, "Validation failed"))
-// 	}
-
-// 	//? 5) Call the service
-// 	project, err := h.contractService.CreateProject(
-// 		c.Context(),
-// 		userUUID,
-// 		companyUUID,
-// 		req,
-// 	)
-
-// 	// ? 6) Handle errors from the service
-// 	if err != nil {
-// 		if errors.Is(err, services.ErrProjectAlreadyExists) {
-// 			return c.Status(fiber.StatusConflict).
-// 				JSON(ErrorResponse(Conflict, "Project already exists"))
-// 		}
-// 		return c.Status(fiber.StatusInternalServerError).
-// 			JSON(ErrorResponse(InternalError, "Failed to create project"))
-// 	}
-
-// 	//? 7) Return success response
-// 	return c.Status(fiber.StatusCreated).
-// 		JSON(SuccessResponse(project, "Project created successfully"))
-// }
-
-// // ! @Router /management/projects [get]
-// func (handler *ContractHandler) GetAllProject(c *fiber.Ctx) error {
-// 	//? 1) Call the service
-// 	// Pass c.Context() to maintain the timeout/cancellation.
-// 	responseProjects, err := handler.contractService.GetAllProjects(c.Context())
-
-// 	//? 2) Handle errors from the service
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error fetching projects"))
-// 	}
-
-// 	//? 3) Return success response
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(responseProjects, "Project Retrieved Successfully"))
-// }
-
-// // ! @Router /management/projects/:id [get]
-// func (handler *ContractHandler) GetProjectByID(c *fiber.Ctx) error {
-// 	//? 1) Get project ID from URL parameters
-// 	projectID := c.Params("id")
-// 	ProjectUUID, err := uuid.Parse(projectID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
-// 	}
-
-// 	//? 2) Call the service
-// 	project, err := handler.contractService.GetProjectByID(c.Context(), ProjectUUID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-// 	//? 3) Return success response
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(project, "Project Retrieved Successfully"))
-
-// }
-
-// // ! @Router /management/projects/:id [put]
-// func (handler *ContractHandler) UpdateProject(c *fiber.Ctx) error {
-// 	//? 1) Get project ID from URL parameters
-// 	projectID := c.Params("id")
-// 	ProjectUUID, err := uuid.Parse(projectID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
-// 	}
-
-// 	//? 2) Parse Body request
-// 	var req struct {
-// 		Name  string `json:"name"`
-// 		Phase uint8  `json:"phase"`
-// 	}
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-// 	}
-
-// 	//? 3) Call the service
-// 	err = handler.contractService.UpdateProject(c.Context(), ProjectUUID, req.Name, req.Phase)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Project Updated Successfully"))
-// }
-
-// // ! @Router /management/projects/:id [delete]
-// func (handler *ContractHandler) DeleteProject(c *fiber.Ctx) error {
-// 	//? 1) Get project ID from URL parameters
-// 	projectID := c.Params("id")
-// 	ProjectUUID, err := uuid.Parse(projectID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Project ID"))
-// 	}
-
-// 	//? 2) Call the service
-// 	err = handler.contractService.DeleteProject(c.Context(), ProjectUUID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-
-// 	//? 3) Return success response
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Project deleted successfully"))
-// }
-
-// // ----------------------------
-// // Contractor Handlers
-// // ----------------------------
-// // ! @Router /management/contractors [post]
-// func (handler *ContractHandler) CreateContractor(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-// 	}
-
-// 	//? 2) Parse Body request
-// 	type RequestBody struct {
-// 		LegalEntity    bool   `json:"legal_entity" gorm:"default:false;not null"`
-// 		FirstName      string `json:"first_name" gorm:"type:varchar(100);not null"`
-// 		LastName       string `json:"last_name" gorm:"type:varchar(100)"`
-// 		PreferentialID string `json:"preferential_id,omitempty" gorm:"size:100"`
-// 		NationalID     string `json:"national_id,omitempty" gorm:"size:100"`
-// 	}
-// 	//? 2-2) Parse Body request
-// 	var req RequestBody
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-// 	}
-// 	//? 2-3) Validate using struct tags
-// 	if err := validate.Struct(req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-// 	}
-
-// 	err := handler.contractService.CreateContractor(c.Context(), userUUID, req.LegalEntity, req.FirstName, req.LastName, req.PreferentialID, req.NationalID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error creating contractor"))
-// 	}
-
-// 	//? 6) Return success response
-// 	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(nil, "Contractor created successfully"))
-// }
-
-// // ! @Router /management/contractors [get]
-// func (handler *ContractHandler) GetAllContractor(c *fiber.Ctx) error {
-// 	contractors, err := handler.contractService.GetAllContractors(c.Context())
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error fetching contractors"))
-// 	}
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contractors, "Contractors Retrieved Successfully"))
-// }
-
-// // ! @Router /management/contractors/:id [get]
-// func (handler *ContractHandler) GetContractorByID(c *fiber.Ctx) error {
-// 	contractorID := c.Params("id")
-// 	ContractorUUID, err := uuid.Parse(contractorID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
-// 	}
-// 	contractor, err := handler.contractService.GetContractorByID(c.Context(), ContractorUUID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error fetching contractor"))
-// 	}
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contractor, "Contractor Retrieved Successfully"))
-// }
-
-// // ! @Router /management/contractors/:id [put]
-// func (handler *ContractHandler) UpdateContractor(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-// 	}
-// 	//? 2) Get contractor ID from URL parameters
-// 	contractorID := c.Params("id")
-// 	ContractorUUID, err := uuid.Parse(contractorID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
-// 	}
-// 	//? 3) Parse Body request
-// 	var req struct {
-// 		FirstName      string `json:"first_name"`
-// 		LastName       string `json:"last_name"`
-// 		LegalEntity    bool   `json:"legal_entity"`
-// 		PreferentialID string `json:"preferential_id,omitempty"`
-// 		NationalID     string `json:"national_id,omitempty"`
-// 	}
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-// 	}
-// 	if err := validate.Struct(req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-// 	}
-
-// 	err = handler.contractService.UpdateContractor(c.Context(), userUUID, ContractorUUID, req.LegalEntity, req.FirstName, req.LastName, req.PreferentialID, req.NationalID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error updating contractor"))
-// 	}
-
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Contractor Updated Successfully"))
-// }
-
-// // ! @Router /management/contractors/:id [delete]
-// func (handler *ContractHandler) DeleteContractor(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-// 	}
-// 	//? 2) Get contractor ID from URL parameters
-// 	contractorID := c.Params("id")
-// 	ContractorUUID, err := uuid.Parse(contractorID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contractor ID"))
-// 	}
-
-// 	err = handler.contractService.DeleteContractor(c.Context(), ContractorUUID, userUUID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Error deleting contractor"))
-// 	}
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Contractor Deleted Successfully"))
-// }
-
-// // --------------------------
-// // Contract Handlers
-// // --------------------------
-
-// // ! @Router /management/contracts [post]
-// func (handler *ContractHandler) CreateContract(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-// 	}
-// 	// 2. Enforce multipart
-// 	if !strings.HasPrefix(c.Get("Content-Type"), "multipart/form-data") {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "multipart/form-data required"))
-// 	}
-
-// 	type RequestBody struct {
-// 		ContractorID    string
-// 		ProjectID       string
-// 		ContractNumber  string
-// 		GrossBudget     float64
-// 		InsuranceRate   float32
-// 		PerformanceBond float32
-// 		AddedValueTax   float32
-// 		StartDate       time.Time
-// 		EndDate         time.Time
-// 	}
-
-// 	// 3. Parse fields
-// 	req := RequestBody{
-// 		ContractorID:   c.FormValue("contractor_id"),
-// 		ProjectID:      c.FormValue("project_id"),
-// 		ContractNumber: c.FormValue("contract_number"),
-// 	}
-
-// 	if err := validate.Struct(req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request Fields!"))
-// 	}
-
-// 	// 4. UUID parsing
-// 	contractorUUID, err := uuid.Parse(req.ContractorID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid contractor_id"))
-// 	}
-
-// 	projectUUID, err := uuid.Parse(req.ProjectID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid project_id"))
-// 	}
-// 	req.GrossBudget, err = strconv.ParseFloat(c.FormValue("gross_budget"), 64)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "invalid gross_budget"))
-// 	}
-
-// 	req.StartDate, err = time.Parse(time.RFC3339, c.FormValue("start_date"))
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "invalid start_date"))
-// 	}
-// 	req.EndDate, err = time.Parse(time.RFC3339, c.FormValue("end_date"))
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "invalid end_date"))
-// 	}
-
-// 	var f float64
-// 	f, err = strconv.ParseFloat(c.FormValue("insurance_rate"), 32)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).
-// 			JSON(ErrorResponse(BadRequest, "invalid insurance_rate"))
-// 	}
-// 	req.InsuranceRate = float32(f)
-
-// 	f, err = strconv.ParseFloat(c.FormValue("performance_bond"), 32)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).
-// 			JSON(ErrorResponse(BadRequest, "invalid performance_bond"))
-// 	}
-// 	req.PerformanceBond = float32(f)
-
-// 	f, err = strconv.ParseFloat(c.FormValue("added_value_tax"), 32)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).
-// 			JSON(ErrorResponse(BadRequest, "invalid added_value_tax"))
-// 	}
-// 	req.AddedValueTax = float32(f)
-
-// 	// 5. File handling
-// 	file, err := c.FormFile("scanned_file")
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "scanned_file required"))
-// 	}
-
-// 	if file.Size > 50<<20 {
-// 		return c.Status(fiber.StatusRequestEntityTooLarge).JSON(ErrorResponse(Failure, "file too large"))
-// 	}
-
-// 	ext := filepath.Ext(file.Filename)
-// 	filename := uuid.New().String() + ext
-
-// 	baseDir := "../storage/contracts"
-// 	uploadDir := filepath.Join(baseDir, contractorUUID.String())
-
-// 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "could not create upload directory"))
-// 	}
-
-// 	dst := filepath.Join(uploadDir, filename)
-
-// 	if err := c.SaveFile(file, dst); err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "could not save uploaded file"))
-// 	}
-
-// 	// 6. Service call
-// 	err = handler.contractService.CreateContract(
-// 		c.Context(),
-// 		userUUID,
-// 		contractorUUID,
-// 		projectUUID,
-// 		req.ContractNumber,
-// 		req.GrossBudget,
-// 		req.InsuranceRate,
-// 		req.PerformanceBond,
-// 		req.AddedValueTax,
-// 		req.StartDate,
-// 		req.EndDate,
-// 		dst,
-// 	)
-
-// 	if err != nil {
-// 		log.Printf("CreateContract DB error: %v", err)
-// 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-
-// 	return c.Status(fiber.StatusCreated).
-// 		JSON(SuccessResponse(nil, "Contract created successfully"))
-// }
-
-// // ! @Router /management/contracts [get]
-// func (handler *ContractHandler) GetAllContracts(c *fiber.Ctx) error {
-// 	//? 2) Call the service
-// 	contracts, err := handler.contractService.GetAllContracts(c.Context())
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to retrieve contracts"))
-// 	}
-
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contracts, "Contracts retrieved successfully"))
-// }
-
-// // ! @Router /management/contracts/:id [get]
-// func (handler *ContractHandler) GetContractByID(c *fiber.Ctx) error {
-// 	//? 1) Get contract ID from URL parameters
-// 	contractID := c.Params("id")
-// 	ContractUUID, err := uuid.Parse(contractID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contract ID"))
-// 	}
-// 	//? 2) Call the service
-// 	contract, err := handler.contractService.GetContractByID(c.Context(), ContractUUID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to retrieve contract"))
-// 	}
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(contract, "Contract retrieved successfully"))
-// }
-
-// // ! @Router /management/contracts/:id [put]
-// func (handler *ContractHandler) UpdateContract(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-// 	}
-// 	//? 2) Get contract ID from URL parameters
-// 	contractID := c.Params("id")
-// 	ContractUUID, err := uuid.Parse(contractID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contract ID"))
-// 	}
-// 	//? 3) Parse Body request
-// 	var req struct {
-// 		ContractorID    string    `json:"contractor_id"`
-// 		ProjectID       string    `json:"project_id"`
-// 		ContractNumber  string    `json:"contract_number"`
-// 		GrossBudget     float64   `json:"gross_budget"`
-// 		InsuranceRate   float32   `json:"insurance_rate"`
-// 		PerformanceBond float32   `json:"performance_bond"`
-// 		AddedValueTax   float32   `json:"added_value_tax"`
-// 		StartDate       time.Time `json:"start_date"`
-// 		EndDate         time.Time `json:"end_date"`
-// 	}
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
-// 	}
-
-// 	//? 4) UUID parsing
-// 	contractorUUID, err := uuid.Parse(req.ContractorID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid contractor_id"))
-// 	}
-
-// 	projectUUID, err := uuid.Parse(req.ProjectID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid project_id"))
-// 	}
-// 	// 5. File handling
-// 	file, err := c.FormFile("scanned_file")
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "scanned_file required"))
-// 	}
-
-// 	if file.Size > 50<<20 {
-// 		return c.Status(fiber.StatusRequestEntityTooLarge).JSON(ErrorResponse(Failure, "file too large"))
-// 	}
-
-// 	ext := filepath.Ext(file.Filename)
-// 	filename := uuid.New().String() + ext
-
-// 	baseDir := "../../../storage/contracts"
-// 	uploadDir := filepath.Join(baseDir, contractorUUID.String())
-
-// 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "could not create upload directory"))
-// 	}
-
-// 	dst := filepath.Join(uploadDir, filename)
-
-// 	if err := c.SaveFile(file, dst); err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "could not save uploaded file"))
-// 	}
-
-// 	//? 5) Call the service
-// 	err = handler.contractService.UpdateContract(
-// 		c.Context(),
-// 		ContractUUID,
-// 		userUUID,
-// 		contractorUUID,
-// 		projectUUID,
-// 		req.ContractNumber,
-// 		req.GrossBudget,
-// 		req.InsuranceRate,
-// 		req.PerformanceBond,
-// 		req.AddedValueTax,
-// 		req.StartDate,
-// 		req.EndDate,
-// 		dst,
-// 	)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to update contract"))
-// 	}
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Contract updated successfully"))
-// }
-
-// // ! @Router /management/contracts/:id [delete]
-// func (handler *ContractHandler) DeleteContract(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-// 	}
-// 	//? 2) Get contract ID from URL parameters
-// 	contractID := c.Params("id")
-// 	ContractUUID, err := uuid.Parse(contractID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Contract ID"))
-// 	}
-
-// 	err = handler.contractService.DeleteContract(c.Context(), ContractUUID, userUUID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to delete contract"))
-// 	}
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Contract deleted successfully"))
-// }
-
-// // ! @Router /management/contracts/wbs [post]
-// func (handler *ContractHandler) CreateWBS(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized access"))
-// 	}
-// 	//? 2) Parse Body request
-// 	type Item struct {
-// 		Description string `json:"description"`
-// 		Quantity    int64  `json:"quantity"`
-// 		Unit        string `json:"unit"`
-// 		UnitPrice   int64  `json:"unit_price"`
-// 	}
-// 	type RequestBody struct {
-// 		ContractNumber string `json:"contract_number" gorm:"default:false;not null"`
-// 		Items          []Item `json:"items" gorm:"type:varchar(100);not null"`
-// 	}
-// 	//? 2-2) Parse Body request
-// 	var req RequestBody
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Body Request!"))
-// 	}
-// 	//? 2-3) Validate using struct tags
-// 	if err := validate.Struct(req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-// 	}
-
-// 	//? 3) get contract record by its number
-// 	contract, err := handler.contractService.GetContractByNumber(c.Context(), req.ContractNumber)
-
-// 	for _, recd := range req.Items {
-// 		var quantity float64
-// 		quantity = float64(recd.Quantity)
-
-// 		var unitPrice float64
-// 		unitPrice = float64(recd.UnitPrice)
-
-// 		// service call to save record to database
-// 		err = handler.contractService.CreateContractWBS(c.Context(), userUUID, contract.ID, contract.ContractorID, contract.ProjectID, recd.Description, recd.Unit, quantity, unitPrice)
-
-// 		if err != nil {
-// 			log.Printf("CreateContract DB error: %v", err)
-// 			return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 		}
-
-// 	}
-
-// 	return c.Status(fiber.StatusCreated).
-// 		JSON(SuccessResponse(nil, "آیتم های ساختار شکست با موفقیت ثبت شدند."))
-// }
-
-// // ! @Router /management/contract/wbs [post]
-// func (handler *ContractHandler) GetContractWBS(c *fiber.Ctx) error {
-// 	// Get contract number from URL parameter instead of body
-// 	contractNumber := c.Params("cnum")
-// 	if contractNumber == "" {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Contract number is required"))
-// 	}
-
-// 	//? 3) get contract record by its number
-// 	contract, err := handler.contractService.GetContractByNumber(c.Context(), contractNumber)
-
-// 	// service call to get correspoding records
-// 	contract_wbs, err := handler.contractService.GetContractWBS(c.Context(), contract.ID)
-// 	if err != nil {
-// 		log.Printf("CreateContract DB error: %v", err)
-// 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-
-// 	contractor, err := handler.contractService.GetContractorByID(c.Context(), contract.ContractorID)
-// 	if err != nil {
-// 		log.Printf("CreateContract DB error: %v", err)
-// 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-
-// 	project, err := handler.contractService.GetProjectByID(c.Context(), contract.ProjectID)
-
-// 	type ResponseData struct {
-// 		Contract    models.Contract      `json:"contract"`
-// 		Contractor  models.Contractor    `json:"contractor"`
-// 		Project     models.Project       `json:"project"`
-// 		ContractWBS []models.ContractWBS `json:"contractWbs"`
-// 	}
-
-// 	resData := ResponseData{
-// 		Contract:    *contract,
-// 		Contractor:  *contractor,
-// 		Project:     *project,
-// 		ContractWBS: *contract_wbs,
-// 	}
-
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(resData, "ContractWbs retrieved successfully"))
-// }
-
-// // ! @Router /management/contracts/status-statement
-// func (handler *ContractHandler) CreateStatusStatement(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-// 	}
-// 	//? 2) Parse Body request
-// 	type RequestBody struct {
-// 		ContractID        string `json:"contract_id"`
-// 		StatementDateFrom string `json:"statement_date_from"`
-// 		StatementDateTo   string `json:"statement_date_to"`
-// 	}
-// 	//? 2-2) Parse Body request
-// 	var req RequestBody
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Body Request!"))
-// 	}
-// 	//? 2-3) Validate using struct tags
-// 	if err := validate.Struct(req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-// 	}
-
-// 	//? 3) UUID parsing
-// 	contractUUID, err := uuid.Parse(req.ContractID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid contract_id"))
-// 	}
-// 	// get contact to retrieve contractor and project ID
-// 	contract, err := handler.contractService.GetContractByID(c.Context(), contractUUID)
-
-// 	//? 4) Parse statement date
-// 	statementDatefrom, err := time.Parse(time.RFC3339, req.StatementDateFrom)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid statement_date format"))
-// 	}
-// 	statementDateTo, err := time.Parse(time.RFC3339, req.StatementDateTo)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid statement_date format"))
-// 	}
-
-// 	// ResponseData
-// 	type ResponseData struct {
-// 		PreviousStatusStatement *models.StatusStatement `json:"previous_status_statement,omitempty"`
-// 		CurrentStatusStatement  *models.StatusStatement `json:"current_status_statement,omitempty"`
-// 	}
-
-// 	//? 5. Get last status statement to find number, progress percent and so on
-// 	previous_status_statement, err := handler.contractService.GetLastStatusStatement(c.Context(), contractUUID)
-
-// 	var current_status_statement models.StatusStatement
-// 	if previous_status_statement == nil {
-// 		current_status_statement, err = handler.contractService.CreateStatusStatement(c.Context(), userUUID, contractUUID, contract.ContractorID, contract.ProjectID, statementDatefrom, statementDateTo, 1, "pending")
-
-// 		if err != nil {
-// 			log.Printf("CreateStatusStatement DB error: %v", err)
-// 			return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 		}
-
-// 		resData := ResponseData{
-// 			PreviousStatusStatement: nil,
-// 			CurrentStatusStatement:  &current_status_statement,
-// 		}
-
-// 		return c.Status(fiber.StatusCreated).
-// 			JSON(SuccessResponse(resData, "Status statement created successfully"))
-// 	}
-// 	if previous_status_statement.Status == "submitted" {
-// 		current_status_statement, err = handler.contractService.CreateStatusStatement(c.Context(), userUUID, contractUUID, contract.ContractorID, contract.ProjectID, statementDatefrom, statementDateTo, previous_status_statement.Number+1, "pending")
-
-// 		if err != nil {
-// 			log.Printf("CreateStatusStatement DB error: %v", err)
-// 			return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 		}
-
-// 		resData := ResponseData{
-// 			PreviousStatusStatement: previous_status_statement,
-// 			CurrentStatusStatement:  &current_status_statement,
-// 		}
-
-// 		return c.Status(fiber.StatusCreated).
-// 			JSON(SuccessResponse(resData, "Status statement created successfully"))
-// 	}
-
-// 	return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Previous status statement must be in submitted state to create new status statement"))
-
-// }
-
-// // !@Router /management/coontracts/status-statement
-// func (handler *ContractHandler) SubmitStatusStatement(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-// 	}
-
-// 	//? 2) Get status statement ID from URL parameter and parse it
-// 	status_statement_id := c.Params("ssid")
-// 	if status_statement_id == "" {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Status statement ID is required"))
-// 	}
-
-// 	status_statement_uuid, err := uuid.Parse(status_statement_id)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid status statement ID format"))
-// 	}
-
-// 	//? 3) Call the service to submit the status statement
-// 	err = handler.contractService.SubmitStatusStatement(c.Context(), userUUID, status_statement_uuid)
-// 	if err != nil {
-// 		log.Printf("SubmitStatusStatement error: %v", err)
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-
-// 	//? 4) Return success response
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(nil, "Status statement submitted successfully"))
-// }
-
-// // ! @Router /management/contracts/status-statement/
-// func (handler *ContractHandler) GetLast2StatusStatements(c *fiber.Ctx) error {
-// 	//? 1) Get contract ID from URL parameter and pase it
-// 	contractID := c.Params("cid")
-// 	if contractID == "" {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Contract ID is required"))
-// 	}
-// 	//? 2) UUID parsing
-// 	contractUUID, err := uuid.Parse(contractID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid contract ID"))
-// 	}
-// 	//? 3) Call the service
-// 	status_statements, err := handler.contractService.GetLast2StatusStatements(c.Context(), contractUUID)
-// 	if err != nil {
-// 		log.Printf("GetLast2StatusStatements DB error: %v", err)
-// 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(status_statements, "Last 2 status statements retrieved successfully"))
-// }
-
-// // ! @Router /management/status-statement/tasks-performed/new
-// func (handler *ContractHandler) CreateTasksPerformed(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-// 	}
-// 	//? 2) Parse Body request and Validate
-// 	type TasksList struct {
-// 		Description string `json:"description"`
-// 		Quantity    int64  `json:"quantity"`
-// 		Unit        string `json:"unit"`
-// 		UnitPrice   int64  `json:"unit_price"`
-// 	}
-
-// 	type RequestBody struct {
-// 		StatusStatementID string      `json:"status_statement_id"`
-// 		TasksList         []TasksList `json:"tasks_list"`
-// 	}
-// 	var req RequestBody
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Body Request!"))
-// 	}
-// 	if err := validate.Struct(req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-// 	}
-
-// 	//? 3) UUID parsing
-// 	statusStatementUUID, err := uuid.Parse(req.StatusStatementID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid status_statement_id"))
-// 	}
-
-// 	//? 4) Call the service
-// 	for _, task := range req.TasksList {
-// 		var quantity float64
-// 		quantity = float64(task.Quantity)
-
-// 		var unitPrice float64
-// 		unitPrice = float64(task.UnitPrice)
-
-// 		err = handler.contractService.CreateTasksPerformed(c.Context(), userUUID, statusStatementUUID, task.Description, task.Unit, quantity, unitPrice)
-// 		if err != nil {
-// 			log.Printf("CreateTasksPerformed DB error: %v", err)
-// 			return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 		}
-// 	}
-
-// 	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(nil, "Tasks performed created successfully"))
-// }
-
-// // ! @Router /management/status-statement/tasks-performed/:cid
-// // todo: use status statement ID instead of contract ID to get last tasks performed, because it's possible that a contract has multiple status statements and each status statement has its own tasks performed records. so we need to specify which status statement's tasks performed we want to retrieve. but for now, we will use contract ID to get last status statement and then get its tasks performed.
-// func (handler *ContractHandler) GetLastTasksPerformed(c *fiber.Ctx) error {
-// 	//? 1. Get contract ID from URL parameter and pase it
-// 	contractID := c.Params("cid")
-// 	if contractID == "" {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Contract ID is required"))
-// 	}
-
-// 	contractUUID, err := uuid.Parse(contractID)
-// 	if err != nil {
-// 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-
-// 	//? 2. Get contract
-// 	contract, err := handler.contractService.GetContractByID(c.Context(), contractUUID)
-// 	if err != nil {
-// 		log.Printf("GetContract DB error: %v", err)
-// 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-
-// 	//? 3. Get last Status Statemenet of contract
-// 	status_statement, err := handler.contractService.GetLastStatusStatement(c.Context(), contract.ID)
-// 	if err != nil {
-// 		log.Printf("GetStatusStament DB error: %v", err)
-// 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-
-// 	//? 4. Get last tasks performed of last status statement
-// 	tasks_performed, err := handler.contractService.GetLastTasksPerformed(c.Context(), status_statement.ID)
-// 	if err != nil {
-// 		log.Printf("GetTasksPerfrormed DB error: %v", err)
-// 		return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 	}
-// 	//? 5. Return results
-// 	return c.Status(fiber.StatusOK).JSON(SuccessResponse(tasks_performed, "Last tasks performed retrieved successfully"))
-// }
-
-// // ! @Router /management/status-statement/extra-works
-// func (handler *ContractHandler) CreateExtraWorks(c *fiber.Ctx) error {
-// 	//? 1) Get user ID from context (set by middleware)
-// 	userUUID, ok := c.Locals("userID").(uuid.UUID)
-// 	if !ok {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
-// 	}
-// 	//? 2) Parse Body request and Validate
-// 	type WorksList struct {
-// 		Description string `json:"description"`
-// 		Quantity    int64  `json:"quantity"`
-// 		Unit        string `json:"unit"`
-// 		UnitPrice   int64  `json:"unit_price"`
-// 	}
-
-// 	type RequestBody struct {
-// 		StatusStatementID string      `json:"status_statement_id"`
-// 		TasksList         []WorksList `json:"works_list"`
-// 	}
-// 	var req RequestBody
-// 	if err := c.BodyParser(&req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Body Request!"))
-// 	}
-// 	if err := validate.Struct(req); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid Request!"))
-// 	}
-
-// 	//? 3) UUID parsing
-// 	statusStatementUUID, err := uuid.Parse(req.StatusStatementID)
-// 	if err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid status_statement_id"))
-// 	}
-
-// 	//? 4) Call the service
-// 	for _, work := range req.TasksList {
-// 		var quantity float64
-// 		quantity = float64(work.Quantity)
-
-// 		var unitPrice float64
-// 		unitPrice = float64(work.UnitPrice)
-
-// 		err = handler.contractService.CreateExtraWorks(c.Context(), userUUID, statusStatementUUID, work.Description, work.Unit, quantity, unitPrice)
-// 		if err != nil {
-// 			log.Printf("CreateExtraWorks DB error: %v", err)
-// 			return c.Status(500).JSON(ErrorResponse(InternalError, err.Error()))
-// 		}
-// 	}
-
-// 	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(nil, "Extra Works created successfully"))
-
-// }
-
-// // ! @Router /management/new-contract [post]
-// // func (ctrl *ContractHandler) CreateContractor(c *fiber.Ctx) error {
-// // 	//? 1) Get user ID from context (set by middleware)
-// // 	userID, ok := c.Locals("userID").(uuid.UUID)
-// // 	if !ok {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "error",
-// // 			Message: "خطای سرور",
-// // 		})
-// // 	}
-// // 	//? 2-1. request struct
-// // 	type CreateContractRequest struct {
-// // 		FullName             string               `json:"fullName" validate:"required"`
-// // 		ContractorType       string               `json:"contractorType"`
-// // 		ContractID           string               `json:"contractId" validate:"required"`
-// // 		ContractorDetailedID string               `json:"contractorDetailedId" validate:"required"`
-// // 		ContractorNationalID string               `json:"contractorNationalId" validate:"required"`
-// // 		ContractStartDate    time.Time            `json:"contractStartDate"` // you must parse this on the backend
-// // 		ContractEndDate      time.Time            `json:"contractEndDate"`   // same
-// // 		GrossContractAmount  string               `json:"grossContractAmount"`
-// // 		ProjectName          string               `json:"projectName"`
-// // 		InsuranceRate        string               `json:"InsuranceRate"`
-// // 		PerformanceBond      string               `json:"PerformanceBond"`
-// // 		AddedValueTax        string               `json:"AddedValueTax"`
-// // 		ScannedFile          multipart.FileHeader `json:"ScannedFile"`
-// // 		Phase0               bool                 `json:"phase0,omitempty"`
-// // 		Phase1               bool                 `json:"phase1,omitempty"`
-// // 		Phase2               bool                 `json:"phase2,omitempty"`
-// // 		Phase3               bool                 `json:"phase3,omitempty"`
-// // 	}
-// // 	//? 2-2. Pars Body request
-// // 	var req CreateContractRequest
-// // 	if err := c.BodyParser(&req); err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ورودی های نا معتبر"})
-// // 	}
-
-// // Todo: ! @get /contractors/contracts/:[name, limit, page]
-
-// // ! @get /contractors/contractor-projects
-// // func (ctrl *ContractHandler) GetContractorProjects(c *fiber.Ctx) error {
-// // 	//? 1. Parse query parameter
-// // 	contractNumber := c.Query("contract_number")
-// // 	if contractNumber == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "شماره قرارداد وارد نشده است",
-// // 		})
-// // 	}
-
-// // 	//? 2. Query contractor by contract number
-// // 	var contract models.Contractor
-// // 	if err := ctrl.db.Where("contract_no = ?", contractNumber).First(&contract).Error; err != nil {
-// // 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// // 			return c.Status(fiber.StatusNotFound).JSON(CtrlResponse{
-// // 				Status:  "failure",
-// // 				Message: "قرارداد یافت نشد",
-// // 			})
-// // 		}
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "خطای سرور در دریافت اطلاعات قرارداد",
-// // 		})
-// // 	}
-
-// // 	//? 3. Get contractor project mappings
-// // 	var contractorProjects []models.ContractorProject
-// // 	if err := ctrl.db.Where("contractor_id = ?", contract.ID).Find(&contractorProjects).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "خطا در دریافت اطلاعات پروژه\u200cهای پیمانکار",
-// // 		})
-// // 	}
-// // 	//? 4. Extract project IDs
-// // 	projectIDs := make([]uuid.UUID, 0, len(contractorProjects))
-// // 	for _, cp := range contractorProjects {
-// // 		projectIDs = append(projectIDs, cp.ProjectID)
-// // 	}
-
-// // 	//? 5. Query only matched projects
-// // 	var projects []models.Project
-// // 	if len(projectIDs) > 0 {
-// // 		if err := ctrl.db.Where("id IN ?", projectIDs).Find(&projects).Error; err != nil {
-// // 			return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 				Status:  "failure",
-// // 				Message: "خطا در دریافت پروژه\u200cها",
-// // 			})
-// // 		}
-// // 	}
-
-// // 	//? 6. Group by project name
-// // 	type ProjectSan struct {
-// // 		Name      string      `json:"name"`
-// // 		Phase     []int       `json:"phase"`
-// // 		ProjectID []uuid.UUID `json:"ids"`
-// // 	}
-// // 	projectMap := make(map[string]*ProjectSan)
-
-// // 	for _, p := range projects {
-// // 		if _, exists := projectMap[p.Name]; !exists {
-// // 			projectMap[p.Name] = &ProjectSan{
-// // 				Name:      p.Name,
-// // 				Phase:     []int{},
-// // 				ProjectID: []uuid.UUID{},
-// // 			}
-// // 		}
-// // 		projectMap[p.Name].Phase = append(projectMap[p.Name].Phase, int(p.Phase))
-// // 		projectMap[p.Name].ProjectID = append(projectMap[p.Name].ProjectID, p.ID)
-// // 	}
-// // 	//? 7. Convert map to slice
-// // 	response := make([]ProjectSan, 0, len(projectMap))
-// // 	for _, ps := range projectMap {
-// // 		response = append(response, *ps)
-// // 	}
-
-// // 	//? 5. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "پروژه\u200cها با موفقیت دریافت شدند",
-// // 		Data:    response,
-// // 	})
-
-// // }
-
-// // ! @get /contractors/get-last-status-statement
-// // func (ctrl *ContractHandler) GetLastStatusStatement(c *fiber.Ctx) error {
-// // 	//? 1) Parse query parameters
-// // 	contractNumber := c.Query("contract_number")
-// // 	if contractNumber == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "شماره قرارداد وارد نشده است",
-// // 		})
-// // 	}
-// // 	projectName := c.Query("project_name")
-// // 	if projectName == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "پروژه ای انتخاب نشده",
-// // 		})
-// // 	}
-// // 	projectPhase := c.Query("project_phase")
-// // 	if projectPhase == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "فاز پروژه انتخاب نشده",
-// // 		})
-// // 	}
-
-// // 	//? 3. find contractor ID
-// // 	var contractor models.Contractor
-// // 	if err := ctrl.db.Where("contract_no = ?", contractNumber).First(&contractor).Error; err != nil {
-// // 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-// // 			"status":  "failure",
-// // 			"message": "پیمانکار یافت نشد",
-// // 		})
-// // 	}
-// // 	//? 4. Search for projects ID
-// // 	var projects models.Project
-// // 	if err := ctrl.db.Where("name = ? AND phase = ?", projectName, projectPhase).First(&projects).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"status":  "faluire",
-// // 			"message": "خطا در دریافت پروژه ها",
-// // 		})
-// // 	}
-
-// // 	//? 6. Get Project Progress
-// // 	var status_statement models.StatusStatement
-// // 	if err := ctrl.db.Where("contractor_id = ? AND project_id = ?", contractor.ID, projects.ID).Order("created_at DESC").First(&status_statement).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"status":  "faluire",
-// // 			"message": "خطا در دریافت آخرین صورت وضعیت",
-// // 		})
-// // 	}
-
-// // 	//? 6. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-// // 		"status":  "success",
-// // 		"message": "آخرین صورت وضعیت با موفقیت دریافت شد",
-// // 		"data":    status_statement,
-// // 	})
-// // }
-
-// // ! @post /contractors/new-status-statement
-// // func (ctrl *ContractHandler) CreateNewStatusStatement(c *fiber.Ctx) error {
-// // 	//? 1) Get user ID from context (set by middleware)
-// // 	userID, ok := c.Locals("userID").(uuid.UUID)
-// // 	if !ok {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "error",
-// // 			Message: "خطای سرور",
-// // 		})
-// // 	}
-// // 	//? 2. Parse Body Request
-// // 	type SttsRequest struct {
-// // 		ContractorNumber string    `json:"contract_no" validate:"required"`
-// // 		ProjectName      string    `json:"project_name" validate:"required"`
-// // 		ProjectPhase     string    `json:"project_phase" validate:"required"`
-// // 		StatProgress     string    `json:"stat_progress" validate:"required"`
-// // 		StatStartDate    time.Time `json:"stat_start_date" validate:"required"`
-// // 		StatEndDate      time.Time `json:"stat_end_date" validate:"required"`
-// // 		StatNumber       string    `json:"stat_number" validate:"required"`
-// // 	}
-// // 	var req SttsRequest
-// // 	if err := c.BodyParser(&req); err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "ورودی های نا معتبر",
-// // 		})
-// // 	}
-// // 	if req.ContractorNumber == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "شماره قرارداد الزامی است"})
-// // 	}
-// // 	if req.ProjectName == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "نام پروژه الزامی است"})
-// // 	}
-// // 	if req.ProjectPhase == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "فاز پروژه الزامی است"})
-// // 	}
-// // 	if req.StatProgress == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "درصد پیشرفت الزامی است"})
-// // 	}
-// // 	if req.StatStartDate.Year() == 1970 {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "تاریخ شروع صورت وضعیت الزامی است"})
-// // 	}
-// // 	if req.StatEndDate.Year() == 1970 {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "تاریخ پایان صورت وضعیت الزامی است"})
-// // 	}
-
-// // 	//? 3. find contractor ID
-// // 	var contractor models.Contractor
-// // 	if err := ctrl.db.Where("contract_no = ?", req.ContractorNumber).First(&contractor).Error; err != nil {
-// // 		return c.Status(fiber.StatusNotFound).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "پیمانکار یافت نشد",
-// // 		})
-// // 	}
-// // 	//? 4. Search for projects ID
-// // 	var projects models.Project
-// // 	if err := ctrl.db.Where("name = ? AND phase = ?", req.ProjectName, req.ProjectPhase).First(&projects).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت پروژه ها",
-// // 		})
-// // 	}
-
-// // 	//? 5. Check if Status Statement exists
-// // 	startDateStr := req.StatStartDate.Format("2006-01-02")
-// // 	endDateStr := req.StatEndDate.Format("2006-01-02")
-// // 	var existing_status_statement models.StatusStatement
-// // 	err := ctrl.db.Where(`
-// //         contractor_id = ?
-// //         AND project_id = ?
-// //         AND statement_date_start::date = ?
-// //         AND statement_date_end::date = ?`,
-// // 		contractor.ID, projects.ID, startDateStr, endDateStr).
-// // 		First(&existing_status_statement).Error
-
-// // 	//* ✅ Record exists → duplicate
-// // 	if err == nil {
-// // 		return c.Status(fiber.StatusConflict).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "صورت وضعیت تکراری",
-// // 		})
-// // 	}
-
-// // 	//* ❌ Real DB error
-// // 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "خطا در ارتباط با پایگاه داده",
-// // 		})
-// // 	}
-// // 	//? 6. Create Status Statement
-// // 	statNumberInt, err := strconv.Atoi(req.StatNumber)
-// // 	if err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "شماره صورت وضعیت نامعتبر است"})
-// // 	}
-// // 	statProgressFloat, err := strconv.ParseFloat(req.StatProgress, 64)
-// // 	if err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "درصد پیشرفت نامعتبر است"})
-// // 	}
-// // 	var status_statement = models.StatusStatement{
-// // 		BaseModel: models.BaseModel{
-// // 			ID:        uuid.New(),
-// // 			CreatedBy: userID,
-// // 		},
-// // 		ContractorID:       contractor.ID,
-// // 		ProjectID:          projects.ID,
-// // 		ProgressPercent:    float32(statProgressFloat),
-// // 		StatementDateStart: req.StatStartDate,
-// // 		StatementDateEnd:   req.StatEndDate,
-// // 		Status:             "Pending",
-// // 		Number:             uint16(statNumberInt),
-// // 	}
-
-// // 	if err := ctrl.db.Create(&status_statement).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{Status: "failure", Message: "خطا در ایجاد صورت وضعیت"})
-// // 	}
-
-// // 	//? 7. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "صورت وضعیت با موفقیت ایجاد شد",
-// // 		Data:    status_statement,
-// // 	})
-// // }
-
-// // ! @get /contractors/get-status-statement
-// // func (ctrl *ContractHandler) GetStatusStatement(c *fiber.Ctx) error {
-// // 	//? 1) Parse query parameters
-// // 	status_statement_id := c.Query("status_statement_id")
-// // 	if status_statement_id == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "صورت وضعیتی برای صدور وجود ندارد",
-// // 		})
-// // 	}
-// // 	contract_id := c.Query("contract_id")
-// // 	if contract_id == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "شماره قرارداد وجود ندارد",
-// // 		})
-// // 	}
-// // 	project_id := c.Query("project_id")
-// // 	if project_id == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "پروژه وجود ندارد",
-// // 		})
-// // 	}
-
-// // 	//? 3. get contract
-// // 	var contract models.Contractor
-// // 	if err := ctrl.db.Where("id = ?", contract_id).First(&contract).Error; err != nil {
-// // 		return c.Status(fiber.StatusNotFound).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "قرارداد یافت نشد",
-// // 		})
-// // 	}
-// // 	//? 4. get project
-// // 	var project models.Project
-// // 	if err := ctrl.db.Where("id = ?", project_id).First(&project).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت پروژه ها",
-// // 		})
-// // 	}
-
-// // 	//? 6. Get Project Progress
-// // 	var last_status_statement models.StatusStatement
-// // 	if err := ctrl.db.Where("contractor_id = ? AND project_id = ? AND id <> ?", contract.ID, project.ID, status_statement_id).Order("created_at DESC").First(&last_status_statement).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت آخرین صورت وضعیت",
-// // 		})
-// // 	}
-// // 	var status_statement models.StatusStatement
-// // 	if err := ctrl.db.Where("id = ?", status_statement_id).First(&status_statement).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت آخرین صورت وضعیت",
-// // 		})
-// // 	}
-
-// // 	type ResData struct {
-// // 		Contract    models.Contractor      `json:"contract"`
-// // 		Project     models.Project         `json:"project"`
-// // 		LastStat    models.StatusStatement `json:"last_stat"`
-// // 		OngoingStat models.StatusStatement `json:"ongoing_stat"`
-// // 	}
-
-// // 	data := ResData{
-// // 		Contract:    contract,
-// // 		Project:     project,
-// // 		LastStat:    last_status_statement,
-// // 		OngoingStat: status_statement,
-// // 	}
-
-// // 	//? 6. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "آخرین صورت وضعیت با موفقیت دریافت شد",
-// // 		Data:    data,
-// // 	})
-// // }
-
-// // ! @post /contractors/new-task-performed
-// // func (ctrl *ContractHandler) CreateNewTaskPerformed(c *fiber.Ctx) error {
-// // 	//? 1) Get user ID from context (set by middleware)
-// // 	userID, ok := c.Locals("userID").(uuid.UUID)
-// // 	if !ok {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "error",
-// // 			Message: "خطای سرور",
-// // 		})
-// // 	}
-// // 	//? 2. Parse Body Request
-// // 	type TasksPerformed struct {
-// // 		StatusStatementID string `json:"statusStatmntId" validate:"required"`
-// // 		Description       string `json:"description" validate:"required"`
-// // 		Unit              string `json:"unit" validate:"required"`
-// // 		Quantity          string `json:"quantity" validate:"required"`
-// // 		UnitPrice         string `json:"unitPrice" validate:"required"`
-// // 	}
-// // 	var reqs []TasksPerformed
-// // 	if err := c.BodyParser(&reqs); err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "ورودی های نا معتبر"})
-// // 	}
-
-// // 	//? 3. Check if any task saved for current status statement
-// // 	var existing_stts_items models.TasksPerformed
-// // 	err := ctrl.db.Where(`
-// //         status_statement_id = ? `,
-// // 		reqs[0].StatusStatementID).
-// // 		First(&existing_stts_items).Error
-
-// // 	//* ✅ Record exists → duplicate
-// // 	if err == nil {
-// // 		return c.Status(fiber.StatusConflict).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "کارکرد ثبت شده",
-// // 		})
-// // 	}
-
-// // 	//* ❌ Real DB error
-// // 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "error",
-// // 			Message: "خطا در ارتباط با پایگاه داده",
-// // 		})
-// // 	}
-
-// // 	//? 4. Validate and save record to database
-// // 	var new_record []models.TasksPerformed
-// // 	for _, req := range reqs {
-// // 		if req.StatusStatementID == "" {
-// // 			return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "شما هنوز صورت وضعیت جدیدی ایجاد نکردید"})
-// // 		}
-// // 		if req.Description == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "شرح آیتم الزامیست"})
-// // 		}
-// // 		if req.Unit == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "واحد آیتم الزامیست"})
-// // 		}
-// // 		if req.Quantity == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "مقدار آیتم الزامیست"})
-// // 		}
-// // 		if req.UnitPrice == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "قیمت واحد آیتم الزامیست"})
-// // 		}
-// // 		var existing_task models.TasksPerformed
-// // 		err := ctrl.db.Where(`
-// //         status_statement_id = ?
-// //         AND description = ? `,
-// // 			req.StatusStatementID, req.Description).
-// // 			First(&existing_task).Error
-
-// // 		//* ✅ Record exists → duplicate
-// // 		if err == nil {
-// // 			return c.Status(fiber.StatusConflict).JSON(CtrlResponse{
-// // 				Status:  "failure",
-// // 				Message: "آیتم تکراری",
-// // 			})
-// // 		}
-
-// // 		//* ❌ Real DB error
-// // 		if !errors.Is(err, gorm.ErrRecordNotFound) {
-// // 			return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 				Status:  "error",
-// // 				Message: "خطا در ارتباط با پایگاه داده",
-// // 			})
-// // 		}
-
-// // 		quantity, err := strconv.ParseFloat(req.Quantity, 64)
-// // 		if err != nil {
-// // 			return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "مقدار نامعتبر است"})
-// // 		}
-// // 		unit_price, err := strconv.ParseFloat(req.UnitPrice, 64)
-// // 		if err != nil {
-// // 			return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "قیمت واحد نامعتبر است"})
-// // 		}
-// // 		parsedUUID, err := uuid.Parse(req.StatusStatementID)
-// // 		if err != nil {
-// // 			return err // or handle the error accordingly
-// // 		}
-
-// // 		var task_performed_record = models.TasksPerformed{
-// // 			BaseModel: models.BaseModel{
-// // 				ID:        uuid.New(),
-// // 				CreatedBy: userID,
-// // 			},
-// // 			StatusStatementID: parsedUUID,
-// // 			Description:       req.Description,
-// // 			Unit:              req.Unit,
-// // 			Quantity:          quantity,
-// // 			UnitPrice:         unit_price,
-// // 			TotalPrice:        quantity * unit_price,
-// // 		}
-// // 		new_record = append(new_record, task_performed_record)
-// // 	}
-// // 	var total_price_sum float64 = 0.0
-// // 	for _, rc := range new_record {
-// // 		total_price_sum += rc.TotalPrice
-// // 	}
-
-// // 	if err := ctrl.db.Create(&new_record).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{Status: "failure", Message: "خطا در ثبت کارکرد"})
-// // 	}
-
-// // 	type ResData struct {
-// // 		Items    []models.TasksPerformed `json:"items"`
-// // 		TotalSum float64                 `json:"totol_sum"`
-// // 	}
-// // 	var records_total_price_sum float64
-// // 	for _, item := range new_record {
-// // 		records_total_price_sum += item.TotalPrice
-// // 	}
-
-// // 	res_data := ResData{
-// // 		Items:    new_record,
-// // 		TotalSum: records_total_price_sum,
-// // 	}
-
-// // 	//? 7. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "کاربرد با موفقیت ثبت شد",
-// // 		Data:    res_data,
-// // 	})
-// // }
-
-// // ! @get /contractors/new-task-performed
-// // func (ctrl *ContractHandler) GetSttsTaskPerformed(c *fiber.Ctx) error {
-// // 	//? 1) Parse query parameters
-// // 	status_statement_id := c.Query("status_statement_id")
-// // 	if status_statement_id == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "صورت وضعیتی برای صدور وجود ندارد",
-// // 		})
-// // 	}
-// // 	// ? 2) Query status statement items
-// // 	var status_statement_tasks []models.TasksPerformed
-// // 	if err := ctrl.db.Where("status_statement_id = ?", status_statement_id).Find(&status_statement_tasks).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت کارکرد صورت وضعیت",
-// // 		})
-// // 	}
-// // 	type ResData struct {
-// // 		Items    []models.TasksPerformed `json:"items"`
-// // 		TotalSum float64                 `json:"totol_sum"`
-// // 	}
-// // 	var items_total_price_sum float64
-// // 	for _, item := range status_statement_tasks {
-// // 		items_total_price_sum += item.TotalPrice
-// // 	}
-
-// // 	res_data := ResData{
-// // 		Items:    status_statement_tasks,
-// // 		TotalSum: items_total_price_sum,
-// // 	}
-
-// // 	//? 6. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "آیتم های کارکرد صورت وضعیت با موفقیت دریافت شد",
-// // 		Data:    res_data,
-// // 	})
-// // }
-
-// // ! @post /contractors/new-extra-work
-// // func (ctrl *ContractHandler) CreateNewExtraWorks(c *fiber.Ctx) error {
-// // 	//? 1) Get user ID from context (set by middleware)
-// // 	userID, ok := c.Locals("userID").(uuid.UUID)
-// // 	if !ok {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "error",
-// // 			Message: "خطای سرور",
-// // 		})
-// // 	}
-// // 	//? 2. Parse Body Request
-// // 	type TasksPerformed struct {
-// // 		StatusStatementID string `json:"statusStatmntId" validate:"required"`
-// // 		Description       string `json:"description" validate:"required"`
-// // 		Unit              string `json:"unit" validate:"required"`
-// // 		Quantity          string `json:"quantity" validate:"required"`
-// // 		UnitPrice         string `json:"unitPrice" validate:"required"`
-// // 	}
-// // 	var reqs []TasksPerformed
-// // 	if err := c.BodyParser(&reqs); err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "ورودی های نا معتبر"})
-// // 	}
-
-// // 	//? 3. Check if any task saved for current status statement
-// // 	var existing_stts_items models.AdditionalWorks
-// // 	err := ctrl.db.Where(`
-// //         status_statement_id = ? `,
-// // 		reqs[0].StatusStatementID).
-// // 		First(&existing_stts_items).Error
-
-// // 	//* ✅ Record exists → duplicate
-// // 	if err == nil {
-// // 		return c.Status(fiber.StatusConflict).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "اضافه کاری و... ثبت شده",
-// // 		})
-// // 	}
-
-// // 	//* ❌ Real DB error
-// // 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "error",
-// // 			Message: "خطا در ارتباط با پایگاه داده",
-// // 		})
-// // 	}
-
-// // 	//? 4. Validate and save record to database
-// // 	var new_record []models.AdditionalWorks
-// // 	for _, req := range reqs {
-// // 		if req.StatusStatementID == "" {
-// // 			return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "شما هنوز صورت وضعیت جدیدی ایجاد نکردید"})
-// // 		}
-// // 		if req.Description == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "شرح آیتم الزامیست"})
-// // 		}
-// // 		if req.Unit == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "واحد آیتم الزامیست"})
-// // 		}
-// // 		if req.Quantity == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "مقدار آیتم الزامیست"})
-// // 		}
-// // 		if req.UnitPrice == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "قیمت واحد آیتم الزامیست"})
-// // 		}
-// // 		var existing_task models.AdditionalWorks
-// // 		err := ctrl.db.Where(`
-// //         status_statement_id = ?
-// //         AND description = ? `,
-// // 			req.StatusStatementID, req.Description).
-// // 			First(&existing_task).Error
-
-// // 		//* ✅ Record exists → duplicate
-// // 		if err == nil {
-// // 			return c.Status(fiber.StatusConflict).JSON(CtrlResponse{
-// // 				Status:  "failure",
-// // 				Message: "آیتم تکراری",
-// // 			})
-// // 		}
-
-// // 		//* ❌ Real DB error
-// // 		if !errors.Is(err, gorm.ErrRecordNotFound) {
-// // 			return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 				Status:  "error",
-// // 				Message: "خطا در ارتباط با پایگاه داده",
-// // 			})
-// // 		}
-
-// // 		quantity, err := strconv.ParseFloat(req.Quantity, 64)
-// // 		if err != nil {
-// // 			return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "مقدار نامعتبر است"})
-// // 		}
-// // 		unit_price, err := strconv.ParseFloat(req.UnitPrice, 64)
-// // 		if err != nil {
-// // 			return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "قیمت واحد نامعتبر است"})
-// // 		}
-// // 		parsedUUID, err := uuid.Parse(req.StatusStatementID)
-// // 		if err != nil {
-// // 			return err // or handle the error accordingly
-// // 		}
-
-// // 		var task_performed_record = models.AdditionalWorks{
-// // 			BaseModel: models.BaseModel{
-// // 				ID:        uuid.New(),
-// // 				CreatedBy: userID,
-// // 			},
-// // 			StatusStatementID: parsedUUID,
-// // 			Description:       req.Description,
-// // 			Unit:              req.Unit,
-// // 			Quantity:          quantity,
-// // 			UnitPrice:         unit_price,
-// // 			TotalPrice:        quantity * unit_price,
-// // 		}
-// // 		new_record = append(new_record, task_performed_record)
-// // 	}
-// // 	var total_price_sum float64 = 0.0
-// // 	for _, rc := range new_record {
-// // 		total_price_sum += rc.TotalPrice
-// // 	}
-
-// // 	if err := ctrl.db.Create(&new_record).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{Status: "failure", Message: "خطا در ثبت کارکرد"})
-// // 	}
-
-// // 	type ResData struct {
-// // 		Items    []models.AdditionalWorks `json:"items"`
-// // 		TotalSum float64                  `json:"totol_sum"`
-// // 	}
-// // 	var records_total_price_sum float64
-// // 	for _, item := range new_record {
-// // 		records_total_price_sum += item.TotalPrice
-// // 	}
-
-// // 	res_data := ResData{
-// // 		Items:    new_record,
-// // 		TotalSum: records_total_price_sum,
-// // 	}
-
-// // 	//? 7. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "کاربرد با موفقیت ثبت شد",
-// // 		Data:    res_data,
-// // 	})
-// // }
-
-// // ! @get /contractors/new-extra-work
-// // func (ctrl *ContractHandler) GetSttsExtraWorks(c *fiber.Ctx) error {
-// // 	//? 1) Parse query parameters
-// // 	status_statement_id := c.Query("status_statement_id")
-// // 	if status_statement_id == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "صورت وضعیتی برای صدور وجود ندارد",
-// // 		})
-// // 	}
-// // 	// ? 2) Query status statement items
-// // 	var status_statement_additional []models.AdditionalWorks
-// // 	if err := ctrl.db.Where("status_statement_id = ?", status_statement_id).Find(&status_statement_additional).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت اضافه کاری و... صورت وضعیت",
-// // 		})
-// // 	}
-// // 	type ResData struct {
-// // 		Items    []models.AdditionalWorks `json:"items"`
-// // 		TotalSum float64                  `json:"totol_sum"`
-// // 	}
-// // 	var items_total_price_sum float64
-// // 	for _, item := range status_statement_additional {
-// // 		items_total_price_sum += item.TotalPrice
-// // 	}
-
-// // 	res_data := ResData{
-// // 		Items:    status_statement_additional,
-// // 		TotalSum: items_total_price_sum,
-// // 	}
-
-// // 	//? 6. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "آیتم های کارکرد صورت وضعیت با موفقیت دریافت شد",
-// // 		Data:    res_data,
-// // 	})
-// // }
-
-// // ! @post /contractors/new-deduction
-// // func (ctrl *ContractHandler) CreateNewDeductions(c *fiber.Ctx) error {
-// // 	//? 1) Get user ID from context (set by middleware)
-// // 	userID, ok := c.Locals("userID").(uuid.UUID)
-// // 	if !ok {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "error",
-// // 			Message: "خطای سرور",
-// // 		})
-// // 	}
-// // 	//? 2. Parse Body Request
-// // 	type TasksPerformed struct {
-// // 		StatusStatementID string `json:"statusStatmntId" validate:"required"`
-// // 		Description       string `json:"description" validate:"required"`
-// // 		Unit              string `json:"unit" validate:"required"`
-// // 		Quantity          string `json:"quantity" validate:"required"`
-// // 		UnitPrice         string `json:"unitPrice" validate:"required"`
-// // 	}
-// // 	var reqs []TasksPerformed
-// // 	if err := c.BodyParser(&reqs); err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "ورودی های نا معتبر"})
-// // 	}
-
-// // 	//? 3. Check if any task saved for current status statement
-// // 	var existing_stts_items models.Deductions
-// // 	err := ctrl.db.Where(`
-// //         status_statement_id = ? `,
-// // 		reqs[0].StatusStatementID).
-// // 		First(&existing_stts_items).Error
-
-// // 	//* ✅ Record exists → duplicate
-// // 	if err == nil {
-// // 		return c.Status(fiber.StatusConflict).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "کسورات و... ثبت شده",
-// // 		})
-// // 	}
-
-// // 	//* ❌ Real DB error
-// // 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "error",
-// // 			Message: "خطا در ارتباط با پایگاه داده",
-// // 		})
-// // 	}
-
-// // 	//? 4. Validate and save record to database
-// // 	var new_record []models.Deductions
-// // 	for _, req := range reqs {
-// // 		if req.StatusStatementID == "" {
-// // 			return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "شما هنوز صورت وضعیت جدیدی ایجاد نکردید"})
-// // 		}
-// // 		if req.Description == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "شرح آیتم الزامیست"})
-// // 		}
-// // 		if req.Unit == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "واحد آیتم الزامیست"})
-// // 		}
-// // 		if req.Quantity == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "مقدار آیتم الزامیست"})
-// // 		}
-// // 		if req.UnitPrice == "" {
-// // 			c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "قیمت واحد آیتم الزامیست"})
-// // 		}
-// // 		var existing_task models.Deductions
-// // 		err := ctrl.db.Where(`
-// //         status_statement_id = ?
-// //         AND description = ? `,
-// // 			req.StatusStatementID, req.Description).
-// // 			First(&existing_task).Error
-
-// // 		//* ✅ Record exists → duplicate
-// // 		if err == nil {
-// // 			return c.Status(fiber.StatusConflict).JSON(CtrlResponse{
-// // 				Status:  "failure",
-// // 				Message: "آیتم تکراری",
-// // 			})
-// // 		}
-
-// // 		//* ❌ Real DB error
-// // 		if !errors.Is(err, gorm.ErrRecordNotFound) {
-// // 			return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 				Status:  "error",
-// // 				Message: "خطا در ارتباط با پایگاه داده",
-// // 			})
-// // 		}
-
-// // 		quantity, err := strconv.ParseFloat(req.Quantity, 64)
-// // 		if err != nil {
-// // 			return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "مقدار نامعتبر است"})
-// // 		}
-// // 		unit_price, err := strconv.ParseFloat(req.UnitPrice, 64)
-// // 		if err != nil {
-// // 			return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{Status: "failure", Message: "قیمت واحد نامعتبر است"})
-// // 		}
-// // 		parsedUUID, err := uuid.Parse(req.StatusStatementID)
-// // 		if err != nil {
-// // 			return err // or handle the error accordingly
-// // 		}
-
-// // 		var task_performed_record = models.Deductions{
-// // 			BaseModel: models.BaseModel{
-// // 				ID:        uuid.New(),
-// // 				CreatedBy: userID,
-// // 			},
-// // 			StatusStatementID: parsedUUID,
-// // 			Description:       req.Description,
-// // 			Unit:              req.Unit,
-// // 			Quantity:          quantity,
-// // 			UnitPrice:         unit_price,
-// // 			TotalPrice:        quantity * unit_price,
-// // 		}
-// // 		new_record = append(new_record, task_performed_record)
-// // 	}
-// // 	var total_price_sum float64 = 0.0
-// // 	for _, rc := range new_record {
-// // 		total_price_sum += rc.TotalPrice
-// // 	}
-
-// // 	if err := ctrl.db.Create(&new_record).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{Status: "failure", Message: "خطا در ثبت کارکرد"})
-// // 	}
-
-// // 	type ResData struct {
-// // 		Items    []models.Deductions `json:"items"`
-// // 		TotalSum float64             `json:"totol_sum"`
-// // 	}
-// // 	var records_total_price_sum float64
-// // 	for _, item := range new_record {
-// // 		records_total_price_sum += item.TotalPrice
-// // 	}
-
-// // 	res_data := ResData{
-// // 		Items:    new_record,
-// // 		TotalSum: records_total_price_sum,
-// // 	}
-
-// // 	//? 7. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "کسورات با موفقیت ثبت شد",
-// // 		Data:    res_data,
-// // 	})
-// // }
-
-// // ! @get /contractors/new-deduction
-// // func (ctrl *ContractHandler) GetSttsDeductions(c *fiber.Ctx) error {
-// // 	//? 1) Parse query parameters
-// // 	status_statement_id := c.Query("status_statement_id")
-// // 	if status_statement_id == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "صورت وضعیتی برای صدور وجود ندارد",
-// // 		})
-// // 	}
-// // 	// ? 2) Query status statement items
-// // 	var status_statement_additional []models.Deductions
-// // 	if err := ctrl.db.Where("status_statement_id = ?", status_statement_id).Find(&status_statement_additional).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت اضافه کاری و... صورت وضعیت",
-// // 		})
-// // 	}
-// // 	type ResData struct {
-// // 		Items    []models.Deductions `json:"items"`
-// // 		TotalSum float64             `json:"totol_sum"`
-// // 	}
-// // 	var items_total_price_sum float64
-// // 	for _, item := range status_statement_additional {
-// // 		items_total_price_sum += item.TotalPrice
-// // 	}
-
-// // 	res_data := ResData{
-// // 		Items:    status_statement_additional,
-// // 		TotalSum: items_total_price_sum,
-// // 	}
-
-// // 	//? 6. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "آیتم های کارکرد صورت وضعیت با موفقیت دریافت شد",
-// // 		Data:    res_data,
-// // 	})
-// // }
-
-// // ! @get /contractors/finance-summary
-// // func (ctrl *ContractHandler) GetSttsFinanceSummary(c *fiber.Ctx) error {
-// // 	//? 1) Parse query parameters
-// // 	status_statement_id := c.Query("status_statement_id")
-// // 	if status_statement_id == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "صورت وضعیتی برای صدور وجود ندارد",
-// // 		})
-// // 	}
-
-// // 	//? 2) Get onGoing Status Statement
-// // 	var status_statement models.StatusStatement
-// // 	if err := ctrl.db.Where("id = ?", status_statement_id).First(&status_statement).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"status":  "faluire",
-// // 			"message": "خطا در دریافت آخرین صورت وضعیت",
-// // 		})
-// // 	}
-
-// // 	var last_status_statement models.StatusStatement
-// // 	if err := ctrl.db.Where("contractor_id = ? AND project_id = ? AND id <> ?", status_statement.ContractorID, status_statement.ProjectID, status_statement.ID).Order("created_at DESC").First(&last_status_statement).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"status":  "faluire",
-// // 			"message": "خطا در دریافت آخرین صورت وضعیت",
-// // 		})
-// // 	}
-// // 	// ? 3) Query status statement items
-// // 	//* tasks performed
-// // 	var status_statement_tasks []models.TasksPerformed
-// // 	if err := ctrl.db.Where("status_statement_id = ?", status_statement_id).Find(&status_statement_tasks).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت کارکرد صورت وضعیت",
-// // 		})
-// // 	}
-// // 	var last_status_statement_tasks []models.TasksPerformed
-// // 	if err := ctrl.db.Where("status_statement_id = ?", last_status_statement.ID).Find(&last_status_statement_tasks).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت آخرین کارکرد صورت وضعیت",
-// // 		})
-// // 	}
-
-// // 	//* Additional Works
-// // 	var status_statement_additional_works []models.TasksPerformed
-// // 	if err := ctrl.db.Where("status_statement_id = ?", status_statement_id).Find(&status_statement_additional_works).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت اضافه کاری صورت وضعیت",
-// // 		})
-// // 	}
-// // 	var last_status_statement_additional_works []models.TasksPerformed
-// // 	if err := ctrl.db.Where("status_statement_id = ?", last_status_statement.ID).Find(&last_status_statement_additional_works).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت آخرین اضافه کاری صورت وضعیت",
-// // 		})
-// // 	}
-
-// // 	//* Deductions
-// // 	var status_statement_deductions []models.TasksPerformed
-// // 	if err := ctrl.db.Where("status_statement_id = ?", status_statement_id).Find(&status_statement_deductions).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت کسور صورت وضعیت",
-// // 		})
-// // 	}
-// // 	var last_status_statement_deductions []models.TasksPerformed
-// // 	if err := ctrl.db.Where("status_statement_id = ?", last_status_statement.ID).Find(&last_status_statement_deductions).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت آخرین کسور صورت وضعیت",
-// // 		})
-// // 	}
-
-// // 	//? 4) Calc Summations of each
-// // 	//* current
-// // 	var current_sum float64
-// // 	for _, item := range status_statement_tasks {
-// // 		current_sum += item.TotalPrice
-// // 	}
-// // 	for _, item := range status_statement_additional_works {
-// // 		current_sum += item.TotalPrice
-// // 	}
-// // 	for _, item := range status_statement_deductions {
-// // 		current_sum += item.TotalPrice
-// // 	}
-
-// // 	//* last
-// // 	var last_sum float64
-// // 	for _, item := range last_status_statement_tasks {
-// // 		last_sum += item.TotalPrice
-// // 	}
-// // 	for _, item := range last_status_statement_additional_works {
-// // 		last_sum += item.TotalPrice
-// // 	}
-// // 	for _, item := range last_status_statement_deductions {
-// // 		last_sum += item.TotalPrice
-// // 	}
-
-// // 	//* current net
-// // 	current_net := current_sum - last_sum
-
-// // 	//? 5) Send Response
-// // 	type ResData struct {
-// // 		CurrentAcc float64 `json:"current_acc"`
-// // 		LastAcc    float64 `json:"last_acc"`
-// // 		CurrentNet float64 `json:"current_net"`
-// // 	}
-
-// // 	res_data := ResData{
-// // 		CurrentAcc: current_sum,
-// // 		LastAcc:    last_sum,
-// // 		CurrentNet: current_net,
-// // 	}
-
-// // 	//? 6. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "خلاصه مالی با موفقیت دریافت شد",
-// // 		Data:    res_data,
-// // 	})
-// // }
-
-// // ! @get /contractors/legal-reductions
-// // func (ctrl *ContractHandler) GetSttsLegalReductions(c *fiber.Ctx) error {
-// // 	//? 1) Parse query parameters
-// // 	status_statement_id := c.Query("status_statement_id")
-// // 	if status_statement_id == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "صورت وضعیتی برای صدور وجود ندارد",
-// // 		})
-// // 	}
-
-// // 	//? 2) Get onGoing Status Statement
-// // 	var status_statement models.StatusStatement
-// // 	if err := ctrl.db.Where("id = ?", status_statement_id).First(&status_statement).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"status":  "faluire",
-// // 			"message": "خطا در دریافت صورت وضعیت",
-// // 		})
-// // 	}
-
-// // 	//? 3) Get Contract
-// // 	var contract models.Contractor
-// // 	if err := ctrl.db.Where("id = ?", status_statement.ContractorID).First(&contract).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"status":  "faluire",
-// // 			"message": "خطا در دریافت قرارداد",
-// // 		})
-// // 	}
-
-// // 	contract_duration_month := float32(contract.Duration) / 30.0
-// // 	performance_bond_rate := contract.PerformanceBond / 100.0
-// // 	insurance_rate := contract.InsuranceRate / 100.0
-
-// // 	performance_bond := contract.GrossBudget * performance_bond_rate / contract_duration_month
-// // 	insurance := contract.GrossBudget * insurance_rate / contract_duration_month
-
-// // 	legal_deduction_sum := performance_bond + insurance
-
-// // 	//? 4) Calc Response
-// // 	type ResData struct {
-// // 		PerformanceBondRate float64 `json:"performance_bond_rate"`
-// // 		PerformanceBond     float64 `json:"performance_bond"`
-// // 		InsuranceRate       float64 `json:"insurance_rate"`
-// // 		Insurance           float64 `json:"insurance"`
-// // 		TotolSum            float64 `json:"total_sum"`
-// // 	}
-
-// // 	res_data := ResData{
-// // 		PerformanceBondRate: float64(performance_bond_rate * 100),
-// // 		PerformanceBond:     float64(performance_bond),
-// // 		InsuranceRate:       float64(insurance_rate * 100),
-// // 		Insurance:           float64(insurance),
-// // 		TotolSum:            float64(legal_deduction_sum),
-// // 	}
-
-// // 	//? 5) Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "کسورات قانونی با موفقیت دریافت شد",
-// // 		Data:    res_data,
-// // 	})
-// // }
-
-// // ! @get /contractors/other-reductions
-// // func (ctrl *ContractHandler) GetSttsOtherReductions(c *fiber.Ctx) error {
-// // 	//? 1) Parse query parameters
-// // 	status_statement_id := c.Query("status_statement_id")
-// // 	if status_statement_id == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(CtrlResponse{
-// // 			Status:  "failure",
-// // 			Message: "صورت وضعیتی برای صدور وجود ندارد",
-// // 		})
-// // 	}
-
-// // 	//? 2) Get onGoing Status Statement
-// // 	var status_statement models.StatusStatement
-// // 	if err := ctrl.db.Where("id = ?", status_statement_id).First(&status_statement).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت صورت وضعیت",
-// // 		})
-// // 	}
-
-// // 	//? 3) Get Contract
-// // 	var contract models.Contractor
-// // 	if err := ctrl.db.Where("id = ?", status_statement.ContractorID).First(&contract).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت قرارداد",
-// // 		})
-// // 	}
-
-// // 	contract_duration_month := float32(contract.Duration) / 30.0
-// // 	added_value_tax_rate := contract.AddedValueTax / 100.0
-// // 	added_value_tax := contract.GrossBudget * added_value_tax_rate / contract_duration_month
-
-// // 	// ? Get last Deductions
-// // 	var status_statement_deductions []models.Deductions
-// // 	if err := ctrl.db.Where("status_statement_id = ?", status_statement_id).Find(&status_statement_deductions).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(CtrlResponse{
-// // 			Status:  "faluire",
-// // 			Message: "خطا در دریافت اضافه کاری و... صورت وضعیت",
-// // 		})
-// // 	}
-
-// // 	var status_statement_deduction_sum float64
-// // 	for _, item := range status_statement_deductions {
-// // 		status_statement_deduction_sum += item.TotalPrice
-// // 	}
-
-// // 	//? 4) Calc Response
-// // 	type ResData struct {
-// // 		Deductions        float64 `json:"deductions"`
-// // 		AddedValueTax     float64 `json:"added_value_tax"`
-// // 		AddedValueTaxRate float64 `json:"added_value_tax_rate"`
-// // 	}
-
-// // 	res_data := ResData{
-// // 		Deductions:        float64(status_statement_deduction_sum),
-// // 		AddedValueTax:     float64(added_value_tax),
-// // 		AddedValueTaxRate: float64(added_value_tax_rate * 100),
-// // 	}
-
-// // 	//? 5) Send response
-// // 	return c.Status(fiber.StatusOK).JSON(CtrlResponse{
-// // 		Status:  "success",
-// // 		Message: "سایر کسورات با موفقیت دریافت شد",
-// // 		Data:    res_data,
-// // 	})
-// // }
-
-// // Todo:
-// // ! @post /contractors/tasks-final-subs
-// // func (ctrl *ContractHandler) TasksFinalSubmition(c *fiber.Ctx) error {
-// // 	//? 1. Get authenticated user ID from token
-// // 	userID, err := utils.ParseToken(c)
-// // 	if userID == uuid.Nil || err != nil {
-// // 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-// // 			"status":  "failure",
-// // 			"message": "شما هنوز وارد حساب کاربری خود نشدید",
-// // 		})
-// // 	}
-// // 	//? 2. Parse Body Request
-// // 	type FinalSubsReq struct {
-// // 		StatusStatementID string `json:"statusStatmntId" validate:"required"`
-// // 		CumulativePrice   string `json:"cumulative_price" validate:"required"`
-// // 	}
-// // 	var req FinalSubsReq
-// // 	if err := c.BodyParser(&req); err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ورودی های نا معتبر"})
-// // 	}
-// // 	//? 3. Validating inputs
-// // 	if req.StatusStatementID == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "شما هنوز صورت وضعیت جدیدی ایجاد نکردید"})
-// // 	}
-// // 	if req.CumulativePrice == "" {
-// // 		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "شرح آیتم الزامیست"})
-// // 	}
-
-// // 	//? 4. Check for existing record
-// // 	var existing_record models.CumulativeTasksPerformed
-// // 	err = ctrl.db.Where(`
-// //         status_statement_id = ?
-// //         AND cumulative_price = ? `,
-// // 		req.StatusStatementID, req.CumulativePrice).
-// // 		First(&existing_record).Error
-
-// // 	//* ✅ Record exists → duplicate
-// // 	if err == nil {
-// // 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-// // 			"status":  "failure",
-// // 			"message": "آیتم تکراری",
-// // 		})
-// // 	}
-
-// // 	//* ❌ Real DB error
-// // 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"status":  "error",
-// // 			"message": "خطا در ارتباط با پایگاه داده",
-// // 		})
-// // 	}
-
-// // 	//? 5. sanitize inputs
-// // 	cumulative_price, err := strconv.ParseFloat(req.CumulativePrice, 64)
-// // 	if err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "مقدار نامعتبر است"})
-// // 	}
-// // 	parsedUUID, err := uuid.Parse(req.StatusStatementID)
-// // 	if err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "خطا در پردازش آیدی کاربر"})
-// // 	}
-
-// // 	//? 6. Save new record to database
-// // 	var cumulative_price_record = models.CumulativeTasksPerformed{
-// // 		BaseModel: models.BaseModel{
-// // 			ID:        uuid.New(),
-// // 			CreatedBy: userID,
-// // 		},
-// // 		StatusStatementID: parsedUUID,
-// // 		CumulativePrice:   cumulative_price,
-// // 	}
-
-// // 	if err := ctrl.db.Create(&cumulative_price_record).Error; err != nil {
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "خطا در ثبت نهایی"})
-// // 	}
-
-// // 	//? 7. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-// // 		"status":  "success",
-// // 		"message": "ثبت نهایی با موفقیت انجام شد",
-// // 		"data":    cumulative_price_record,
-// // 	})
-// // }
-
-// // ! @post /contractors/other-reductions
-// // func (ctrl *ContractHandler) GetOtherDeductions(c *fiber.Ctx) error {
-// // 	//? 1. Get authenticated user ID from token
-// // 	userID, err := utils.ParseToken(c)
-// // 	if userID == uuid.Nil || err != nil {
-// // 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-// // 			"status":  "failure",
-// // 			"message": "شما هنوز وارد حساب کاربری خود نشدید",
-// // 		})
-// // 	}
-
-// // 	//? 2. Parse Body Request
-// // 	type FinanceSummaryReq struct {
-// // 		StatusStatementID string `json:"statusStatmntId" validate:"required"`
-// // 	}
-// // 	var req FinanceSummaryReq
-// // 	if err := c.BodyParser(&req); err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-// // 			"error": "ورودی‌های نامعتبر",
-// // 		})
-// // 	}
-
-// // 	//? 3. Validate and parse UUID
-// // 	if req.StatusStatementID == "" {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-// // 			"error": "شما هنوز صورت وضعیت جدیدی ایجاد نکردید",
-// // 		})
-// // 	}
-// // 	parsedUUID, err := uuid.Parse(req.StatusStatementID)
-// // 	if err != nil {
-// // 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-// // 			"error": "خطا در پردازش آیدی صورت‌وضعیت",
-// // 		})
-// // 	}
-
-// // 	//? 4. Get last existing record (before current one)
-// // 	var lastRecord models.CumulativeTasksPerformed
-// // 	err = ctrl.db.
-// // 		Where("status_statement_id <> ?", parsedUUID).
-// // 		Order("updated_at DESC").
-// // 		Limit(1).
-// // 		First(&lastRecord).Error
-
-// // 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-// // 		// Real DB error
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"status":  "error",
-// // 			"message": "خطا در ارتباط با پایگاه داده",
-// // 		})
-// // 	}
-
-// // 	//? 5. Get current record
-// // 	var currentRecord models.CumulativeTasksPerformed
-// // 	err = ctrl.db.
-// // 		Where("status_statement_id = ?", parsedUUID).
-// // 		First(&currentRecord).Error
-
-// // 	if err != nil {
-// // 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// // 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-// // 				"status":  "failure",
-// // 				"message": "رکوردی برای این صورت وضعیت پیدا نشد",
-// // 			})
-// // 		}
-// // 		// Real DB error
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"status":  "error",
-// // 			"message": "خطا در ارتباط با پایگاه داده",
-// // 		})
-// // 	}
-
-// // 	//? 6. Calculate results
-// // 	current := currentRecord.CumulativePrice
-// // 	last := lastRecord.CumulativePrice // will be 0 if not found
-
-// // 	res := fiber.Map{
-// // 		"last_cumulative":      last,
-// // 		"current_cumulative":   current,
-// // 		"current_period_price": current - last,
-// // 	}
-
-// // 	//? 7. Send response
-// // 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-// // 		"status":  "success",
-// // 		"message": "خلاصه مالی با موفقیت بازیابی شد",
-// // 		"data":    res,
-// // 	})
-// // }
+import (
+	"strconv"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
+	"github.com/sobhan-yasami/docs-db-panel/internal/services"
+	"gorm.io/gorm"
+)
+
+// jwtClaims extracts the JWT claims set by the Authenticate middleware.
+func jwtClaims(c *fiber.Ctx) *schemas.JWTClaims {
+	claims, _ := c.Locals("claims").(*schemas.JWTClaims)
+	return claims
+}
+
+// serviceErr maps a ServiceError to the correct HTTP status/body.
+func serviceErr(c *fiber.Ctx, err error) error {
+	if svcErr, ok := err.(*services.ServiceError); ok {
+		return c.Status(svcErr.Code).JSON(ErrorResponse(BadRequest, svcErr.Message))
+	}
+	return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+}
+
+// paginationQuery parses page/limit query params with safe defaults.
+func paginationQuery(c *fiber.Ctx) (page, limit int) {
+	page, _ = strconv.Atoi(c.Query("page", "1"))
+	limit, _ = strconv.Atoi(c.Query("limit", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	return
+}
+
+// ============================================================
+// PROJECT HANDLER
+// ============================================================
+
+type ProjectHandler struct {
+	svc *services.ProjectService
+}
+
+func NewProjectHandler(db *gorm.DB) *ProjectHandler {
+	return &ProjectHandler{svc: services.NewProjectService(db)}
+}
+
+// POST /projects
+func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
+	claims := jwtClaims(c)
+	if claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
+	var req services.CreateProjectReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	project, err := h.svc.Create(c.Context(), claims.CompanyID, req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(project, "Project created"))
+}
+
+// GET /projects/:id
+func (h *ProjectHandler) GetProject(c *fiber.Ctx) error {
+	project, err := h.svc.GetByID(c.Context(), c.Params("id"))
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(project))
+}
+
+// GET /projects
+func (h *ProjectHandler) ListProjects(c *fiber.Ctx) error {
+	claims := jwtClaims(c)
+	if claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
+	page, limit := paginationQuery(c)
+	status := c.Query("status")
+
+	projects, total, err := h.svc.List(c.Context(), claims.CompanyID, status, page, limit)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(fiber.Map{
+		"data":  projects,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	}))
+}
+
+// PUT /projects/:id
+func (h *ProjectHandler) UpdateProject(c *fiber.Ctx) error {
+	var req services.UpdateProjectReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	project, err := h.svc.Update(c.Context(), c.Params("id"), req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(project, "Project updated"))
+}
+
+// DELETE /projects/:id
+func (h *ProjectHandler) DeleteProject(c *fiber.Ctx) error {
+	if err := h.svc.Delete(c.Context(), c.Params("id")); err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
+// ============================================================
+// CONTRACTOR HANDLER
+// ============================================================
+
+type ContractorHandler struct {
+	svc *services.ContractorService
+}
+
+func NewContractorHandler(db *gorm.DB) *ContractorHandler {
+	return &ContractorHandler{svc: services.NewContractorService(db)}
+}
+
+// POST /contractors
+func (h *ContractorHandler) CreateContractor(c *fiber.Ctx) error {
+	var req services.CreateContractorReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	contractor, err := h.svc.Create(c.Context(), req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(contractor, "Contractor created"))
+}
+
+// GET /contractors/:id
+func (h *ContractorHandler) GetContractor(c *fiber.Ctx) error {
+	contractor, err := h.svc.GetByID(c.Context(), c.Params("id"))
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(contractor))
+}
+
+// GET /contractors
+func (h *ContractorHandler) ListContractors(c *fiber.Ctx) error {
+	page, limit := paginationQuery(c)
+	search := c.Query("search")
+	contractors, total, err := h.svc.List(c.Context(), search, page, limit)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(fiber.Map{
+		"data":  contractors,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	}))
+}
+
+// PUT /contractors/:id
+func (h *ContractorHandler) UpdateContractor(c *fiber.Ctx) error {
+	var req services.UpdateContractorReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	contractor, err := h.svc.Update(c.Context(), c.Params("id"), req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(contractor, "Contractor updated"))
+}
+
+// DELETE /contractors/:id
+func (h *ContractorHandler) DeleteContractor(c *fiber.Ctx) error {
+	if err := h.svc.Delete(c.Context(), c.Params("id")); err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
+// ============================================================
+// CONTRACT HANDLER
+// ============================================================
+
+type ContractHandler struct {
+	svc *services.ContractSvc
+}
+
+func NewContractHandler(db *gorm.DB) *ContractHandler {
+	return &ContractHandler{svc: services.NewContractSvc(db)}
+}
+
+// POST /contracts
+func (h *ContractHandler) CreateContract(c *fiber.Ctx) error {
+	var req services.CreateContractReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	contract, err := h.svc.Create(c.Context(), req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(contract, "Contract created"))
+}
+
+// GET /contracts/:id
+func (h *ContractHandler) GetContract(c *fiber.Ctx) error {
+	contract, err := h.svc.GetByID(c.Context(), c.Params("id"))
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(contract))
+}
+
+// GET /contracts?project_id=...
+func (h *ContractHandler) ListContracts(c *fiber.Ctx) error {
+	page, limit := paginationQuery(c)
+	projectID := c.Query("project_id")
+	contracts, total, err := h.svc.ListByProject(c.Context(), projectID, page, limit)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(fiber.Map{
+		"data":  contracts,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	}))
+}
+
+// PUT /contracts/:id
+func (h *ContractHandler) UpdateContract(c *fiber.Ctx) error {
+	var req services.UpdateContractReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	contract, err := h.svc.Update(c.Context(), c.Params("id"), req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(contract, "Contract updated"))
+}
+
+// DELETE /contracts/:id
+func (h *ContractHandler) DeleteContract(c *fiber.Ctx) error {
+	if err := h.svc.Delete(c.Context(), c.Params("id")); err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
+// GET /contracts/:id/wbs
+func (h *ContractHandler) ListWBS(c *fiber.Ctx) error {
+	items, err := h.svc.ListWBS(c.Context(), c.Params("id"))
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(items))
+}
+
+// POST /contracts/:id/wbs
+func (h *ContractHandler) CreateWBS(c *fiber.Ctx) error {
+	var req services.CreateWBSReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	item, err := h.svc.CreateWBS(c.Context(), c.Params("id"), req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(item, "WBS item created"))
+}

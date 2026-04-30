@@ -1,502 +1,655 @@
 package services
 
-// import (
-// 	"context"
-// 	"errors"
-// 	"time"
-
-// 	"github.com/google/uuid"
-// 	"github.com/sobhan-yasami/docs-db-panel/internal/models"
-// 	"gorm.io/gorm"
-// )
-
-// // --------------------------
-// // ContractService handles operations related to contracts and projects.
-// // --------------------------
-// type ContractService struct {
-// 	db *gorm.DB
-// }
-
-// func NewContractService(db *gorm.DB) *ContractService {
-// 	return &ContractService{db: db}
-// }
-
-// // ------------------------------------------------------------------------
-
-// // =============================
-// // Project Management
-// // =============================
-// var ErrProjectAlreadyExists = errors.New("project already exists")
-
-// type CreateProjectRequest struct {
-// 	Name  string              `json:"name" validate:"required,max=100"`
-// 	Phase models.ProjectPhase `json:"phase" validate:"required"`
-// }
-
-// func (s *ContractService) CreateProject(
-// 	ctx context.Context,
-// 	userID uuid.UUID,
-// 	companyID uuid.UUID,
-// 	req CreateProjectRequest,
-// ) (*models.Project, error) {
-
-// 	project := &models.Project{
-// 		BaseModel: models.BaseModel{
-// 			CreatedBy: &userID,
-// 		},
-// 		Name:      req.Name,
-// 		Phase:     req.Phase,
-// 		CompanyID: companyID,
-// 	}
-
-// 	err := s.db.WithContext(ctx).Create(project).Error
-// 	if err != nil {
-
-// 		// Detect unique violation
-// 		if isUniqueConstraintError(err) {
-// 			return nil, ErrProjectAlreadyExists
-// 		}
-
-// 		return nil, err
-// 	}
-
-// 	return project, nil
-// }
-
-// // GetAllProjects fetches projects, groups them by name, and returns a summary.
-// func (s *ContractService) GetAllProjects(ctx context.Context) ([]models.Project, error) {
-// 	// We can define the limit here, or pass it as an argument.
-// 	const projectLimit = 50
-
-// 	//? 1) Fetch projects with context and limit
-// 	var projects []models.Project
-// 	if err := s.db.WithContext(ctx).
-// 		Limit(projectLimit). // Limit is handled by the service
-// 		Order("name ASC").
-// 		Find(&projects).Error; err != nil {
-// 		return nil, err // Return the raw Gorm error
-// 	}
-
-// 	//? 2) Group projects by name and collect phases (Business logic handled by service)
-// 	// projectsMap := make(map[string][]int)
-// 	// for _, project := range projects {
-// 	// 	projectsMap[project.Name] = append(projectsMap[project.Name], int(project.Phase))
-// 	// }
-
-// 	//? 3) Build final response structure (Transformation logic handled by service)
-// 	// responseProjects := make([]ProjectSummary, 0, len(projectsMap))
-// 	// for name, phases := range projectsMap {
-// 	// 	responseProjects = append(responseProjects, ProjectSummary{
-// 	// 		Name:   name,
-// 	// 		Phases: phases,
-// 	// 	})
-// 	// }
-
-// 	return projects, nil
-// }
-
-// // get project by ID
-// func (s *ContractService) GetProjectByID(ctx context.Context, projectID uuid.UUID) (*models.Project, error) {
-// 	var project models.Project
-// 	if err := s.db.WithContext(ctx).First(&project, "id = ?", projectID).Error; err != nil {
-// 		return nil, err
-// 	}
-// 	return &project, nil
-// }
-
-// // UpdateProject updates project details.
-// func (s *ContractService) UpdateProject(ctx context.Context, projectID uuid.UUID, name string, phase uint8) error {
-// 	// Update the project fields
-// 	updates := map[string]interface{}{
-// 		"name":  name,
-// 		"phase": phase,
-// 	}
-
-// 	if err := s.db.WithContext(ctx).Model(&models.Project{}).Where("id = ?", projectID).Updates(updates).Error; err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// // Delete Project deletes a project by its ID.
-// func (s *ContractService) DeleteProject(ctx context.Context, projectID uuid.UUID) error {
-// 	// Delete the project by ID
-// 	if err := s.db.WithContext(ctx).Delete(&models.Project{}, "id = ?", projectID).Error; err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// // ---------------------------
-// // Contractor Management
-// // ---------------------------
-// // CreateContractor creates a new contractor in the system.
-// func (s *ContractService) CreateContractor(ctx context.Context, employeeID uuid.UUID, legalEntity bool, firstName, lastName, preferentialID, nationalID string) error {
-// 	// check if contractor with same NationalID exists
-// 	var existingCount int64
-// 	if err := s.db.WithContext(ctx).
-// 		Model(&models.Contractor{}).
-// 		Where("national_id = ?", nationalID).
-// 		Count(&existingCount).Error; err != nil {
-// 		return err // Return database errors to the handler
-// 	}
-
-// 	if existingCount > 0 {
-// 		return gorm.ErrRegistered // or a custom error indicating duplicate contractor
-// 	}
-
-// 	// Create new contractor
-// 	contractor := models.Contractor{
-// 		User: models.User{
-// 			ID:          uuid.New(),
-// 			FirstName:   firstName,
-// 			LastName:    lastName,
-// 			Permissions: "none",
-// 		},
-// 		LegalEntity:    legalEntity,
-// 		PreferentialID: preferentialID,
-// 		NationalID:     nationalID,
-// 		CreatedBy:      employeeID,
-// 	}
-
-// 	if err := s.db.WithContext(ctx).Create(&contractor).Error; err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// // GetAllContractors retrieves all contractors.
-// func (s *ContractService) GetAllContractors(ctx context.Context) ([]models.Contractor, error) {
-// 	var contractors []models.Contractor
-// 	if err := s.db.WithContext(ctx).Find(&contractors).Error; err != nil {
-// 		return nil, err
-// 	}
-// 	return contractors, nil
-// }
-
-// // GetContractorByID retrieves a contractor by their ID.
-// func (s *ContractService) GetContractorByID(ctx context.Context, contractorID uuid.UUID) (*models.Contractor, error) {
-// 	var contractor models.Contractor
-// 	if err := s.db.WithContext(ctx).First(&contractor, "id = ?", contractorID).Error; err != nil {
-// 		return nil, err
-// 	}
-// 	return &contractor, nil
-// }
-
-// // UpdateContractor updates contractor details.
-// func (s *ContractService) UpdateContractor(ctx context.Context, employeeID uuid.UUID, contractorID uuid.UUID, legalEntity bool, firstName, lastName, preferentialID, nationalID string) error {
-// 	// Update the contractor fields
-// 	updates := map[string]interface{}{
-// 		"legal_entity":    legalEntity,
-// 		"first_name":      firstName,
-// 		"last_name":       lastName,
-// 		"preferential_id": preferentialID,
-// 		"national_id":     nationalID,
-// 		"updated_by":      employeeID,
-// 	}
-
-// 	if err := s.db.WithContext(ctx).Model(&models.Contractor{}).Where("id = ?", contractorID).Updates(updates).Error; err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// // DeleteContractor deletes a contractor by its ID.
-// func (s *ContractService) DeleteContractor(ctx context.Context, contractorID uuid.UUID, adminID uuid.UUID) error {
-// 	// 1. We use a transaction to ensure both the 'DeletedBy' update
-// 	// and the Soft Delete happen together.
-// 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-
-// 		// 2. Update the DeletedBy field first
-// 		if err := tx.Model(&models.Contractor{}).
-// 			Where("id = ?", contractorID).
-// 			Update("deleted_by", adminID).Error; err != nil {
-// 			return err
-// 		}
-
-// 		// 3. Perform the standard GORM Soft Delete
-// 		if err := tx.Delete(&models.Contractor{}, "id = ?", contractorID).Error; err != nil {
-// 			return err
-// 		}
-
-// 		return nil
-// 	})
-// }
-
-// // ---------------------------
-// // Contract Management
-// // ---------------------------
-// // CreateContract
-// func (s *ContractService) CreateContract(ctx context.Context, userID, contractorID, projectID uuid.UUID, contractNumber string, GrossBudget float64, insuranceRate, performanceBond, addedValueTax float32, startDate, endDate time.Time, ScanedFileUrl string) error {
-// 	contract := models.Contract{
-// 		BaseModel: models.BaseModel{
-// 			ID:        uuid.New(),
-// 			CreatedBy: userID,
-// 		},
-// 		ContractorID:    contractorID,
-// 		ProjectID:       projectID,
-// 		ContractNumber:  contractNumber,
-// 		GrossBudget:     GrossBudget,
-// 		InsuranceRate:   insuranceRate,
-// 		PerformanceBond: performanceBond,
-// 		AddedValueTax:   addedValueTax,
-// 		StartDate:       startDate,
-// 		EndDate:         endDate,
-// 		ScanedFileUrl:   ScanedFileUrl,
-// 	}
-
-// 	if err := s.db.WithContext(ctx).Create(&contract).Error; err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// // GetAllContracts
-// func (s *ContractService) GetAllContracts(ctx context.Context) ([]models.Contract, error) {
-// 	var contracts []models.Contract
-// 	if err := s.db.WithContext(ctx).Find(&contracts).Error; err != nil {
-// 		return nil, err
-// 	}
-// 	return contracts, nil
-// }
-
-// // GetContractByID
-// func (s *ContractService) GetContractByID(ctx context.Context, contractID uuid.UUID) (*models.Contract, error) {
-// 	var contract models.Contract
-// 	if err := s.db.WithContext(ctx).First(&contract, "id = ?", contractID).Error; err != nil {
-// 		return nil, err
-// 	}
-// 	return &contract, nil
-// }
-
-// // GetContract by ContractNumber
-// func (s *ContractService) GetContractByNumber(ctx context.Context, contractNumber string) (*models.Contract, error) {
-// 	var contract models.Contract
-// 	if err := s.db.WithContext(ctx).First(&contract, "contract_number = ?", contractNumber).Error; err != nil {
-// 		return nil, err
-// 	}
-// 	return &contract, nil
-// }
-
-// // UpdateContract
-// func (s *ContractService) UpdateContract(ctx context.Context, contractID, userID, contractorID, projectID uuid.UUID, contractNumber string, GrossBudget float64, insuranceRate, performanceBond, addedValueTax float32, startDate, endDate time.Time, ScanedFileUrl string) error {
-// 	// Update the contract fields
-// 	updates := map[string]interface{}{
-// 		"contractor_id":    contractorID,
-// 		"project_id":       projectID,
-// 		"contract_number":  contractNumber,
-// 		"gross_budget":     GrossBudget,
-// 		"insurance_rate":   insuranceRate,
-// 		"performance_bond": performanceBond,
-// 		"added_value_tax":  addedValueTax,
-// 		"start_date":       startDate,
-// 		"end_date":         endDate,
-// 		"scaned_file_url":  ScanedFileUrl,
-// 		"updated_by":       userID,
-// 	}
-
-// 	if err := s.db.WithContext(ctx).Model(&models.Contract{}).Where("id = ?", contractID).Updates(updates).Error; err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// // DeleteContract
-// func (s *ContractService) DeleteContract(ctx context.Context, contractID, userID uuid.UUID) error {
-// 	// 1. We use a transaction to ensure both the 'DeletedBy' update
-// 	// and the Soft Delete happen together.
-// 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-
-// 		// 2. Update the DeletedBy field first
-// 		if err := tx.Model(&models.Contract{}).
-// 			Where("id = ?", contractID).
-// 			Update("deleted_by", userID).Error; err != nil {
-// 			return err
-// 		}
-
-// 		// 3. Perform the standard GORM Soft Delete
-// 		if err := tx.Delete(&models.Contract{}, "id = ?", contractID).Error; err != nil {
-// 			return err
-// 		}
-
-// 		return nil
-// 	})
-// }
-
-// // -----------
-// //
-// // --------
-// func (s *ContractService) CreateContractWBS(ctx context.Context, userID, contractID, contractorID, projectID uuid.UUID, description, unit string, quantity, unitPrice float64) error {
-
-// 	// check for existing record with same description under the same contract
-// 	var existingCount int64
-// 	if err := s.db.WithContext(ctx).
-// 		Model(&models.ContractWBS{}).
-// 		Where("contract_id = ? AND description = ?", contractID, description).
-// 		Count(&existingCount).Error; err != nil {
-// 		return err // Return database errors to the handler
-// 	}
-
-// 	if existingCount > 0 {
-// 		return gorm.ErrRegistered // or a custom error indicating duplicate contractor
-// 	}
-
-// 	// Create new record
-// 	contractWbs := models.ContractWBS{
-// 		BaseModel: models.BaseModel{
-// 			ID:        uuid.New(),
-// 			CreatedBy: userID,
-// 		},
-// 		Description:  description,
-// 		Unit:         unit,
-// 		Quantity:     quantity,
-// 		UnitPrice:    unitPrice,
-// 		TotalPrice:   quantity * unitPrice,
-// 		ContractID:   contractID,
-// 		ProjectID:    projectID,
-// 		ContractorID: contractorID,
-// 	}
-
-// 	if err := s.db.WithContext(ctx).Create(&contractWbs).Error; err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// // GetContractByID
-// func (s *ContractService) GetContractWBS(ctx context.Context, contractID uuid.UUID) (*[]models.ContractWBS, error) {
-// 	var contract_wbs []models.ContractWBS
-// 	if err := s.db.WithContext(ctx).Find(&contract_wbs, "contract_id = ?", contractID).Error; err != nil {
-// 		return nil, err
-// 	}
-// 	return &contract_wbs, nil
-// }
-
-// // create tasks performed
-// func (s *ContractService) CreateTasksPerformed(ctx context.Context, userID, statusStatementID uuid.UUID, description, unit string, quantity, unitPrice float64) error {
-// 	// Create new record
-// 	taskPerformed := models.TasksPerformed{
-// 		BaseModel: models.BaseModel{
-// 			ID:        uuid.New(),
-// 			CreatedBy: userID,
-// 		},
-// 		StatusStatementID: statusStatementID,
-// 		Description:       description,
-// 		Unit:              unit,
-// 		Quantity:          quantity,
-// 		UnitPrice:         unitPrice,
-// 		TotalPrice:        quantity * unitPrice,
-// 	}
-
-// 	if err := s.db.WithContext(ctx).Create(&taskPerformed).Error; err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// // GetLastStatement
-// func (s *ContractService) GetLastStatusStatement(ctx context.Context, contractID uuid.UUID) (*models.StatusStatement, error) {
-// 	var statusStatement models.StatusStatement
-
-// 	err := s.db.WithContext(ctx).
-// 		Where("contract_id = ?", contractID).
-// 		Order("number desc").
-// 		First(&statusStatement).Error
-
-// 	if err != nil {
-// 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// 			return nil, nil
-// 		}
-// 		return nil, err
-// 	}
-
-// 	return &statusStatement, nil
-// }
-
-// // GetLast2StatusStatements returns the last 2 status statements for a contract
-// func (s *ContractService) GetLast2StatusStatements(ctx context.Context, contractID uuid.UUID) ([]*models.StatusStatement, error) {
-// 	var status_statements []*models.StatusStatement
-
-// 	if err := s.db.WithContext(ctx).
-// 		Where("contract_id = ?", contractID).
-// 		Order("number desc").
-// 		Limit(2).
-// 		Find(&status_statements).Error; err != nil {
-// 		return nil, err
-// 	}
-
-// 	return status_statements, nil
-// }
-
-// // get last tasks performed
-// func (s *ContractService) GetLastTasksPerformed(ctx context.Context, statusStatementID uuid.UUID) (*[]models.TasksPerformed, error) {
-// 	var tasks_performed []models.TasksPerformed
-
-// 	if err := s.db.WithContext(ctx).Where("status_statement_id = ?", statusStatementID).Order("created_at desc").Find(&tasks_performed).Error; err != nil {
-// 		return nil, err
-// 	}
-// 	return &tasks_performed, nil
-// }
-
-// // CreateStatusStatement
-// func (s *ContractService) CreateStatusStatement(ctx context.Context, userID, contractID, contractorID, projectID uuid.UUID, statementDateStart, statementDateEnd time.Time, statusNumber uint16, status string) (models.StatusStatement, error) {
-// 	// Create new record
-// 	neue_statusStatement := models.StatusStatement{
-// 		BaseModel: models.BaseModel{
-// 			ID:        uuid.New(),
-// 			CreatedBy: userID,
-// 		},
-// 		ContractID:         contractID,
-// 		ContractorID:       contractorID,
-// 		ProjectID:          projectID,
-// 		StatementDateStart: statementDateStart,
-// 		StatementDateEnd:   statementDateEnd,
-// 		Status:             status,
-// 		Number:             statusNumber,
-// 	}
-
-// 	if err := s.db.WithContext(ctx).Create(&neue_statusStatement).Error; err != nil {
-// 		return models.StatusStatement{}, err
-// 	}
-// 	return neue_statusStatement, nil
-// }
-
-// // SubmitStatusStatement updates the status statement state to "submitted"
-// func (s *ContractService) SubmitStatusStatement(ctx context.Context, userUUID, statusStatementID uuid.UUID) error {
-// 	var statusStatement models.StatusStatement
-// 	if err := s.db.WithContext(ctx).First(&statusStatement, "id = ?", statusStatementID).Error; err != nil {
-// 		return err
-// 	}
-
-// 	// Update the status to "submitted"
-// 	statusStatement.Status = "submitted"
-// 	statusStatement.UpdatedBy = userUUID
-
-// 	if err := s.db.WithContext(ctx).Save(&statusStatement).Error; err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
-// // Extra works:
-// func (s *ContractService) CreateExtraWorks(ctx context.Context, userID, statusStatementID uuid.UUID, description, unit string, quantity, unitPrice float64) error {
-// 	// Create new record
-// 	additionalWork := models.AdditionalWorks{
-// 		BaseModel: models.BaseModel{
-// 			ID:        uuid.New(),
-// 			CreatedBy: userID,
-// 		},
-// 		StatusStatementID: statusStatementID,
-// 		Description:       description,
-// 		Unit:              unit,
-// 		Quantity:          quantity,
-// 		UnitPrice:         unitPrice,
-// 		TotalPrice:        quantity * unitPrice,
-// 	}
-
-// 	if err := s.db.WithContext(ctx).Create(&additionalWork).Error; err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
+import (
+	"context"
+	"errors"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
+	model "github.com/sobhan-yasami/docs-db-panel/internal/models"
+	"gorm.io/gorm"
+)
+
+// ============================================================
+// PROJECT SERVICE
+// ============================================================
+
+type ProjectService struct{ db *gorm.DB }
+
+func NewProjectService(db *gorm.DB) *ProjectService { return &ProjectService{db: db} }
+
+type CreateProjectReq struct {
+	Code           string   `json:"code"`
+	Name           string   `json:"name"`
+	Description    string   `json:"description"`
+	Category       string   `json:"category"`
+	Status         string   `json:"status"`
+	Priority       string   `json:"priority"`
+	StartDate      *string  `json:"start_date"`
+	EndDate        *string  `json:"end_date"`
+	BudgetEstimate string   `json:"budget_estimate"`
+	Currency       string   `json:"currency"`
+	Tags           []string `json:"tags"`
+}
+
+type UpdateProjectReq struct {
+	Name           *string  `json:"name"`
+	Description    *string  `json:"description"`
+	Category       *string  `json:"category"`
+	Status         *string  `json:"status"`
+	Priority       *string  `json:"priority"`
+	StartDate      *string  `json:"start_date"`
+	EndDate        *string  `json:"end_date"`
+	BudgetEstimate *string  `json:"budget_estimate"`
+	BudgetActual   *string  `json:"budget_actual"`
+	Currency       *string  `json:"currency"`
+	Tags           []string `json:"tags"`
+}
+
+func (s *ProjectService) Create(ctx context.Context, companyID string, req CreateProjectReq) (*model.Project, error) {
+	cid, err := uuid.Parse(companyID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid company ID", Code: 400}
+	}
+	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.Code) == "" {
+		return nil, &ServiceError{Message: "Name and code are required", Code: 400}
+	}
+
+	budget := decimal.Zero
+	if req.BudgetEstimate != "" {
+		budget, err = decimal.NewFromString(req.BudgetEstimate)
+		if err != nil {
+			return nil, &ServiceError{Message: "Invalid budget_estimate", Code: 400}
+		}
+	}
+
+	currency := req.Currency
+	if len(currency) != 3 {
+		currency = "IRR"
+	}
+
+	status := model.ProjectStatus(req.Status)
+	if !status.Valid() {
+		status = model.ProjectPlanning
+	}
+	priority := model.Priority(req.Priority)
+	if !priority.Valid() {
+		priority = model.PriorityMedium
+	}
+
+	p := model.Project{
+		CompanyID:      cid,
+		Code:           req.Code,
+		Name:           req.Name,
+		Description:    req.Description,
+		Category:       req.Category,
+		Status:         status,
+		Priority:       priority,
+		BudgetEstimate: budget,
+		Currency:       currency,
+		Tags:           pq.StringArray(req.Tags),
+	}
+	if req.StartDate != nil && *req.StartDate != "" {
+		t, err := time.Parse("2006-01-02", *req.StartDate)
+		if err == nil {
+			p.StartDate = &t
+		}
+	}
+	if req.EndDate != nil && *req.EndDate != "" {
+		t, err := time.Parse("2006-01-02", *req.EndDate)
+		if err == nil {
+			p.EndDate = &t
+		}
+	}
+
+	if err := s.db.WithContext(ctx).Create(&p).Error; err != nil {
+		return nil, dbErr(err)
+	}
+	return &p, nil
+}
+
+func (s *ProjectService) GetByID(ctx context.Context, id string) (*model.Project, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid project ID", Code: 400}
+	}
+	var p model.Project
+	if err := s.db.WithContext(ctx).First(&p, "id = ?", uid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, &ServiceError{Message: "Project not found", Code: 404}
+		}
+		return nil, &ServiceError{Message: "Database error", Code: 500}
+	}
+	return &p, nil
+}
+
+func (s *ProjectService) List(ctx context.Context, companyID, status string, page, limit int) ([]model.Project, int64, error) {
+	q := s.db.WithContext(ctx).Model(&model.Project{})
+	if companyID != "" {
+		if cid, err := uuid.Parse(companyID); err == nil {
+			q = q.Where("company_id = ?", cid)
+		}
+	}
+	if status != "" {
+		q = q.Where("status = ?", status)
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, &ServiceError{Message: "Count failed", Code: 500}
+	}
+	var projects []model.Project
+	if err := q.Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&projects).Error; err != nil {
+		return nil, 0, &ServiceError{Message: "Query failed", Code: 500}
+	}
+	return projects, total, nil
+}
+
+func (s *ProjectService) Update(ctx context.Context, id string, req UpdateProjectReq) (*model.Project, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid project ID", Code: 400}
+	}
+	var p model.Project
+	if err := s.db.WithContext(ctx).First(&p, "id = ?", uid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, &ServiceError{Message: "Project not found", Code: 404}
+		}
+		return nil, &ServiceError{Message: "Database error", Code: 500}
+	}
+
+	updates := make(map[string]any)
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.Category != nil {
+		updates["category"] = *req.Category
+	}
+	if req.Status != nil {
+		updates["status"] = *req.Status
+	}
+	if req.Priority != nil {
+		updates["priority"] = *req.Priority
+	}
+	if req.Currency != nil {
+		updates["currency"] = *req.Currency
+	}
+	if req.Tags != nil {
+		updates["tags"] = pq.StringArray(req.Tags)
+	}
+	if req.BudgetEstimate != nil {
+		if v, err := decimal.NewFromString(*req.BudgetEstimate); err == nil {
+			updates["budget_estimate"] = v
+		}
+	}
+	if req.BudgetActual != nil {
+		if v, err := decimal.NewFromString(*req.BudgetActual); err == nil {
+			updates["budget_actual"] = v
+		}
+	}
+	if req.StartDate != nil {
+		if *req.StartDate == "" {
+			updates["start_date"] = nil
+		} else if t, err := time.Parse("2006-01-02", *req.StartDate); err == nil {
+			updates["start_date"] = t
+		}
+	}
+	if req.EndDate != nil {
+		if *req.EndDate == "" {
+			updates["end_date"] = nil
+		} else if t, err := time.Parse("2006-01-02", *req.EndDate); err == nil {
+			updates["end_date"] = t
+		}
+	}
+
+	if len(updates) > 0 {
+		if err := s.db.WithContext(ctx).Model(&p).Updates(updates).Error; err != nil {
+			return nil, &ServiceError{Message: "Update failed", Code: 500}
+		}
+	}
+	return &p, nil
+}
+
+func (s *ProjectService) Delete(ctx context.Context, id string) error {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return &ServiceError{Message: "Invalid project ID", Code: 400}
+	}
+	result := s.db.WithContext(ctx).Where("id = ?", uid).Delete(&model.Project{})
+	if result.Error != nil {
+		return &ServiceError{Message: "Delete failed", Code: 500}
+	}
+	if result.RowsAffected == 0 {
+		return &ServiceError{Message: "Project not found", Code: 404}
+	}
+	return nil
+}
+
+// ============================================================
+// CONTRACTOR SERVICE
+// ============================================================
+
+type ContractorService struct{ db *gorm.DB }
+
+func NewContractorService(db *gorm.DB) *ContractorService { return &ContractorService{db: db} }
+
+type CreateContractorReq struct {
+	Type       string   `json:"type"`
+	FName      string   `json:"first_name"`
+	LName      string   `json:"last_name"`
+	DetailedID string   `json:"detailed_id"`
+	NationalID string   `json:"national_id"`
+	Phone      string   `json:"phone"`
+	Address    string   `json:"address"`
+	Specialty  string   `json:"specialty"`
+	Rating     *float32 `json:"rating"`
+}
+
+type UpdateContractorReq struct {
+	Type      *string  `json:"type"`
+	FName     *string  `json:"first_name"`
+	LName     *string  `json:"last_name"`
+	Phone     *string  `json:"phone"`
+	Address   *string  `json:"address"`
+	Specialty *string  `json:"specialty"`
+	Rating    *float32 `json:"rating"`
+}
+
+func (s *ContractorService) Create(ctx context.Context, req CreateContractorReq) (*model.Contractor, error) {
+	if req.FName == "" || req.LName == "" || req.NationalID == "" || req.DetailedID == "" {
+		return nil, &ServiceError{Message: "first_name, last_name, national_id and detailed_id are required", Code: 400}
+	}
+	typ := req.Type
+	if typ != "individual" && typ != "company" {
+		typ = "individual"
+	}
+	c := model.Contractor{
+		Type:       typ,
+		FName:      req.FName,
+		LName:      req.LName,
+		DetailedID: req.DetailedID,
+		NationalID: req.NationalID,
+		Phone:      req.Phone,
+		Address:    req.Address,
+		Specialty:  req.Specialty,
+		Rating:     req.Rating,
+	}
+	if err := s.db.WithContext(ctx).Create(&c).Error; err != nil {
+		return nil, dbErr(err)
+	}
+	return &c, nil
+}
+
+func (s *ContractorService) GetByID(ctx context.Context, id string) (*model.Contractor, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid contractor ID", Code: 400}
+	}
+	var c model.Contractor
+	if err := s.db.WithContext(ctx).First(&c, "id = ?", uid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, &ServiceError{Message: "Contractor not found", Code: 404}
+		}
+		return nil, &ServiceError{Message: "Database error", Code: 500}
+	}
+	return &c, nil
+}
+
+func (s *ContractorService) List(ctx context.Context, search string, page, limit int) ([]model.Contractor, int64, error) {
+	q := s.db.WithContext(ctx).Model(&model.Contractor{})
+	if search != "" {
+		like := "%" + strings.TrimSpace(search) + "%"
+		q = q.Where("f_name ILIKE ? OR l_name ILIKE ? OR national_id ILIKE ? OR specialty ILIKE ?", like, like, like, like)
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, &ServiceError{Message: "Count failed", Code: 500}
+	}
+	var items []model.Contractor
+	if err := q.Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&items).Error; err != nil {
+		return nil, 0, &ServiceError{Message: "Query failed", Code: 500}
+	}
+	return items, total, nil
+}
+
+func (s *ContractorService) Update(ctx context.Context, id string, req UpdateContractorReq) (*model.Contractor, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid contractor ID", Code: 400}
+	}
+	var c model.Contractor
+	if err := s.db.WithContext(ctx).First(&c, "id = ?", uid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, &ServiceError{Message: "Contractor not found", Code: 404}
+		}
+		return nil, &ServiceError{Message: "Database error", Code: 500}
+	}
+	updates := make(map[string]any)
+	if req.Type != nil {
+		updates["type"] = *req.Type
+	}
+	if req.FName != nil {
+		updates["f_name"] = *req.FName
+	}
+	if req.LName != nil {
+		updates["l_name"] = *req.LName
+	}
+	if req.Phone != nil {
+		updates["phone"] = *req.Phone
+	}
+	if req.Address != nil {
+		updates["address"] = *req.Address
+	}
+	if req.Specialty != nil {
+		updates["specialty"] = *req.Specialty
+	}
+	if req.Rating != nil {
+		updates["rating"] = *req.Rating
+	}
+	if len(updates) > 0 {
+		if err := s.db.WithContext(ctx).Model(&c).Updates(updates).Error; err != nil {
+			return nil, &ServiceError{Message: "Update failed", Code: 500}
+		}
+	}
+	return &c, nil
+}
+
+func (s *ContractorService) Delete(ctx context.Context, id string) error {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return &ServiceError{Message: "Invalid contractor ID", Code: 400}
+	}
+	result := s.db.WithContext(ctx).Where("id = ?", uid).Delete(&model.Contractor{})
+	if result.Error != nil {
+		return &ServiceError{Message: "Delete failed", Code: 500}
+	}
+	if result.RowsAffected == 0 {
+		return &ServiceError{Message: "Contractor not found", Code: 404}
+	}
+	return nil
+}
+
+// ============================================================
+// CONTRACT SERVICE
+// ============================================================
+
+type ContractSvc struct{ db *gorm.DB }
+
+func NewContractSvc(db *gorm.DB) *ContractSvc { return &ContractSvc{db: db} }
+
+type CreateContractReq struct {
+	ProjectID         string  `json:"project_id"`
+	ContractorID      string  `json:"contractor_id"`
+	Code              string  `json:"code"`
+	Title             string  `json:"title"`
+	Description       string  `json:"description"`
+	Status            string  `json:"status"`
+	TotalPrice        string  `json:"total_amount"`
+	Currency          string  `json:"currency"`
+	SignedAt          *string `json:"signed_at"`
+	StartsOn          *string `json:"starts_on"`
+	EndsOn            *string `json:"ends_on"`
+	RetentionBps      int16   `json:"retention_bps"`
+	InsuranceRateBps  int16   `json:"insurance_rate_bps"`
+	AddedValueRateBps int16   `json:"added_value_rate_bps"`
+	ScanedFileUrl     string  `json:"scanfile_url"`
+}
+
+type UpdateContractReq struct {
+	Title             *string `json:"title"`
+	Description       *string `json:"description"`
+	Status            *string `json:"status"`
+	TotalPrice        *string `json:"total_amount"`
+	Currency          *string `json:"currency"`
+	SignedAt          *string `json:"signed_at"`
+	StartsOn          *string `json:"starts_on"`
+	EndsOn            *string `json:"ends_on"`
+	RetentionBps      *int16  `json:"retention_bps"`
+	InsuranceRateBps  *int16  `json:"insurance_rate_bps"`
+	AddedValueRateBps *int16  `json:"added_value_rate_bps"`
+	ScanedFileUrl     *string `json:"scanfile_url"`
+}
+
+func parseDate(s string) *time.Time {
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return nil
+	}
+	return &t
+}
+
+func (s *ContractSvc) Create(ctx context.Context, req CreateContractReq) (*model.Contract, error) {
+	pid, err := uuid.Parse(req.ProjectID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid project_id", Code: 400}
+	}
+	ctrID, err := uuid.Parse(req.ContractorID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid contractor_id", Code: 400}
+	}
+	if req.Code == "" || req.Title == "" {
+		return nil, &ServiceError{Message: "code and title are required", Code: 400}
+	}
+
+	price := decimal.Zero
+	if req.TotalPrice != "" {
+		price, err = decimal.NewFromString(req.TotalPrice)
+		if err != nil {
+			return nil, &ServiceError{Message: "Invalid total_amount", Code: 400}
+		}
+	}
+
+	currency := req.Currency
+	if len(currency) != 3 {
+		currency = "IRR"
+	}
+
+	status := model.ContractStatus(req.Status)
+	if !status.Valid() {
+		status = model.ContractDraft
+	}
+
+	ct := model.Contract{
+		ProjectID:         pid,
+		ContractorID:      ctrID,
+		Code:              req.Code,
+		Title:             req.Title,
+		Description:       req.Description,
+		Status:            status,
+		TotalPrice:        price,
+		Currency:          currency,
+		RetentionBps:      req.RetentionBps,
+		InsuranceRateBps:  req.InsuranceRateBps,
+		AddedValueRateBps: req.AddedValueRateBps,
+		ScanedFileUrl:     req.ScanedFileUrl,
+	}
+	if req.SignedAt != nil && *req.SignedAt != "" {
+		ct.SignedAt = parseDate(*req.SignedAt)
+	}
+	if req.StartsOn != nil && *req.StartsOn != "" {
+		ct.StartsOn = parseDate(*req.StartsOn)
+	}
+	if req.EndsOn != nil && *req.EndsOn != "" {
+		ct.EndsOn = parseDate(*req.EndsOn)
+	}
+
+	if err := s.db.WithContext(ctx).Create(&ct).Error; err != nil {
+		return nil, dbErr(err)
+	}
+	return &ct, nil
+}
+
+func (s *ContractSvc) GetByID(ctx context.Context, id string) (*model.Contract, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid contract ID", Code: 400}
+	}
+	var ct model.Contract
+	if err := s.db.WithContext(ctx).First(&ct, "id = ?", uid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, &ServiceError{Message: "Contract not found", Code: 404}
+		}
+		return nil, &ServiceError{Message: "Database error", Code: 500}
+	}
+	return &ct, nil
+}
+
+func (s *ContractSvc) ListByProject(ctx context.Context, projectID string, page, limit int) ([]model.Contract, int64, error) {
+	q := s.db.WithContext(ctx).Model(&model.Contract{})
+	if projectID != "" {
+		if pid, err := uuid.Parse(projectID); err == nil {
+			q = q.Where("project_id = ?", pid)
+		}
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, &ServiceError{Message: "Count failed", Code: 500}
+	}
+	var items []model.Contract
+	if err := q.Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&items).Error; err != nil {
+		return nil, 0, &ServiceError{Message: "Query failed", Code: 500}
+	}
+	return items, total, nil
+}
+
+func (s *ContractSvc) Update(ctx context.Context, id string, req UpdateContractReq) (*model.Contract, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid contract ID", Code: 400}
+	}
+	var ct model.Contract
+	if err := s.db.WithContext(ctx).First(&ct, "id = ?", uid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, &ServiceError{Message: "Contract not found", Code: 404}
+		}
+		return nil, &ServiceError{Message: "Database error", Code: 500}
+	}
+
+	updates := make(map[string]any)
+	if req.Title != nil {
+		updates["title"] = *req.Title
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.Status != nil {
+		updates["status"] = *req.Status
+	}
+	if req.Currency != nil {
+		updates["currency"] = *req.Currency
+	}
+	if req.ScanedFileUrl != nil {
+		updates["scaned_file_url"] = *req.ScanedFileUrl
+	}
+	if req.RetentionBps != nil {
+		updates["retention_bps"] = *req.RetentionBps
+	}
+	if req.InsuranceRateBps != nil {
+		updates["insurance_rate_bps"] = *req.InsuranceRateBps
+	}
+	if req.AddedValueRateBps != nil {
+		updates["added_value_rate_bps"] = *req.AddedValueRateBps
+	}
+	if req.TotalPrice != nil {
+		if v, err := decimal.NewFromString(*req.TotalPrice); err == nil {
+			updates["total_price"] = v
+		}
+	}
+	if req.SignedAt != nil {
+		updates["signed_at"] = parseDate(*req.SignedAt)
+	}
+	if req.StartsOn != nil {
+		updates["starts_on"] = parseDate(*req.StartsOn)
+	}
+	if req.EndsOn != nil {
+		updates["ends_on"] = parseDate(*req.EndsOn)
+	}
+
+	if len(updates) > 0 {
+		if err := s.db.WithContext(ctx).Model(&ct).Updates(updates).Error; err != nil {
+			return nil, &ServiceError{Message: "Update failed", Code: 500}
+		}
+	}
+	return &ct, nil
+}
+
+func (s *ContractSvc) Delete(ctx context.Context, id string) error {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return &ServiceError{Message: "Invalid contract ID", Code: 400}
+	}
+	result := s.db.WithContext(ctx).Where("id = ?", uid).Delete(&model.Contract{})
+	if result.Error != nil {
+		return &ServiceError{Message: "Delete failed", Code: 500}
+	}
+	if result.RowsAffected == 0 {
+		return &ServiceError{Message: "Contract not found", Code: 404}
+	}
+	return nil
+}
+
+// ============================================================
+// WBS SERVICE (nested under Contract)
+// ============================================================
+
+type CreateWBSReq struct {
+	ItemCode    string `json:"item_code"`
+	Description string `json:"description"`
+	Unit        string `json:"unit"`
+	Quantity    string `json:"quantity"`
+	UnitPrice   string `json:"unit_price"`
+}
+
+func (s *ContractSvc) ListWBS(ctx context.Context, contractID string) ([]model.WBS, error) {
+	cid, err := uuid.Parse(contractID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid contract ID", Code: 400}
+	}
+	var items []model.WBS
+	if err := s.db.WithContext(ctx).Where("contract_id = ?", cid).Order("item_code ASC").Find(&items).Error; err != nil {
+		return nil, &ServiceError{Message: "Query failed", Code: 500}
+	}
+	return items, nil
+}
+
+func (s *ContractSvc) CreateWBS(ctx context.Context, contractID string, req CreateWBSReq) (*model.WBS, error) {
+	cid, err := uuid.Parse(contractID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid contract ID", Code: 400}
+	}
+	if req.ItemCode == "" || req.Unit == "" {
+		return nil, &ServiceError{Message: "item_code and unit are required", Code: 400}
+	}
+	qty := decimal.Zero
+	if req.Quantity != "" {
+		qty, err = decimal.NewFromString(req.Quantity)
+		if err != nil {
+			return nil, &ServiceError{Message: "Invalid quantity", Code: 400}
+		}
+	}
+	price := decimal.Zero
+	if req.UnitPrice != "" {
+		price, err = decimal.NewFromString(req.UnitPrice)
+		if err != nil {
+			return nil, &ServiceError{Message: "Invalid unit_price", Code: 400}
+		}
+	}
+	item := model.WBS{
+		ContractID:  cid,
+		ItemCode:    req.ItemCode,
+		Description: req.Description,
+		Unit:        req.Unit,
+		Quantity:    qty,
+		UnitPrice:   price,
+		TotalPrice:  qty.Mul(price),
+	}
+	if err := s.db.WithContext(ctx).Create(&item).Error; err != nil {
+		return nil, dbErr(err)
+	}
+	return &item, nil
+}

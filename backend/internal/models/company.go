@@ -22,18 +22,18 @@ import (
 // without a trigger): the referenced Employee must have RoleManager.
 type Company struct {
 	BaseModel
-	Name   string `gorm:"size:255;not null;index"                          json:"name"`
-	RegNum string `gorm:"size:64;not null;uniqueIndex:idx_companies_reg"   json:"reg_num"`
+	Name   string `gorm:"size:255;not null;index" json:"name"`
+	RegNum string `gorm:"size:64;not null;uniqueIndex:idx_companies_reg" json:"reg_num"`
 
 	// Self-referential parent (nullable: root nodes).
 	ParentID *uuid.UUID `gorm:"type:uuid;index" json:"parent_id,omitempty"`
 	Parent   *Company   `gorm:"foreignKey:ParentID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"-"`
-	Children []Company  `gorm:"foreignKey:ParentID;references:ID"                                              json:"-"`
+	Children []Company  `gorm:"foreignKey:ParentID;references:ID" json:"-"`
 
 	// 1:1 manager. UNIQUE on manager_id keeps it strictly 1:1 (one
 	// employee cannot manage two companies simultaneously).
-	ManagerID *uuid.UUID `gorm:"type:uuid;uniqueIndex:idx_companies_manager"                                      json:"manager_id,omitempty"`
-	Manager   *Employee  `gorm:"foreignKey:ManagerID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"-"`
+	ManagerID *uuid.UUID `gorm:"type:uuid;uniqueIndex:idx_companies_manager" json:"manager_id,omitempty"`
+	Manager   *Employee  `gorm:"foreignKey:ManagerID;references:ID;constraint:false" json:"-"` // no DB-level FK: circular dep with employees.company_id
 
 	// 1:N collections (back-references).
 	Employees []Employee `gorm:"foreignKey:CompanyID" json:"-"`

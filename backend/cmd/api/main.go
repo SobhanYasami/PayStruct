@@ -15,13 +15,9 @@ import (
 
 	"github.com/sobhan-yasami/docs-db-panel/internal/database"
 	"github.com/sobhan-yasami/docs-db-panel/internal/handlers"
-	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"
 	"github.com/sobhan-yasami/docs-db-panel/internal/routes"
 )
 
-// --------------------
-// Color helpers
-// --------------------
 var (
 	colorReset  = "\033[0m"
 	colorRed    = "\033[31m"
@@ -29,87 +25,62 @@ var (
 	colorYellow = "\033[33m"
 	colorBlue   = "\033[34m"
 	colorCyan   = "\033[36m"
-	colorWhite  = "\033[97m"
 	bold        = "\033[1m"
 )
 
-// --------------------
-// Constants
-// --------------------
 const (
 	defaultPort        = "5000"
 	defaultBodyLimitMB = 50
 	shutdownTimeout    = 10 * time.Second
 )
 
-// --------------------
-// Initialization
-// --------------------
 func init() {
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Warning: Could not load .env file: %v", err)
 	}
 }
 
-// --------------------
-// Main
-// --------------------
 func main() {
-	//! 0. Declare mode
 	debugMode := os.Getenv("DEBUG") == "true"
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		log.Fatalf("%s❌ JWT_SECRET is not set in environment variables%s", colorRed, colorReset)
 	}
 
-	//! 1. Initialize database
 	db, err := database.Connect()
 	if err != nil {
 		log.Fatalf("%s❌ Database connection failed:%s %v", colorRed, colorReset, err)
 	}
 
-	//! 1.1 Run Seeder
 	if err := database.Seed(db); err != nil {
-		log.Fatalf("❌Database seed failed: %v", err)
+		log.Fatalf("❌ Database seed failed: %v", err)
 	}
 
-	//! 2. Create Fiber app
 	app := fiber.New(fiber.Config{
-		Prefork:       false, // Set to true in production if needed
+		Prefork:       false,
 		CaseSensitive: true,
 		StrictRouting: true,
 		ServerHeader:  "Fiber",
 		AppName:       "Contractor Management Panel",
 		BodyLimit:     defaultBodyLimitMB * 1024 * 1024,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			// Internal server error by default
 			code := fiber.StatusInternalServerError
-
-			// Log always
 			log.Printf("%s[ERROR]%s %v", colorRed, colorReset, err)
-
-			// In debug mode, show details
 			if debugMode {
 				return c.Status(code).JSON(fiber.Map{
 					"error":   err.Error(),
 					"message": "Debug mode active",
 				})
 			}
-
-			// In production, hide internals
-			return c.Status(code).JSON(fiber.Map{
-				"error": "Internal server error",
-			})
+			return c.Status(code).JSON(fiber.Map{"error": "Internal server error"})
 		},
 	})
 
-	//! 3. Middleware
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowHeaders: "Origin, Content-Type, Accept, Access-Control-Allow-Credentials, Authorization",
-		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
-		// AllowCredentials: true,
-		MaxAge:        24 * 86400, // 24 hours
+		AllowOrigins:  "*",
+		AllowHeaders:  "Origin, Content-Type, Accept, Access-Control-Allow-Credentials, Authorization",
+		AllowMethods:  "GET, POST, PUT, DELETE, OPTIONS",
+		MaxAge:        24 * 86400,
 		ExposeHeaders: "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Authorization",
 	}))
 
@@ -121,26 +92,29 @@ func main() {
 		log.Printf("%s🐛 Debug mode enabled%s", colorCyan, colorReset)
 	}
 
-	//! 4. Static files
 	app.Static("/files-storage", "../storage")
 
-	//! 5. Routes
-	//? Base API route
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
-	//? Authorizer
-	authorizer := middlewares.NewAuthorizer(db)
-	//? User routes
+
 	userHandler := handlers.NewUserHandler(db)
-	routes.SetupUserRoutes(v1, userHandler, authorizer, jwtSecret)
+	routes.SetupUserRoutes(v1, userHandler, jwtSecret)
 
-	//? Company routes
-	// companyHandler := handlers.NewCompanyHandler(db)
-	//? Contracts routes
-	// contractsHandler := handlers.NewContractHandler(db)
-	// routes.SetupContractsRoutes(v1, contractsHandler, authorizer, jwtSecret)
+	companyHandler := handlers.NewCompanyHandler(db)
+	routes.SetupCompanyRoutes(v1, companyHandler, jwtSecret)
 
-	//! 6. Get port from environment
+	projectHandler := handlers.NewProjectHandler(db)
+	routes.SetupProjectRoutes(v1, projectHandler, jwtSecret)
+
+	contractorHandler := handlers.NewContractorHandler(db)
+	routes.SetupContractorRoutes(v1, contractorHandler, jwtSecret)
+
+	contractHandler := handlers.NewContractHandler(db)
+	routes.SetupContractRoutes(v1, contractHandler, jwtSecret)
+
+	statementHandler := handlers.NewStatementHandler(db)
+	routes.SetupStatementRoutes(v1, statementHandler, jwtSecret)
+
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
 		port = defaultPort
@@ -149,7 +123,6 @@ func main() {
 		}
 	}
 
-	//! 7 Start server in a goroutine
 	go func() {
 		fmt.Printf("%s🚀 Server running%s → %shttp://localhost:%s%s%s\n",
 			colorGreen, colorReset, colorBlue, port, colorReset, bold)
@@ -158,7 +131,6 @@ func main() {
 		}
 	}()
 
-	//! 8. Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -167,6 +139,5 @@ func main() {
 	if err := app.ShutdownWithTimeout(shutdownTimeout); err != nil {
 		log.Printf("%s⚠️ Error during shutdown:%s %v", colorRed, colorReset, err)
 	}
-
 	log.Printf("%s✅ Server gracefully stopped%s", colorGreen, colorReset)
 }
