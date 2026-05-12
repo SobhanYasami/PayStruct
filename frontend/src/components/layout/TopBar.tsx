@@ -1,58 +1,57 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import { User } from "lucide-react";
-import styles from "./TopBar.module.css";
+import { usePathname, useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
+import { useAuthStore } from "@/lib/stores/auth";
 
-const breadcrumbMap: Record<string, string> = {
-	"/dashboard": "داشبورد",
-	"/dashboard/projects": "پروژه‌ها",
-	"/dashboard/contractors": "پیمانکاران",
-	"/dashboard/contracts": "قراردادها",
-	"/dashboard/employees": "کارکنان",
-	"/dashboard/companies": "شرکت‌ها",
-	"/dashboard/profile": "پروفایل",
-	"/dashboard/settings": "تنظیمات",
+const crumbMap: Record<string, string> = {
+  dashboard: "داشبورد",
+  projects: "پروژه‌ها",
+  contractors: "پیمانکاران",
+  employees: "کارمندان",
+  reports: "گزارشات",
+  contracts: "قراردادها",
+  statements: "صورت وضعیت‌ها",
 };
 
-function getLabel(pathname: string): string {
-	if (breadcrumbMap[pathname]) return breadcrumbMap[pathname];
-	if (pathname.includes("/statements/")) return "صورت‌وضعیت";
-	if (pathname.startsWith("/dashboard/contracts/")) return "جزئیات قرارداد";
-	if (pathname.startsWith("/dashboard/projects/")) return "جزئیات پروژه";
-	if (pathname.startsWith("/dashboard/contractors/contractor")) return "پیمانکاران";
-	if (pathname.startsWith("/dashboard/contractors/contract")) return "قراردادها";
-	if (pathname.startsWith("/dashboard/contractors/status-statement")) return "صورت‌وضعیت‌ها";
-	return "داشبورد";
-}
+export function TopBar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuthStore();
 
-export default function TopBar() {
-	const pathname = usePathname();
-	const [userName, setUserName] = useState("");
+  const segments = pathname.split("/").filter(Boolean);
+  const crumbs = segments.map((s) => crumbMap[s] ?? s);
 
-	useEffect(() => {
-		const token = localStorage.getItem("usr-token");
-		if (token) {
-			try {
-				const payload = JSON.parse(atob(token.split(".")[1]));
-				const name = payload.user_name || payload.name || payload.email || "کاربر";
-				setUserName(name);
-			} catch {
-				setUserName("کاربر");
-			}
-		}
-	}, []);
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
-	return (
-		<header className={styles.topbar}>
-			<span className={styles.pageTitle}>{getLabel(pathname)}</span>
-			<div className={styles.user}>
-				<div className={styles.avatar}>
-					<User size={14} />
-				</div>
-				{userName && <span className={styles.userName}>{userName}</span>}
-			</div>
-		</header>
-	);
+  return (
+    <header className="h-14 flex items-center justify-between px-6 border-b bg-white/80 backdrop-blur-sm">
+      <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+        {crumbs.map((c, i) => (
+          <span key={i} className="flex items-center gap-2">
+            {i > 0 && <span>/</span>}
+            <span className={i === crumbs.length - 1 ? "text-foreground font-medium" : ""}>
+              {c}
+            </span>
+          </span>
+        ))}
+      </nav>
+
+      <div className="flex items-center gap-3">
+        {user && (
+          <span className="text-sm text-muted-foreground">{user.name}</span>
+        )}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition"
+        >
+          <LogOut size={16} />
+          خروج
+        </button>
+      </div>
+    </header>
+  );
 }
