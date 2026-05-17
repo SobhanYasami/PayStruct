@@ -55,24 +55,29 @@ func (Contractor) TableName() string { return "contractors" }
 // (bps) fields store percentages as integer basis-points: 1000 = 10.00%.
 type Contract struct {
 	BaseModel
-	CompanyID    uuid.UUID `gorm:"type:uuid;not null;index" json:"company_id"`
+	// CompanyID + ContractNo form a composite unique index (contract numbers are scoped per company).
+	CompanyID    uuid.UUID `gorm:"type:uuid;not null;index;uniqueIndex:idx_contracts_company_no" json:"company_id"`
 	ProjectID    uuid.UUID `gorm:"type:uuid;not null;index" json:"project_id"`
 	ContractorID uuid.UUID `gorm:"type:uuid;not null;index" json:"contractor_id"`
 
-	// ContractNo is unique within a company.
+	// ContractNo format: <jalali-year>/<sequence>, e.g. "1404/3". Unique per company.
 	ContractNo  string       `gorm:"size:64;not null;uniqueIndex:idx_contracts_company_no" json:"contract_no"`
 	Title       string       `gorm:"size:255;not null" json:"title"`
 	Description string       `gorm:"type:text" json:"description,omitempty"`
 	Type        ContractType `gorm:"type:varchar(24);not null;default:'lump_sum';check:type IN ('lump_sum','unit_rate','cost_plus','time_material')" json:"type"`
 
-	Status        ContractStatus  `gorm:"type:varchar(16);not null;default:'draft';index;check:status IN ('draft','signed','active','closed','cancelled')" json:"status"`
-	ContractValue decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"contract_value"`
-	Currency      string          `gorm:"size:3;not null;default:'IRR';check:char_length(currency)=3" json:"currency"`
+	Status      ContractStatus  `gorm:"type:varchar(16);not null;default:'draft';index;check:status IN ('draft','signed','active','closed','cancelled')" json:"status"`
+	GrossBudget decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"gross_budget"`
+	Currency    string          `gorm:"size:3;not null;default:'IRR';check:char_length(currency)=3" json:"currency"`
 
 	// Basis-point financial parameters. 1000 bps = 10.00%.
+	PerformanceBondPctBps int `gorm:"not null;default:0;check:performance_bond_pct_bps >= 0 AND performance_bond_pct_bps <= 10000" json:"performance_bond_pct_bps"`
+	InsuranceRatePctBps   int `gorm:"not null;default:0;check:insurance_rate_pct_bps >= 0 AND insurance_rate_pct_bps <= 10000" json:"insurance_rate_pct_bps"`
+	VatPctBps             int `gorm:"not null;default:0;check:vat_pct_bps >= 0 AND vat_pct_bps <= 10000" json:"vat_pct_bps"`
+
+	// Kept for backward compat with statement calculations.
 	RetentionPctBps      int `gorm:"not null;default:0;check:retention_pct_bps >= 0 AND retention_pct_bps <= 10000" json:"retention_pct_bps"`
 	AdvancePctBps        int `gorm:"not null;default:0;check:advance_pct_bps >= 0 AND advance_pct_bps <= 10000" json:"advance_pct_bps"`
-	VatPctBps            int `gorm:"not null;default:0;check:vat_pct_bps >= 0 AND vat_pct_bps <= 10000" json:"vat_pct_bps"`
 	SocialSecurityPctBps int `gorm:"not null;default:0;check:social_security_pct_bps >= 0 AND social_security_pct_bps <= 10000" json:"social_security_pct_bps"`
 
 	SignedAt *time.Time `json:"signed_at,omitempty"`

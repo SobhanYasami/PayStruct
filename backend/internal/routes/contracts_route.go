@@ -31,15 +31,18 @@ func SetupContractorRoutes(router fiber.Router, h *handlers.ContractorHandler, j
 }
 
 // SetupContractRoutes mounts contract CRUD and WBS sub-resource under /contracts.
+// All operations (read + write) require at least one of the head roles or admin/sudoer.
 func SetupContractRoutes(router fiber.Router, h *handlers.ContractHandler, jwtSecret string) {
-	contracts := router.Group("/contracts", middlewares.Authenticate(jwtSecret))
+	auth := middlewares.Authenticate(jwtSecret)
+	headOnly := middlewares.RequireAnyRole("manager", "engineering_head", "finance_head", "juridical_head")
+
+	contracts := router.Group("/contracts", auth, headOnly)
 	contracts.Post("/", h.CreateContract)
 	contracts.Get("/", h.ListContracts)
 	contracts.Get("/:id", h.GetContract)
 	contracts.Put("/:id", h.UpdateContract)
 	contracts.Delete("/:id", h.DeleteContract)
 
-	// Line items nested under a contract
 	contracts.Get("/:id/line-items", h.ListLineItems)
 	contracts.Post("/:id/line-items", h.CreateLineItem)
 }

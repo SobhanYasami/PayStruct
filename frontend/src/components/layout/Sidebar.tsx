@@ -9,12 +9,14 @@ import {
   UserCheck,
   FileText,
   Building2,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const navItems = [
   { href: "/dashboard", label: "داشبورد", icon: LayoutDashboard },
   { href: "/projects", label: "پروژه‌ها", icon: FolderKanban },
+  { href: "/contracts", label: "قراردادها", icon: ScrollText },
   { href: "/contractors", label: "پیمانکاران", icon: UserCheck },
   { href: "/employees", label: "کارمندان", icon: Users },
   { href: "/companies", label: "شرکت‌ها", icon: Building2 },

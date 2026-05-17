@@ -23,11 +23,12 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
   const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
   if (!res.ok) {
-    let body: { title?: string; detail?: string; type?: string } = {};
+    let body: { title?: string; detail?: string; message?: string; type?: string } = {};
     try {
       body = await res.json();
     } catch {}
-    throw new ApiError(res.status, body.title ?? res.statusText, body.detail ?? "", body.type);
+    const detail = body.detail ?? body.message ?? "";
+    throw new ApiError(res.status, body.title ?? res.statusText, detail, body.type);
   }
   if (res.status === 204 || res.headers.get("content-length") === "0") {
     return undefined as T;

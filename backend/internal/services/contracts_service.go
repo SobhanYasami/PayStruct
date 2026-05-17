@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -517,40 +518,48 @@ type ContractSvc struct{ db *gorm.DB }
 func NewContractSvc(db *gorm.DB) *ContractSvc { return &ContractSvc{db: db} }
 
 type CreateContractReq struct {
-	CompanyID            string  `json:"company_id"`
-	ProjectID            string  `json:"project_id"`
-	ContractorID         string  `json:"contractor_id"`
-	ContractNo           string  `json:"contract_no"`
-	Title                string  `json:"title"`
-	Description          string  `json:"description"`
-	Type                 string  `json:"type"`
-	Status               string  `json:"status"`
-	ContractValue        string  `json:"contract_value"`
-	Currency             string  `json:"currency"`
-	SignedAt             *string `json:"signed_at"`
-	StartsOn             *string `json:"starts_on"`
-	EndsOn               *string `json:"ends_on"`
-	RetentionPctBps      int     `json:"retention_pct_bps"`
-	AdvancePctBps        int     `json:"advance_pct_bps"`
-	VatPctBps            int     `json:"vat_pct_bps"`
-	SocialSecurityPctBps int     `json:"social_security_pct_bps"`
-	ScannedFileURL       string  `json:"scanned_file_url"`
+	ProjectID             string  `json:"project_id"`
+	ContractorID          string  `json:"contractor_id"`
+	ContractNo            string  `json:"contract_no"`
+	Title                 string  `json:"title"`
+	Description           string  `json:"description"`
+	Type                  string  `json:"type"`
+	Status                string  `json:"status"`
+	GrossBudget           string  `json:"gross_budget"`
+	Currency              string  `json:"currency"`
+	StartsOn              *string `json:"starts_on"`
+	EndsOn                *string `json:"ends_on"`
+	PerformanceBondPctBps int     `json:"performance_bond_pct_bps"`
+	InsuranceRatePctBps   int     `json:"insurance_rate_pct_bps"`
+	VatPctBps             int     `json:"vat_pct_bps"`
+	RetentionPctBps       int     `json:"retention_pct_bps"`
+	AdvancePctBps         int     `json:"advance_pct_bps"`
+	SocialSecurityPctBps  int     `json:"social_security_pct_bps"`
+	ScannedFileURL        string  `json:"scanned_file_url"`
 }
 
 type UpdateContractReq struct {
-	Title                *string `json:"title"`
-	Description          *string `json:"description"`
-	Status               *string `json:"status"`
-	ContractValue        *string `json:"contract_value"`
-	Currency             *string `json:"currency"`
-	SignedAt             *string `json:"signed_at"`
-	StartsOn             *string `json:"starts_on"`
-	EndsOn               *string `json:"ends_on"`
-	RetentionPctBps      *int    `json:"retention_pct_bps"`
-	AdvancePctBps        *int    `json:"advance_pct_bps"`
-	VatPctBps            *int    `json:"vat_pct_bps"`
-	SocialSecurityPctBps *int    `json:"social_security_pct_bps"`
-	ScannedFileURL       *string `json:"scanned_file_url"`
+	Title                 *string `json:"title"`
+	Description           *string `json:"description"`
+	Status                *string `json:"status"`
+	GrossBudget           *string `json:"gross_budget"`
+	Currency              *string `json:"currency"`
+	StartsOn              *string `json:"starts_on"`
+	EndsOn                *string `json:"ends_on"`
+	PerformanceBondPctBps *int    `json:"performance_bond_pct_bps"`
+	InsuranceRatePctBps   *int    `json:"insurance_rate_pct_bps"`
+	VatPctBps             *int    `json:"vat_pct_bps"`
+	RetentionPctBps       *int    `json:"retention_pct_bps"`
+	AdvancePctBps         *int    `json:"advance_pct_bps"`
+	SocialSecurityPctBps  *int    `json:"social_security_pct_bps"`
+	ScannedFileURL        *string `json:"scanned_file_url"`
+}
+
+// ContractListItem embeds Contract and adds denormalized display fields.
+type ContractListItem struct {
+	model.Contract
+	ContractorName string `gorm:"column:contractor_name" json:"contractor_name"`
+	ProjectName    string `gorm:"column:project_name"    json:"project_name"`
 }
 
 func parseDate(s string) *time.Time {
@@ -561,7 +570,41 @@ func parseDate(s string) *time.Time {
 	return &t
 }
 
-func (s *ContractSvc) Create(ctx context.Context, req CreateContractReq) (*model.Contract, error) {
+// jalaliYear returns the approximate Jalali (Solar Hijri) year for t.
+func jalaliYear(t time.Time) int {
+	y := t.Year() - 621
+	if t.Month() < time.March || (t.Month() == time.March && t.Day() < 21) {
+		y--
+	}
+	return y
+}
+
+func (s *ContractSvc) nextContractNo(ctx context.Context, companyID uuid.UUID) (string, error) {
+	year := jalaliYear(time.Now())
+	prefix := fmt.Sprintf("%d/%%", year)
+	var maxSeq int
+	err := s.db.WithContext(ctx).Raw(
+		`SELECT COALESCE(MAX(
+			CASE WHEN contract_no ~ '^\d+/\d+$'
+			     THEN CAST(SPLIT_PART(contract_no, '/', 2) AS INTEGER)
+			     ELSE 0
+			END
+		), 0)
+		FROM contracts
+		WHERE company_id = ? AND contract_no LIKE ? AND deleted_at IS NULL`,
+		companyID, prefix,
+	).Scan(&maxSeq).Error
+	if err != nil {
+		return "", &ServiceError{Message: "Failed to generate contract number", Code: 500}
+	}
+	return fmt.Sprintf("%d/%d", year, maxSeq+1), nil
+}
+
+func (s *ContractSvc) Create(ctx context.Context, callerCompanyID string, req CreateContractReq) (*model.Contract, error) {
+	companyID, err := uuid.Parse(callerCompanyID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid company_id", Code: 400}
+	}
 	pid, err := uuid.Parse(req.ProjectID)
 	if err != nil {
 		return nil, &ServiceError{Message: "Invalid project_id", Code: 400}
@@ -570,23 +613,23 @@ func (s *ContractSvc) Create(ctx context.Context, req CreateContractReq) (*model
 	if err != nil {
 		return nil, &ServiceError{Message: "Invalid contractor_id", Code: 400}
 	}
-	if req.ContractNo == "" || req.Title == "" {
-		return nil, &ServiceError{Message: "contract_no and title are required", Code: 400}
+	if strings.TrimSpace(req.Title) == "" {
+		return nil, &ServiceError{Message: "title is required", Code: 400}
 	}
 
-	var companyID uuid.UUID
-	if req.CompanyID != "" {
-		companyID, err = uuid.Parse(req.CompanyID)
+	contractNo := strings.TrimSpace(req.ContractNo)
+	if contractNo == "" {
+		contractNo, err = s.nextContractNo(ctx, companyID)
 		if err != nil {
-			return nil, &ServiceError{Message: "Invalid company_id", Code: 400}
+			return nil, err
 		}
 	}
 
-	price := decimal.Zero
-	if req.ContractValue != "" {
-		price, err = decimal.NewFromString(req.ContractValue)
+	budget := decimal.Zero
+	if req.GrossBudget != "" {
+		budget, err = decimal.NewFromString(req.GrossBudget)
 		if err != nil {
-			return nil, &ServiceError{Message: "Invalid contract_value", Code: 400}
+			return nil, &ServiceError{Message: "Invalid gross_budget", Code: 400}
 		}
 	}
 
@@ -599,31 +642,29 @@ func (s *ContractSvc) Create(ctx context.Context, req CreateContractReq) (*model
 	if !status.Valid() {
 		status = model.ContractDraft
 	}
-
 	ctype := model.ContractType(req.Type)
 	if !ctype.Valid() {
 		ctype = model.ContractLumpSum
 	}
 
 	ct := model.Contract{
-		CompanyID:            companyID,
-		ProjectID:            pid,
-		ContractorID:         ctrID,
-		ContractNo:           req.ContractNo,
-		Title:                req.Title,
-		Description:          req.Description,
-		Type:                 ctype,
-		Status:               status,
-		ContractValue:        price,
-		Currency:             currency,
-		RetentionPctBps:      req.RetentionPctBps,
-		AdvancePctBps:        req.AdvancePctBps,
-		VatPctBps:            req.VatPctBps,
-		SocialSecurityPctBps: req.SocialSecurityPctBps,
-		ScannedFileURL:       req.ScannedFileURL,
-	}
-	if req.SignedAt != nil && *req.SignedAt != "" {
-		ct.SignedAt = parseDate(*req.SignedAt)
+		CompanyID:             companyID,
+		ProjectID:             pid,
+		ContractorID:          ctrID,
+		ContractNo:            contractNo,
+		Title:                 req.Title,
+		Description:           req.Description,
+		Type:                  ctype,
+		Status:                status,
+		GrossBudget:           budget,
+		Currency:              currency,
+		PerformanceBondPctBps: req.PerformanceBondPctBps,
+		InsuranceRatePctBps:   req.InsuranceRatePctBps,
+		VatPctBps:             req.VatPctBps,
+		RetentionPctBps:       req.RetentionPctBps,
+		AdvancePctBps:         req.AdvancePctBps,
+		SocialSecurityPctBps:  req.SocialSecurityPctBps,
+		ScannedFileURL:        req.ScannedFileURL,
 	}
 	if req.StartsOn != nil && *req.StartsOn != "" {
 		ct.StartsOn = parseDate(*req.StartsOn)
@@ -653,19 +694,39 @@ func (s *ContractSvc) GetByID(ctx context.Context, id string) (*model.Contract, 
 	return &ct, nil
 }
 
-func (s *ContractSvc) ListByProject(ctx context.Context, projectID string, page, limit int) ([]model.Contract, int64, error) {
-	q := s.db.WithContext(ctx).Model(&model.Contract{})
-	if projectID != "" {
-		if pid, err := uuid.Parse(projectID); err == nil {
-			q = q.Where("project_id = ?", pid)
+func (s *ContractSvc) List(ctx context.Context, companyID, projectID, search string, page, limit int) ([]ContractListItem, int64, error) {
+	q := s.db.WithContext(ctx).
+		Table("contracts").
+		Select(`contracts.*,
+			COALESCE(contractors.display_name, '') AS contractor_name,
+			COALESCE(projects.name, '')             AS project_name`).
+		Joins("LEFT JOIN contractors ON contractors.id = contracts.contractor_id AND contractors.deleted_at IS NULL").
+		Joins("LEFT JOIN projects ON projects.id = contracts.project_id AND projects.deleted_at IS NULL").
+		Where("contracts.deleted_at IS NULL")
+
+	if companyID != "" {
+		if cid, err := uuid.Parse(companyID); err == nil {
+			q = q.Where("contracts.company_id = ?", cid)
 		}
 	}
+	if projectID != "" {
+		if pid, err := uuid.Parse(projectID); err == nil {
+			q = q.Where("contracts.project_id = ?", pid)
+		}
+	}
+	if search != "" {
+		like := "%" + strings.TrimSpace(search) + "%"
+		q = q.Where("contracts.title ILIKE ? OR contracts.contract_no ILIKE ?", like, like)
+	}
+
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, &ServiceError{Message: "Count failed", Code: 500}
 	}
-	var items []model.Contract
-	if err := q.Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&items).Error; err != nil {
+	var items []ContractListItem
+	if err := q.Order("contracts.created_at DESC").
+		Offset((page - 1) * limit).Limit(limit).
+		Find(&items).Error; err != nil {
 		return nil, 0, &ServiceError{Message: "Query failed", Code: 500}
 	}
 	return items, total, nil
@@ -700,25 +761,28 @@ func (s *ContractSvc) Update(ctx context.Context, id string, req UpdateContractR
 	if req.ScannedFileURL != nil {
 		updates["scanned_file_url"] = *req.ScannedFileURL
 	}
+	if req.PerformanceBondPctBps != nil {
+		updates["performance_bond_pct_bps"] = *req.PerformanceBondPctBps
+	}
+	if req.InsuranceRatePctBps != nil {
+		updates["insurance_rate_pct_bps"] = *req.InsuranceRatePctBps
+	}
+	if req.VatPctBps != nil {
+		updates["vat_pct_bps"] = *req.VatPctBps
+	}
 	if req.RetentionPctBps != nil {
 		updates["retention_pct_bps"] = *req.RetentionPctBps
 	}
 	if req.AdvancePctBps != nil {
 		updates["advance_pct_bps"] = *req.AdvancePctBps
 	}
-	if req.VatPctBps != nil {
-		updates["vat_pct_bps"] = *req.VatPctBps
-	}
 	if req.SocialSecurityPctBps != nil {
 		updates["social_security_pct_bps"] = *req.SocialSecurityPctBps
 	}
-	if req.ContractValue != nil {
-		if v, err := decimal.NewFromString(*req.ContractValue); err == nil {
-			updates["contract_value"] = v
+	if req.GrossBudget != nil {
+		if v, err := decimal.NewFromString(*req.GrossBudget); err == nil {
+			updates["gross_budget"] = v
 		}
-	}
-	if req.SignedAt != nil {
-		updates["signed_at"] = parseDate(*req.SignedAt)
 	}
 	if req.StartsOn != nil {
 		updates["starts_on"] = parseDate(*req.StartsOn)

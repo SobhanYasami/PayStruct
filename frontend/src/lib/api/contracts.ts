@@ -10,16 +10,19 @@ export interface Contract {
   description?: string;
   type: "lump_sum" | "unit_rate" | "cost_plus" | "time_material";
   status: string;
-  contract_value: string;
+  gross_budget: string;
   currency: string;
+  performance_bond_pct_bps: number;
+  insurance_rate_pct_bps: number;
+  vat_pct_bps: number;
   retention_pct_bps: number;
   advance_pct_bps: number;
-  vat_pct_bps: number;
   social_security_pct_bps: number;
-  signed_at?: string;
   starts_on?: string;
   ends_on?: string;
   scanned_file_url?: string;
+  contractor_name?: string;
+  project_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -39,21 +42,24 @@ export interface ContractLineItem {
 export interface CreateContractReq {
   project_id: string;
   contractor_id: string;
-  contract_no: string;
+  contract_no?: string;
   title: string;
   description?: string;
   type?: string;
-  contract_value?: string;
+  status?: string;
+  gross_budget?: string;
   currency?: string;
-  retention_pct_bps?: number;
-  advance_pct_bps?: number;
-  vat_pct_bps?: number;
-  social_security_pct_bps?: number;
   starts_on?: string;
   ends_on?: string;
+  performance_bond_pct_bps?: number;
+  insurance_rate_pct_bps?: number;
+  vat_pct_bps?: number;
+  retention_pct_bps?: number;
+  advance_pct_bps?: number;
+  social_security_pct_bps?: number;
 }
 
-export type UpdateContractReq = Partial<Omit<CreateContractReq, "project_id">>;
+export type UpdateContractReq = Partial<Omit<CreateContractReq, "project_id" | "contractor_id">>;
 
 export interface CreateLineItemReq {
   description: string;
@@ -68,9 +74,9 @@ interface Envelope<T> { status: string; data: T; message: string }
 interface ListPayload<T> { data: T[]; total: number; page: number; limit: number }
 
 export const contractsApi = {
-  list: (projectId: string, page = 1, limit = 20) =>
+  list: (page = 1, limit = 20, projectId?: string, search?: string) =>
     apiFetch<Envelope<ListPayload<Contract>>>(
-      `/contracts?project_id=${projectId}&page=${page}&limit=${limit}`
+      `/contracts?page=${page}&limit=${limit}${projectId ? `&project_id=${projectId}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`
     ),
 
   get: (id: string) =>

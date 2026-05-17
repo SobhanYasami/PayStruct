@@ -195,6 +195,19 @@ END$$`,
 		 ON contractors (national_id)
 		 WHERE national_id IS NOT NULL AND national_id != ''`,
 
+		// contract_no unique index must be composite (company_id, contract_no).
+		// Old schema had a single-column unique index — drop and recreate.
+		`DROP INDEX IF EXISTS idx_contracts_company_no`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_contracts_company_no
+		 ON contracts (company_id, contract_no) WHERE deleted_at IS NULL`,
+
+		// Old schema had a `code` column (NOT NULL, no default) and a stale
+		// unique index on (project_id, code). The column is now superseded by
+		// contract_no. Drop the stale index and relax the NOT NULL so new
+		// INSERTs (which omit `code`) are not rejected by Postgres.
+		`DROP INDEX IF EXISTS idx_contracts_project_code`,
+		`ALTER TABLE contracts ALTER COLUMN code DROP NOT NULL`,
+
 		`CREATE INDEX IF NOT EXISTS idx_employees_roles_gin
 		 ON employees USING GIN (roles)`,
 

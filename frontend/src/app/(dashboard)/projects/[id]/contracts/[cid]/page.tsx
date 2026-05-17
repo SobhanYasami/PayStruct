@@ -90,7 +90,7 @@ export default function ContractDetailPage() {
       </div>
 
       <div className="bg-white border rounded-xl px-6 py-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-        <Kpi label="ارزش قرارداد" value={formatMoney(contract.contract_value, contract.currency)} mono />
+        <Kpi label="ارزش قرارداد" value={formatMoney(contract.gross_budget, contract.currency)} mono />
         <Kpi label="حسن انجام کار" value={bpsToPercent(contract.retention_pct_bps)} />
         <Kpi label="پیش‌پرداخت" value={bpsToPercent(contract.advance_pct_bps)} />
         <Kpi label="ارزش افزوده" value={bpsToPercent(contract.vat_pct_bps)} />

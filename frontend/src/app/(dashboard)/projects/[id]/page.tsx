@@ -48,7 +48,7 @@ export default function ProjectDetailPage() {
 
   const { data: contractsRes, isLoading: loadingContracts } = useQuery({
     queryKey: ["contracts", id],
-    queryFn: () => contractsApi.list(id),
+    queryFn: () => contractsApi.list(1, 100, id),
   });
 
   const { data: contractorsRes } = useQuery({
@@ -144,7 +144,7 @@ export default function ProjectDetailPage() {
                 header: "ارزش قرارداد",
                 render: (r) => (
                   <span className="font-mono text-sm text-money-in">
-                    {formatMoney(r.contract_value, r.currency)}
+                    {formatMoney(r.gross_budget, r.currency)}
                   </span>
                 ),
               },

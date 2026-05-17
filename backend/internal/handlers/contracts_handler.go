@@ -19,9 +19,29 @@ func jwtClaims(c *fiber.Ctx) *schemas.JWTClaims {
 // serviceErr maps a ServiceError to the correct HTTP status/body.
 func serviceErr(c *fiber.Ctx, err error) error {
 	if svcErr, ok := err.(*services.ServiceError); ok {
-		return c.Status(svcErr.Code).JSON(ErrorResponse(BadRequest, svcErr.Message))
+		status := codeToResponseStatus(svcErr.Code)
+		return c.Status(svcErr.Code).JSON(ErrorResponse(status, svcErr.Message))
 	}
 	return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Internal server error"))
+}
+
+func codeToResponseStatus(code int) ResponseStatus {
+	switch code {
+	case 400:
+		return BadRequest
+	case 401:
+		return Unauthorized
+	case 403:
+		return Forbidden
+	case 404:
+		return NotFound
+	case 409:
+		return Conflict
+	case 422:
+		return UnprocessableEntity
+	default:
+		return InternalError
+	}
 }
 
 // paginationQuery parses page/limit query params with safe defaults.
@@ -246,11 +266,15 @@ func NewContractHandler(db *gorm.DB) *ContractHandler {
 
 // POST /contracts
 func (h *ContractHandler) CreateContract(c *fiber.Ctx) error {
+	claims := jwtClaims(c)
+	if claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
 	var req services.CreateContractReq
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
 	}
-	contract, err := h.svc.Create(c.Context(), req)
+	contract, err := h.svc.Create(c.Context(), claims.CompanyID, req)
 	if err != nil {
 		return serviceErr(c, err)
 	}
@@ -266,11 +290,22 @@ func (h *ContractHandler) GetContract(c *fiber.Ctx) error {
 	return c.JSON(SuccessResponse(contract))
 }
 
-// GET /contracts?project_id=...
+// GET /contracts
 func (h *ContractHandler) ListContracts(c *fiber.Ctx) error {
+	claims := jwtClaims(c)
+	if claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
 	page, limit := paginationQuery(c)
 	projectID := c.Query("project_id")
-	contracts, total, err := h.svc.ListByProject(c.Context(), projectID, page, limit)
+	search := c.Query("search")
+
+	companyID := claims.CompanyID
+	if slices.Contains(claims.Roles, "admin") || slices.Contains(claims.Roles, "sudoer") {
+		companyID = c.Query("company_id")
+	}
+
+	contracts, total, err := h.svc.List(c.Context(), companyID, projectID, search, page, limit)
 	if err != nil {
 		return serviceErr(c, err)
 	}
