@@ -95,10 +95,14 @@ type Contract struct {
 
 func (Contract) TableName() string { return "contracts" }
 
-// ContractLineItem is the Bill-of-Quantities line (formerly WBS).
+// ContractLineItem is the Bill-of-Quantities (WBS) line for a contract.
+// ContractorID and ProjectID are denormalized from the parent contract for
+// query convenience.
 type ContractLineItem struct {
 	BaseModel
-	ContractID   uuid.UUID       `gorm:"type:uuid;not null;index"                                json:"contract_id"`
+	ContractID   uuid.UUID  `gorm:"type:uuid;not null;index"  json:"contract_id"`
+	ContractorID *uuid.UUID `gorm:"type:uuid;index"           json:"contractor_id,omitempty"`
+	ProjectID    *uuid.UUID `gorm:"type:uuid;index"           json:"project_id,omitempty"`
 	SortOrder    int             `gorm:"not null;default:0"                                      json:"sort_order"`
 	Description  string          `gorm:"type:text;not null"                                      json:"description"`
 	Unit         string          `gorm:"size:32;not null"                                        json:"unit"`

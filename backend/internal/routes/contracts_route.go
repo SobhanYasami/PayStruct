@@ -45,4 +45,6 @@ func SetupContractRoutes(router fiber.Router, h *handlers.ContractHandler, jwtSe
 
 	contracts.Get("/:id/line-items", h.ListLineItems)
 	contracts.Post("/:id/line-items", h.CreateLineItem)
+	contracts.Put("/:id/line-items/:itemId", h.UpdateLineItem)
+	contracts.Delete("/:id/line-items/:itemId", h.DeleteLineItem)
 }

@@ -359,3 +359,24 @@ func (h *ContractHandler) CreateLineItem(c *fiber.Ctx) error {
 	}
 	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(item, "Line item created"))
 }
+
+// PUT /contracts/:id/line-items/:itemId
+func (h *ContractHandler) UpdateLineItem(c *fiber.Ctx) error {
+	var req services.UpdateLineItemReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	item, err := h.svc.UpdateLineItem(c.Context(), c.Params("itemId"), req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(item, "Line item updated"))
+}
+
+// DELETE /contracts/:id/line-items/:itemId
+func (h *ContractHandler) DeleteLineItem(c *fiber.Ctx) error {
+	if err := h.svc.DeleteLineItem(c.Context(), c.Params("itemId")); err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}

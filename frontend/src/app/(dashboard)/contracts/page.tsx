@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -235,6 +236,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function ContractsPage() {
   const qc = useQueryClient();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -360,6 +362,7 @@ export default function ContractsPage() {
         data={contracts}
         isLoading={isLoading}
         keyExtractor={(r) => r.id}
+        onRowClick={(r) => router.push(`/contracts/${r.id}`)}
         emptyMessage="قراردادی یافت نشد"
       />
 

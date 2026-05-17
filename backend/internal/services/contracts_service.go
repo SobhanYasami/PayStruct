@@ -827,6 +827,15 @@ type CreateLineItemReq struct {
 	CurrencyCode string `json:"currency_code"`
 }
 
+type UpdateLineItemReq struct {
+	SortOrder    *int    `json:"sort_order"`
+	Description  *string `json:"description"`
+	Unit         *string `json:"unit"`
+	Quantity     *string `json:"quantity"`
+	UnitRate     *string `json:"unit_rate"`
+	CurrencyCode *string `json:"currency_code"`
+}
+
 func (s *ContractSvc) ListLineItems(ctx context.Context, contractID string) ([]model.ContractLineItem, error) {
 	cid, err := uuid.Parse(contractID)
 	if err != nil {
@@ -865,8 +874,17 @@ func (s *ContractSvc) CreateLineItem(ctx context.Context, contractID string, req
 	if len(currency) != 3 {
 		currency = "IRR"
 	}
+
+	// Denormalize contractor_id and project_id from parent contract.
+	var ct model.Contract
+	if err := s.db.WithContext(ctx).Select("contractor_id, project_id").First(&ct, "id = ?", cid).Error; err != nil {
+		return nil, &ServiceError{Message: "Contract not found", Code: 404}
+	}
+
 	item := model.ContractLineItem{
 		ContractID:   cid,
+		ContractorID: &ct.ContractorID,
+		ProjectID:    &ct.ProjectID,
 		SortOrder:    req.SortOrder,
 		Description:  req.Description,
 		Unit:         req.Unit,
@@ -878,4 +896,70 @@ func (s *ContractSvc) CreateLineItem(ctx context.Context, contractID string, req
 		return nil, dbErr(err)
 	}
 	return &item, nil
+}
+
+func (s *ContractSvc) UpdateLineItem(ctx context.Context, itemID string, req UpdateLineItemReq) (*model.ContractLineItem, error) {
+	uid, err := uuid.Parse(itemID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid line item ID", Code: 400}
+	}
+	var item model.ContractLineItem
+	if err := s.db.WithContext(ctx).First(&item, "id = ?", uid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, &ServiceError{Message: "Line item not found", Code: 404}
+		}
+		return nil, &ServiceError{Message: "Database error", Code: 500}
+	}
+
+	updates := make(map[string]any)
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.Unit != nil {
+		updates["unit"] = *req.Unit
+	}
+	if req.SortOrder != nil {
+		updates["sort_order"] = *req.SortOrder
+	}
+	if req.CurrencyCode != nil {
+		c := *req.CurrencyCode
+		if len(c) == 3 {
+			updates["currency_code"] = c
+		}
+	}
+	if req.Quantity != nil {
+		if v, err := decimal.NewFromString(*req.Quantity); err == nil {
+			updates["quantity"] = v
+		} else {
+			return nil, &ServiceError{Message: "Invalid quantity", Code: 400}
+		}
+	}
+	if req.UnitRate != nil {
+		if v, err := decimal.NewFromString(*req.UnitRate); err == nil {
+			updates["unit_rate"] = v
+		} else {
+			return nil, &ServiceError{Message: "Invalid unit_rate", Code: 400}
+		}
+	}
+	if len(updates) > 0 {
+		if err := s.db.WithContext(ctx).Model(&item).Updates(updates).Error; err != nil {
+			return nil, &ServiceError{Message: "Update failed", Code: 500}
+		}
+	}
+	return &item, nil
+}
+
+func (s *ContractSvc) DeleteLineItem(ctx context.Context, itemID string) error {
+	uid, err := uuid.Parse(itemID)
+	if err != nil {
+		return &ServiceError{Message: "Invalid line item ID", Code: 400}
+	}
+	result := s.db.WithContext(ctx).Where("id = ?", uid).Delete(&model.ContractLineItem{})
+	if result.Error != nil {
+		return &ServiceError{Message: "Delete failed", Code: 500}
+	}
+	if result.RowsAffected == 0 {
+		return &ServiceError{Message: "Line item not found", Code: 404}
+	}
+	return nil
 }

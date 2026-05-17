@@ -30,6 +30,8 @@ export interface Contract {
 export interface ContractLineItem {
   id: string;
   contract_id: string;
+  contractor_id?: string;
+  project_id?: string;
   sort_order: number;
   description: string;
   unit: string;
@@ -70,6 +72,15 @@ export interface CreateLineItemReq {
   sort_order?: number;
 }
 
+export interface UpdateLineItemReq {
+  description?: string;
+  unit?: string;
+  quantity?: string;
+  unit_rate?: string;
+  currency_code?: string;
+  sort_order?: number;
+}
+
 interface Envelope<T> { status: string; data: T; message: string }
 interface ListPayload<T> { data: T[]; total: number; page: number; limit: number }
 
@@ -105,4 +116,13 @@ export const contractsApi = {
       method: "POST",
       body: JSON.stringify(req),
     }),
+
+  updateLineItem: (contractId: string, itemId: string, req: UpdateLineItemReq) =>
+    apiFetch<Envelope<ContractLineItem>>(`/contracts/${contractId}/line-items/${itemId}`, {
+      method: "PUT",
+      body: JSON.stringify(req),
+    }),
+
+  deleteLineItem: (contractId: string, itemId: string) =>
+    apiFetch<void>(`/contracts/${contractId}/line-items/${itemId}`, { method: "DELETE" }),
 };
