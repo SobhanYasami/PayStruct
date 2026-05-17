@@ -10,17 +10,32 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// AutoMigrate runs gorm.AutoMigrate over every model, then installs FK
-// constraints and bespoke indexes. FK creation is deferred to
-// MigrateForeignKeys because GORM's tag-driven FK emission can't handle
-// the companies.manager_id ↔ employees.company_id cycle.
-//
-// Use in dev and tests; production should switch to atlas/goose so DDL
-// changes are reviewable and reversible.
+// AutoMigrate runs gorm.AutoMigrate over every model in FK-safe order, then
+// installs FK constraints and bespoke indexes.
 func AutoMigrate(db *gorm.DB) error {
 	ordered := []any{
-		&Company{}, &Employee{}, &Project{}, &Contractor{}, &Contract{},
-		&WBS{}, &StatusStatement{}, &WorksDone{}, &ExtraWork{}, &Deduction{},
+		// No FKs or only self-referential.
+		&Currency{},
+		&Company{},
+		// Depends on Company.
+		&Employee{},
+		&Project{},
+		&RefreshToken{},
+		// Depends on Company + Project.
+		&Contractor{},
+		&Contract{},
+		&ContractLineItem{},
+		// Depends on Contract.
+		&FXRate{},
+		&InterimStatement{},
+		&WorkDoneItem{},
+		&ExtraWorkItem{},
+		&RetentionRecord{},
+		&AdvancePaymentRecord{},
+		&LiquidatedDamage{},
+		// Audit — entity-polymorphic, no hard FKs.
+		&ApprovalEvent{},
+		&Attachment{},
 	}
 	for _, m := range ordered {
 		if err := db.AutoMigrate(m); err != nil {
@@ -33,23 +48,10 @@ func AutoMigrate(db *gorm.DB) error {
 	return MigrateIndexes(db)
 }
 
-// fk is the normalized projection of a BelongsTo relationship onto a
-// concrete ALTER TABLE ADD CONSTRAINT statement.
 type fk struct {
 	name, table, col, refTable, refCol, onDelete, onUpdate string
 }
 
-// collectFKs walks every model via the GORM schema parser and projects each
-// BelongsTo relationship into an installable fk record. Source of truth is
-// the struct tag — renaming a field or column can no longer desynchronize
-// the installer from the schema.
-//
-// Defaults when the `constraint:` clause is absent on a tag:
-//   - ON DELETE: SET NULL when the FK column is nullable, else RESTRICT.
-//     Matches the prior hardcoded intent and refuses to default to CASCADE
-//     (which should always be explicit on a destructive action).
-//   - ON UPDATE: CASCADE. PK mutations are vanishingly rare with UUIDv7
-//     surrogates; cascading is the safe default.
 func collectFKs(db *gorm.DB, models []any) ([]fk, error) {
 	cache := &sync.Map{}
 	seen := make(map[string]struct{})
@@ -81,9 +83,6 @@ func collectFKs(db *gorm.DB, models []any) ([]fk, error) {
 
 				name := constraintName(rel.Schema.Table, ref.ForeignKey.DBName)
 				if _, dup := seen[name]; dup {
-					// Real composite FKs would collide here. The schema
-					// uses single-column UUID PKs everywhere, so a hit
-					// indicates a duplicate relationship declaration.
 					return nil, fmt.Errorf("duplicate fk name %q (collision on %s.%s)",
 						name, rel.Schema.Table, ref.ForeignKey.DBName)
 				}
@@ -102,16 +101,10 @@ func collectFKs(db *gorm.DB, models []any) ([]fk, error) {
 		}
 	}
 
-	// Deterministic order — DDL diffs across boots stay reviewable.
 	sort.Slice(out, func(i, j int) bool { return out[i].name < out[j].name })
 	return out, nil
 }
 
-// parseConstraintTag extracts OnDelete / OnUpdate from GORM's compact
-// constraint syntax: "OnUpdate:CASCADE,OnDelete:SET NULL". Tolerant of
-// case and whitespace. Unknown actions pass through verbatim — Postgres
-// rejects them at ALTER TABLE time, which is the correct failure mode
-// (loud, immediate, with the offending tag named in the error).
 func parseConstraintTag(tag string) (onDelete, onUpdate string) {
 	for _, part := range strings.Split(tag, ",") {
 		k, v, ok := strings.Cut(part, ":")
@@ -128,29 +121,16 @@ func parseConstraintTag(tag string) (onDelete, onUpdate string) {
 	return
 }
 
-// constraintName produces a stable, ≤63-byte (Postgres NAMEDATALEN-1)
-// constraint identifier. Strips a trailing "_id" for readability:
-// (employees, company_id) → fk_employees_company.
 func constraintName(table, col string) string {
 	name := fmt.Sprintf("fk_%s_%s", table, strings.TrimSuffix(col, "_id"))
 	if len(name) > 63 {
-		name = name[:63] // collisions surface in the seen-map dup check
+		name = name[:63]
 	}
 	return name
 }
 
-// MigrateForeignKeys installs FK constraints after every table exists.
-// Required because postgre.go opens GORM with
-// DisableForeignKeyConstraintWhenMigrating: true to break the
-// companies↔employees cycle.
-//
-// DEFERRABLE INITIALLY IMMEDIATE lets a seeder run
-// `SET CONSTRAINTS ALL DEFERRED` inside a tx when inserting circularly
-// referenced rows (e.g. create company, then its manager employee).
-//
-// Idempotent via pg_constraint lookup — Postgres has no
-// `ADD CONSTRAINT IF NOT EXISTS`, so each statement is wrapped in a
-// PL/pgSQL guard.
+// MigrateForeignKeys installs FK constraints after all tables exist.
+// Idempotent via pg_constraint lookup.
 func MigrateForeignKeys(db *gorm.DB) error {
 	fks, err := collectFKs(db, AllModels())
 	if err != nil {
@@ -180,19 +160,32 @@ END$$;`
 	return nil
 }
 
-// MigrateIndexes applies indexes that GORM struct tags can't cleanly
-// express — Postgres-specific GIN on TEXT[] columns, partial / functional
-// indexes.
-//
-// Trade-offs:
-//   - GIN is larger and slower to update than B-tree but the only sane
-//     choice for `array @> ARRAY[...]` and `&&` containment used by
-//     role/tag filters.
-//   - Trigram index on company.name is optional; uncomment if substring
-//     search ("ILIKE '%foo%'") is exposed on the listing UI, after
-//     `CREATE EXTENSION IF NOT EXISTS pg_trgm`.
+// MigrateIndexes applies Postgres-specific indexes not expressible via GORM tags.
 func MigrateIndexes(db *gorm.DB) error {
 	stmts := []string{
+		// Make tax_id and registration_no nullable so multiple contractors can
+		// omit them without hitting the unique constraint on empty string.
+		`ALTER TABLE contractors ALTER COLUMN tax_id DROP NOT NULL`,
+		`ALTER TABLE contractors ALTER COLUMN registration_no DROP NOT NULL`,
+		// Same fix for companies.tax_id.
+		`ALTER TABLE companies ALTER COLUMN tax_id DROP NOT NULL`,
+		// Drop ALL stale NOT-NULL columns in contractors that are not in the
+		// current model. Safe: IF NOT EXISTS / IF EXISTS guards all statements.
+		`DO $$
+DECLARE col TEXT;
+BEGIN
+    FOR col IN
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'contractors'
+          AND is_nullable = 'NO'
+          AND column_name NOT IN (
+            'id','created_at','updated_at',
+            'type','display_name','legal_name','default_currency'
+          )
+    LOOP
+        EXECUTE format('ALTER TABLE contractors ALTER COLUMN %I DROP NOT NULL', col);
+    END LOOP;
+END$$`,
 		`CREATE INDEX IF NOT EXISTS idx_employees_roles_gin
 		 ON employees USING GIN (roles)`,
 
@@ -200,15 +193,15 @@ func MigrateIndexes(db *gorm.DB) error {
 		 ON projects USING GIN (tags)`,
 
 		`CREATE INDEX IF NOT EXISTS idx_statements_contract_status
-		 ON status_statements (contract_id, status, sequence_no DESC)
+		 ON interim_statements (contract_id, status, sequence_no DESC)
 		 WHERE deleted_at IS NULL`,
 
 		`CREATE INDEX IF NOT EXISTS idx_projects_status_priority
 		 ON projects (company_id, status, priority)
 		 WHERE deleted_at IS NULL`,
 
-		// `CREATE INDEX IF NOT EXISTS idx_companies_name_trgm
-		//  ON companies USING GIN (name gin_trgm_ops)`,
+		`CREATE INDEX IF NOT EXISTS idx_approval_events_entity
+		 ON approval_events (entity_type, entity_id, created_at DESC)`,
 	}
 	for _, s := range stmts {
 		if err := db.Exec(s).Error; err != nil {

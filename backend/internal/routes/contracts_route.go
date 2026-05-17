@@ -7,15 +7,17 @@ import (
 )
 
 // SetupProjectRoutes mounts project CRUD under /projects.
-// All routes require authentication; only authenticated employees
-// (any role) can manage projects scoped to their company.
+// Reads: any authenticated user. Writes: manager + engineering_head (+ admin/sudoer).
 func SetupProjectRoutes(router fiber.Router, h *handlers.ProjectHandler, jwtSecret string) {
-	projects := router.Group("/projects", middlewares.Authenticate(jwtSecret))
-	projects.Post("/", h.CreateProject)
+	auth := middlewares.Authenticate(jwtSecret)
+	canWrite := middlewares.RequireAnyRole("manager", "engineering_head")
+
+	projects := router.Group("/projects", auth)
 	projects.Get("/", h.ListProjects)
 	projects.Get("/:id", h.GetProject)
-	projects.Put("/:id", h.UpdateProject)
-	projects.Delete("/:id", h.DeleteProject)
+	projects.Post("/", canWrite, h.CreateProject)
+	projects.Put("/:id", canWrite, h.UpdateProject)
+	projects.Delete("/:id", canWrite, h.DeleteProject)
 }
 
 // SetupContractorRoutes mounts contractor CRUD under /contractors.
@@ -37,7 +39,7 @@ func SetupContractRoutes(router fiber.Router, h *handlers.ContractHandler, jwtSe
 	contracts.Put("/:id", h.UpdateContract)
 	contracts.Delete("/:id", h.DeleteContract)
 
-	// WBS nested under a contract
-	contracts.Get("/:id/wbs", h.ListWBS)
-	contracts.Post("/:id/wbs", h.CreateWBS)
+	// Line items nested under a contract
+	contracts.Get("/:id/line-items", h.ListLineItems)
+	contracts.Post("/:id/line-items", h.CreateLineItem)
 }

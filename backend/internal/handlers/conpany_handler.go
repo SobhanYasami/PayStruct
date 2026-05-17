@@ -84,8 +84,23 @@ func (h *CompanyHandler) CreateCompany(c *fiber.Ctx) error {
 	}, "Company created successfully"))
 }
 
+// isSuperAdmin returns true if claims include sudoer or admin role.
+func isSuperAdmin(claims *schemas.JWTClaims) bool {
+	for _, r := range claims.Roles {
+		if r == "sudoer" || r == "admin" {
+			return true
+		}
+	}
+	return false
+}
+
 // GET /company/management
 func (h *CompanyHandler) GetAllCompanies(c *fiber.Ctx) error {
+	claims, ok := c.Locals("claims").(*schemas.JWTClaims)
+	if !ok || claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
+
 	search := c.Query("search")
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)
@@ -94,6 +109,25 @@ func (h *CompanyHandler) GetAllCompanies(c *fiber.Ctx) error {
 	}
 	if limit < 1 || limit > 100 {
 		limit = 10
+	}
+
+	// Non-admin heads only see their own company
+	if !isSuperAdmin(claims) {
+		companyUUID, err := uuid.Parse(claims.CompanyID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Invalid company in token"))
+		}
+		company, err := h.companySvc.GetCompanyDetails(c.Context(), companyUUID)
+		if err != nil {
+			if svcErr, ok := err.(*services.ServiceError); ok {
+				return c.Status(svcErr.Code).JSON(ErrorResponse(NotFound, svcErr.Message))
+			}
+			return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to get company"))
+		}
+		item := companyResponse{ID: company.ID, Name: company.Name, RegNum: company.RegNum, ParentID: company.ParentID}
+		return c.JSON(SuccessResponse(fiber.Map{
+			"data": []companyResponse{item}, "total": 1, "page": 1, "limit": 1, "total_pages": 1,
+		}, "Companies retrieved successfully"))
 	}
 
 	companies, total, err := h.companySvc.ListCompanies(c.Context(), search, page, limit)
@@ -125,9 +159,19 @@ func (h *CompanyHandler) GetAllCompanies(c *fiber.Ctx) error {
 
 // GET /company/management/:id
 func (h *CompanyHandler) GetCompanyByID(c *fiber.Ctx) error {
+	claims, ok := c.Locals("claims").(*schemas.JWTClaims)
+	if !ok || claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
+
 	companyUUID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid company ID"))
+	}
+
+	// Non-admin heads can only read their own company
+	if !isSuperAdmin(claims) && claims.CompanyID != companyUUID.String() {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse(Forbidden, "access denied"))
 	}
 
 	company, err := h.companySvc.GetCompanyDetails(c.Context(), companyUUID)

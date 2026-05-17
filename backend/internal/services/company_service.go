@@ -23,9 +23,14 @@ func NewCompanyService(db *gorm.DB) *CompanyService {
 // -----------------------------------------------------------------------
 
 type CreateCompanyReq struct {
-	Name     string  `json:"name"`
-	RegNum   string  `json:"reg_num"`
-	ParentID *string `json:"parent_id,omitempty"`
+	Name              string  `json:"name"`
+	RegNum            string  `json:"reg_num"`
+	ParentID          *string `json:"parent_id,omitempty"`
+	ManagerID         *string `json:"manager_id,omitempty"`
+	EngineeringHeadID *string `json:"engineering_head_id,omitempty"`
+	FinancialHeadID   *string `json:"financial_head_id,omitempty"`
+	JuridicalHeadID   *string `json:"juridical_head_id,omitempty"`
+	SecurityHeadID    *string `json:"security_head_id,omitempty"`
 }
 
 func (s *CompanyService) CreateCompany(ctx context.Context, req CreateCompanyReq) (*model.Company, error) {
@@ -59,6 +64,21 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req CreateCompanyReq
 		RegNum:   req.RegNum,
 		ParentID: parentUUID,
 	}
+	parseOptUUID := func(s *string) *uuid.UUID {
+		if s == nil || *s == "" {
+			return nil
+		}
+		id, err := uuid.Parse(*s)
+		if err != nil {
+			return nil
+		}
+		return &id
+	}
+	company.ManagerID = parseOptUUID(req.ManagerID)
+	company.EngineeringHeadID = parseOptUUID(req.EngineeringHeadID)
+	company.FinancialHeadID = parseOptUUID(req.FinancialHeadID)
+	company.JuridicalHeadID = parseOptUUID(req.JuridicalHeadID)
+	company.SecurityHeadID = parseOptUUID(req.SecurityHeadID)
 
 	if err := s.db.WithContext(ctx).Create(&company).Error; err != nil {
 		return nil, dbErr(err)
@@ -86,9 +106,14 @@ func (s *CompanyService) GetCompanyDetails(ctx context.Context, companyID uuid.U
 // -----------------------------------------------------------------------
 
 type UpdateCompanyReq struct {
-	Name     string  `json:"name"`
-	RegNum   string  `json:"reg_num"`
-	ParentID *string `json:"parent_id,omitempty"`
+	Name              string  `json:"name"`
+	RegNum            string  `json:"reg_num"`
+	ParentID          *string `json:"parent_id,omitempty"`
+	ManagerID         *string `json:"manager_id,omitempty"`
+	EngineeringHeadID *string `json:"engineering_head_id,omitempty"`
+	FinancialHeadID   *string `json:"financial_head_id,omitempty"`
+	JuridicalHeadID   *string `json:"juridical_head_id,omitempty"`
+	SecurityHeadID    *string `json:"security_head_id,omitempty"`
 }
 
 func (s *CompanyService) UpdateCompany(ctx context.Context, companyID uuid.UUID, req UpdateCompanyReq) (*model.Company, error) {
@@ -106,16 +131,34 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, companyID uuid.UUID,
 	if r := strings.TrimSpace(req.RegNum); r != "" {
 		company.RegNum = r
 	}
-	if req.ParentID != nil {
-		if *req.ParentID == "" {
-			company.ParentID = nil
-		} else {
-			id, err := uuid.Parse(*req.ParentID)
-			if err != nil {
-				return nil, &ServiceError{Message: "Invalid parent_id", Code: 400}
-			}
-			company.ParentID = &id
+	parseOptUUID2 := func(sp *string) *uuid.UUID {
+		if sp == nil {
+			return nil // not in request — don't touch
 		}
+		if *sp == "" {
+			return nil // explicit clear
+		}
+		id, _ := uuid.Parse(*sp)
+		return &id
+	}
+
+	if req.ParentID != nil {
+		company.ParentID = parseOptUUID2(req.ParentID)
+	}
+	if req.ManagerID != nil {
+		company.ManagerID = parseOptUUID2(req.ManagerID)
+	}
+	if req.EngineeringHeadID != nil {
+		company.EngineeringHeadID = parseOptUUID2(req.EngineeringHeadID)
+	}
+	if req.FinancialHeadID != nil {
+		company.FinancialHeadID = parseOptUUID2(req.FinancialHeadID)
+	}
+	if req.JuridicalHeadID != nil {
+		company.JuridicalHeadID = parseOptUUID2(req.JuridicalHeadID)
+	}
+	if req.SecurityHeadID != nil {
+		company.SecurityHeadID = parseOptUUID2(req.SecurityHeadID)
 	}
 
 	if err := s.db.WithContext(ctx).Save(&company).Error; err != nil {

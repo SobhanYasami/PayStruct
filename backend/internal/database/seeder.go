@@ -29,12 +29,12 @@ func Seed(db *gorm.DB) error {
 
 		log.Println("No sudoer found. Bootstrapping system...")
 
-		// 2) Create system company.
+		// 2) Find or create system company.
 		company := model.Company{
 			Name:   "System Company",
 			RegNum: "SYS-001",
 		}
-		if err := tx.Create(&company).Error; err != nil {
+		if err := tx.Where(model.Company{RegNum: "SYS-001"}).FirstOrCreate(&company).Error; err != nil {
 			return err
 		}
 

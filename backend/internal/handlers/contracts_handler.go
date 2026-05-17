@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"slices"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -54,11 +55,22 @@ func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
 	if claims == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
 	}
-	var req services.CreateProjectReq
-	if err := c.BodyParser(&req); err != nil {
+
+	var body struct {
+		services.CreateProjectReq
+		CompanyID string `json:"company_id"`
+	}
+	if err := c.BodyParser(&body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
 	}
-	project, err := h.svc.Create(c.Context(), claims.CompanyID, req)
+
+	companyID := claims.CompanyID
+	isAdmin := slices.Contains(claims.Roles, "admin") || slices.Contains(claims.Roles, "sudoer")
+	if body.CompanyID != "" && isAdmin {
+		companyID = body.CompanyID
+	}
+
+	project, err := h.svc.Create(c.Context(), companyID, body.CreateProjectReq)
 	if err != nil {
 		return serviceErr(c, err)
 	}
@@ -83,7 +95,12 @@ func (h *ProjectHandler) ListProjects(c *fiber.Ctx) error {
 	page, limit := paginationQuery(c)
 	status := c.Query("status")
 
-	projects, total, err := h.svc.List(c.Context(), claims.CompanyID, status, page, limit)
+	companyID := claims.CompanyID
+	if slices.Contains(claims.Roles, "admin") || slices.Contains(claims.Roles, "sudoer") {
+		companyID = c.Query("company_id") // admins may filter by company or see all (empty = all)
+	}
+
+	projects, total, err := h.svc.List(c.Context(), companyID, status, page, limit)
 	if err != nil {
 		return serviceErr(c, err)
 	}
@@ -258,24 +275,24 @@ func (h *ContractHandler) DeleteContract(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusNoContent).Send(nil)
 }
 
-// GET /contracts/:id/wbs
-func (h *ContractHandler) ListWBS(c *fiber.Ctx) error {
-	items, err := h.svc.ListWBS(c.Context(), c.Params("id"))
+// GET /contracts/:id/line-items
+func (h *ContractHandler) ListLineItems(c *fiber.Ctx) error {
+	items, err := h.svc.ListLineItems(c.Context(), c.Params("id"))
 	if err != nil {
 		return serviceErr(c, err)
 	}
 	return c.JSON(SuccessResponse(items))
 }
 
-// POST /contracts/:id/wbs
-func (h *ContractHandler) CreateWBS(c *fiber.Ctx) error {
-	var req services.CreateWBSReq
+// POST /contracts/:id/line-items
+func (h *ContractHandler) CreateLineItem(c *fiber.Ctx) error {
+	var req services.CreateLineItemReq
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
 	}
-	item, err := h.svc.CreateWBS(c.Context(), c.Params("id"), req)
+	item, err := h.svc.CreateLineItem(c.Context(), c.Params("id"), req)
 	if err != nil {
 		return serviceErr(c, err)
 	}
-	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(item, "WBS item created"))
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(item, "Line item created"))
 }

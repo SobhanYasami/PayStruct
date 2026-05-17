@@ -8,6 +8,7 @@ import {
   Users,
   UserCheck,
   FileText,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -16,6 +17,7 @@ const navItems = [
   { href: "/projects", label: "پروژه‌ها", icon: FolderKanban },
   { href: "/contractors", label: "پیمانکاران", icon: UserCheck },
   { href: "/employees", label: "کارمندان", icon: Users },
+  { href: "/companies", label: "شرکت‌ها", icon: Building2 },
   { href: "/reports", label: "گزارشات", icon: FileText },
 ];
 

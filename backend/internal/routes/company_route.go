@@ -7,15 +7,17 @@ import (
 )
 
 func SetupCompanyRoutes(router fiber.Router, h *handlers.CompanyHandler, jwtSecret string) {
-	company := router.Group("/company",
-		middlewares.Authenticate(jwtSecret),
-		middlewares.SuperAdminOnly(),
-	)
+	auth := middlewares.Authenticate(jwtSecret)
+	headRead := middlewares.RequireAnyRole("manager", "finance_head", "juridical_head", "engineering_head", "security_head")
 
-	management := company.Group("/management")
-	management.Post("/", h.CreateCompany)
-	management.Get("/", h.GetAllCompanies)
-	management.Get("/:id", h.GetCompanyByID)
-	management.Put("/:id", h.UpdateCompany)
-	management.Delete("/:id", h.DeleteCompany)
+	// Reads: head roles + admin/sudoer (company-scoped for non-admin)
+	mgmtRead := router.Group("/company/management", auth, headRead)
+	mgmtRead.Get("/", h.GetAllCompanies)
+	mgmtRead.Get("/:id", h.GetCompanyByID)
+
+	// Writes: sudoer only
+	mgmtWrite := router.Group("/company/management", auth, middlewares.SuperAdminOnly())
+	mgmtWrite.Post("/", h.CreateCompany)
+	mgmtWrite.Put("/:id", h.UpdateCompany)
+	mgmtWrite.Delete("/:id", h.DeleteCompany)
 }

@@ -37,7 +37,8 @@ type Project struct {
 	BudgetActual   decimal.Decimal `gorm:"type:numeric(20,2);not null;default:0" json:"budget_actual"`
 	Currency       string          `gorm:"size:3;not null;default:'USD';check:char_length(currency)=3" json:"currency"`
 
-	Tags pq.StringArray `gorm:"type:text[];not null;default:'{}'" json:"tags"`
+	Phase string         `gorm:"size:64;index"                    json:"phase,omitempty"`
+	Tags  pq.StringArray `gorm:"type:text[];not null;default:'{}'" json:"tags"`
 
 	// Owning company. RESTRICT delete: orphaning a project would cascade
 	// surprises into contracts and status statements; force the caller to

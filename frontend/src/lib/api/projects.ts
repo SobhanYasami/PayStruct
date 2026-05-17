@@ -7,6 +7,7 @@ export interface Project {
   name: string;
   description?: string;
   category?: string;
+  phase?: string;
   status: string;
   priority: string;
   budget_estimate: string;
@@ -15,15 +16,18 @@ export interface Project {
   start_date?: string;
   end_date?: string;
   tags?: string[];
-  created_at: string;
-  updated_at: string;
+  contracts_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreateProjectReq {
+  company_id?: string;
   code: string;
   name: string;
   description?: string;
   category?: string;
+  phase?: string;
   status?: string;
   priority?: string;
   budget_estimate?: string;
@@ -33,7 +37,20 @@ export interface CreateProjectReq {
   tags?: string[];
 }
 
-export type UpdateProjectReq = Partial<CreateProjectReq> & { budget_actual?: string };
+export interface UpdateProjectReq {
+  name?: string;
+  description?: string;
+  category?: string;
+  phase?: string;
+  status?: string;
+  priority?: string;
+  budget_estimate?: string;
+  budget_actual?: string;
+  currency?: string;
+  start_date?: string;
+  end_date?: string;
+  tags?: string[];
+}
 
 interface Envelope<T> { status: string; data: T; message: string }
 interface ListPayload<T> { data: T[]; total: number; page: number; limit: number }

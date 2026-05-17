@@ -47,3 +47,26 @@ func RequireRole(roleName string) fiber.Handler {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied"})
 	}
 }
+
+// RequireAnyRole passes if the caller holds sudoer, admin, or any of the listed roles.
+func RequireAnyRole(roles ...string) fiber.Handler {
+	set := make(map[string]struct{}, len(roles))
+	for _, r := range roles {
+		set[r] = struct{}{}
+	}
+	return func(c *fiber.Ctx) error {
+		claims, ok := c.Locals("claims").(*schemas.JWTClaims)
+		if !ok || claims == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+		for _, r := range claims.Roles {
+			if r == roleSudoer || r == "admin" {
+				return c.Next()
+			}
+			if _, ok := set[r]; ok {
+				return c.Next()
+			}
+		}
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied"})
+	}
+}

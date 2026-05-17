@@ -26,6 +26,7 @@ type CreateProjectReq struct {
 	Name           string   `json:"name"`
 	Description    string   `json:"description"`
 	Category       string   `json:"category"`
+	Phase          string   `json:"phase"`
 	Status         string   `json:"status"`
 	Priority       string   `json:"priority"`
 	StartDate      *string  `json:"start_date"`
@@ -39,6 +40,7 @@ type UpdateProjectReq struct {
 	Name           *string  `json:"name"`
 	Description    *string  `json:"description"`
 	Category       *string  `json:"category"`
+	Phase          *string  `json:"phase"`
 	Status         *string  `json:"status"`
 	Priority       *string  `json:"priority"`
 	StartDate      *string  `json:"start_date"`
@@ -47,6 +49,12 @@ type UpdateProjectReq struct {
 	BudgetActual   *string  `json:"budget_actual"`
 	Currency       *string  `json:"currency"`
 	Tags           []string `json:"tags"`
+}
+
+// ProjectListItem embeds Project and adds the live contracts count.
+type ProjectListItem struct {
+	model.Project
+	ContractsCount int64 `gorm:"column:contracts_count" json:"contracts_count"`
 }
 
 func (s *ProjectService) Create(ctx context.Context, companyID string, req CreateProjectReq) (*model.Project, error) {
@@ -86,6 +94,7 @@ func (s *ProjectService) Create(ctx context.Context, companyID string, req Creat
 		Name:           req.Name,
 		Description:    req.Description,
 		Category:       req.Category,
+		Phase:          req.Phase,
 		Status:         status,
 		Priority:       priority,
 		BudgetEstimate: budget,
@@ -126,25 +135,33 @@ func (s *ProjectService) GetByID(ctx context.Context, id string) (*model.Project
 	return &p, nil
 }
 
-func (s *ProjectService) List(ctx context.Context, companyID, status string, page, limit int) ([]model.Project, int64, error) {
-	q := s.db.WithContext(ctx).Model(&model.Project{})
+const projectsCountSelect = `projects.*,
+	COALESCE((SELECT COUNT(*) FROM contracts
+		WHERE contracts.project_id = projects.id
+		  AND contracts.deleted_at IS NULL), 0) AS contracts_count`
+
+func (s *ProjectService) List(ctx context.Context, companyID, status string, page, limit int) ([]ProjectListItem, int64, error) {
+	q := s.db.WithContext(ctx).Table("projects").Where("projects.deleted_at IS NULL")
 	if companyID != "" {
 		if cid, err := uuid.Parse(companyID); err == nil {
-			q = q.Where("company_id = ?", cid)
+			q = q.Where("projects.company_id = ?", cid)
 		}
 	}
 	if status != "" {
-		q = q.Where("status = ?", status)
+		q = q.Where("projects.status = ?", status)
 	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, &ServiceError{Message: "Count failed", Code: 500}
 	}
-	var projects []model.Project
-	if err := q.Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&projects).Error; err != nil {
+	var items []ProjectListItem
+	if err := q.Select(projectsCountSelect).
+		Order("projects.created_at DESC").
+		Offset((page - 1) * limit).Limit(limit).
+		Find(&items).Error; err != nil {
 		return nil, 0, &ServiceError{Message: "Query failed", Code: 500}
 	}
-	return projects, total, nil
+	return items, total, nil
 }
 
 func (s *ProjectService) Update(ctx context.Context, id string, req UpdateProjectReq) (*model.Project, error) {
@@ -169,6 +186,9 @@ func (s *ProjectService) Update(ctx context.Context, id string, req UpdateProjec
 	}
 	if req.Category != nil {
 		updates["category"] = *req.Category
+	}
+	if req.Phase != nil {
+		updates["phase"] = *req.Phase
 	}
 	if req.Status != nil {
 		updates["status"] = *req.Status
@@ -239,45 +259,68 @@ type ContractorService struct{ db *gorm.DB }
 func NewContractorService(db *gorm.DB) *ContractorService { return &ContractorService{db: db} }
 
 type CreateContractorReq struct {
-	Type       string   `json:"type"`
-	FName      string   `json:"first_name"`
-	LName      string   `json:"last_name"`
-	DetailedID string   `json:"detailed_id"`
-	NationalID string   `json:"national_id"`
-	Phone      string   `json:"phone"`
-	Address    string   `json:"address"`
-	Specialty  string   `json:"specialty"`
-	Rating     *float32 `json:"rating"`
+	Type            string   `json:"type"`
+	DisplayName     string   `json:"display_name"`
+	LegalName       string   `json:"legal_name"`
+	TaxID           string   `json:"tax_id"`
+	RegistrationNo  string   `json:"registration_no"`
+	NationalID      string   `json:"national_id"`
+	DefaultCurrency string   `json:"default_currency"`
+	BankAccountJSON string   `json:"bank_account"`
+	ContactJSON     string   `json:"contact"`
+	Rating          *float32 `json:"rating"`
 }
 
 type UpdateContractorReq struct {
-	Type      *string  `json:"type"`
-	FName     *string  `json:"first_name"`
-	LName     *string  `json:"last_name"`
-	Phone     *string  `json:"phone"`
-	Address   *string  `json:"address"`
-	Specialty *string  `json:"specialty"`
-	Rating    *float32 `json:"rating"`
+	Type            *string  `json:"type"`
+	DisplayName     *string  `json:"display_name"`
+	LegalName       *string  `json:"legal_name"`
+	TaxID           *string  `json:"tax_id"`
+	DefaultCurrency *string  `json:"default_currency"`
+	BankAccountJSON *string  `json:"bank_account"`
+	ContactJSON     *string  `json:"contact"`
+	Rating          *float32 `json:"rating"`
 }
 
 func (s *ContractorService) Create(ctx context.Context, req CreateContractorReq) (*model.Contractor, error) {
-	if req.FName == "" || req.LName == "" || req.NationalID == "" || req.DetailedID == "" {
-		return nil, &ServiceError{Message: "first_name, last_name, national_id and detailed_id are required", Code: 400}
+	if req.DisplayName == "" || req.LegalName == "" {
+		return nil, &ServiceError{Message: "display_name and legal_name are required", Code: 400}
 	}
 	typ := req.Type
 	if typ != "individual" && typ != "company" {
 		typ = "individual"
 	}
+	currency := req.DefaultCurrency
+	if len(currency) != 3 {
+		currency = "IRR"
+	}
+	var taxID *string
+	if req.TaxID != "" {
+		taxID = &req.TaxID
+	}
+	var regNo *string
+	if req.RegistrationNo != "" {
+		regNo = &req.RegistrationNo
+	}
+	bankJSON := req.BankAccountJSON
+	if bankJSON == "" {
+		bankJSON = "{}"
+	}
+	contactJSON := req.ContactJSON
+	if contactJSON == "" {
+		contactJSON = "{}"
+	}
 	c := model.Contractor{
-		Type:       typ,
-		FName:      req.FName,
-		LName:      req.LName,
-		DetailedID: req.DetailedID,
-		NationalID: req.NationalID,
-		Phone:      req.Phone,
-		Address:    req.Address,
-		Specialty:  req.Specialty,
-		Rating:     req.Rating,
+		Type:            typ,
+		DisplayName:     req.DisplayName,
+		LegalName:       req.LegalName,
+		TaxID:           taxID,
+		RegistrationNo:  regNo,
+		NationalID:      req.NationalID,
+		DefaultCurrency: currency,
+		BankAccountJSON: bankJSON,
+		ContactJSON:     contactJSON,
+		Rating:          req.Rating,
 	}
 	if err := s.db.WithContext(ctx).Create(&c).Error; err != nil {
 		return nil, dbErr(err)
@@ -304,7 +347,7 @@ func (s *ContractorService) List(ctx context.Context, search string, page, limit
 	q := s.db.WithContext(ctx).Model(&model.Contractor{})
 	if search != "" {
 		like := "%" + strings.TrimSpace(search) + "%"
-		q = q.Where("f_name ILIKE ? OR l_name ILIKE ? OR national_id ILIKE ? OR specialty ILIKE ?", like, like, like, like)
+		q = q.Where("display_name ILIKE ? OR legal_name ILIKE ? OR national_id ILIKE ? OR tax_id ILIKE ?", like, like, like, like)
 	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
@@ -333,20 +376,23 @@ func (s *ContractorService) Update(ctx context.Context, id string, req UpdateCon
 	if req.Type != nil {
 		updates["type"] = *req.Type
 	}
-	if req.FName != nil {
-		updates["f_name"] = *req.FName
+	if req.DisplayName != nil {
+		updates["display_name"] = *req.DisplayName
 	}
-	if req.LName != nil {
-		updates["l_name"] = *req.LName
+	if req.LegalName != nil {
+		updates["legal_name"] = *req.LegalName
 	}
-	if req.Phone != nil {
-		updates["phone"] = *req.Phone
+	if req.TaxID != nil {
+		updates["tax_id"] = *req.TaxID
 	}
-	if req.Address != nil {
-		updates["address"] = *req.Address
+	if req.DefaultCurrency != nil {
+		updates["default_currency"] = *req.DefaultCurrency
 	}
-	if req.Specialty != nil {
-		updates["specialty"] = *req.Specialty
+	if req.BankAccountJSON != nil {
+		updates["bank_account_json"] = *req.BankAccountJSON
+	}
+	if req.ContactJSON != nil {
+		updates["contact_json"] = *req.ContactJSON
 	}
 	if req.Rating != nil {
 		updates["rating"] = *req.Rating
@@ -383,36 +429,40 @@ type ContractSvc struct{ db *gorm.DB }
 func NewContractSvc(db *gorm.DB) *ContractSvc { return &ContractSvc{db: db} }
 
 type CreateContractReq struct {
-	ProjectID         string  `json:"project_id"`
-	ContractorID      string  `json:"contractor_id"`
-	Code              string  `json:"code"`
-	Title             string  `json:"title"`
-	Description       string  `json:"description"`
-	Status            string  `json:"status"`
-	TotalPrice        string  `json:"total_amount"`
-	Currency          string  `json:"currency"`
-	SignedAt          *string `json:"signed_at"`
-	StartsOn          *string `json:"starts_on"`
-	EndsOn            *string `json:"ends_on"`
-	RetentionBps      int16   `json:"retention_bps"`
-	InsuranceRateBps  int16   `json:"insurance_rate_bps"`
-	AddedValueRateBps int16   `json:"added_value_rate_bps"`
-	ScanedFileUrl     string  `json:"scanfile_url"`
+	CompanyID            string  `json:"company_id"`
+	ProjectID            string  `json:"project_id"`
+	ContractorID         string  `json:"contractor_id"`
+	ContractNo           string  `json:"contract_no"`
+	Title                string  `json:"title"`
+	Description          string  `json:"description"`
+	Type                 string  `json:"type"`
+	Status               string  `json:"status"`
+	ContractValue        string  `json:"contract_value"`
+	Currency             string  `json:"currency"`
+	SignedAt             *string `json:"signed_at"`
+	StartsOn             *string `json:"starts_on"`
+	EndsOn               *string `json:"ends_on"`
+	RetentionPctBps      int     `json:"retention_pct_bps"`
+	AdvancePctBps        int     `json:"advance_pct_bps"`
+	VatPctBps            int     `json:"vat_pct_bps"`
+	SocialSecurityPctBps int     `json:"social_security_pct_bps"`
+	ScannedFileURL       string  `json:"scanned_file_url"`
 }
 
 type UpdateContractReq struct {
-	Title             *string `json:"title"`
-	Description       *string `json:"description"`
-	Status            *string `json:"status"`
-	TotalPrice        *string `json:"total_amount"`
-	Currency          *string `json:"currency"`
-	SignedAt          *string `json:"signed_at"`
-	StartsOn          *string `json:"starts_on"`
-	EndsOn            *string `json:"ends_on"`
-	RetentionBps      *int16  `json:"retention_bps"`
-	InsuranceRateBps  *int16  `json:"insurance_rate_bps"`
-	AddedValueRateBps *int16  `json:"added_value_rate_bps"`
-	ScanedFileUrl     *string `json:"scanfile_url"`
+	Title                *string `json:"title"`
+	Description          *string `json:"description"`
+	Status               *string `json:"status"`
+	ContractValue        *string `json:"contract_value"`
+	Currency             *string `json:"currency"`
+	SignedAt             *string `json:"signed_at"`
+	StartsOn             *string `json:"starts_on"`
+	EndsOn               *string `json:"ends_on"`
+	RetentionPctBps      *int    `json:"retention_pct_bps"`
+	AdvancePctBps        *int    `json:"advance_pct_bps"`
+	VatPctBps            *int    `json:"vat_pct_bps"`
+	SocialSecurityPctBps *int    `json:"social_security_pct_bps"`
+	ScannedFileURL       *string `json:"scanned_file_url"`
 }
 
 func parseDate(s string) *time.Time {
@@ -432,15 +482,23 @@ func (s *ContractSvc) Create(ctx context.Context, req CreateContractReq) (*model
 	if err != nil {
 		return nil, &ServiceError{Message: "Invalid contractor_id", Code: 400}
 	}
-	if req.Code == "" || req.Title == "" {
-		return nil, &ServiceError{Message: "code and title are required", Code: 400}
+	if req.ContractNo == "" || req.Title == "" {
+		return nil, &ServiceError{Message: "contract_no and title are required", Code: 400}
+	}
+
+	var companyID uuid.UUID
+	if req.CompanyID != "" {
+		companyID, err = uuid.Parse(req.CompanyID)
+		if err != nil {
+			return nil, &ServiceError{Message: "Invalid company_id", Code: 400}
+		}
 	}
 
 	price := decimal.Zero
-	if req.TotalPrice != "" {
-		price, err = decimal.NewFromString(req.TotalPrice)
+	if req.ContractValue != "" {
+		price, err = decimal.NewFromString(req.ContractValue)
 		if err != nil {
-			return nil, &ServiceError{Message: "Invalid total_amount", Code: 400}
+			return nil, &ServiceError{Message: "Invalid contract_value", Code: 400}
 		}
 	}
 
@@ -454,19 +512,27 @@ func (s *ContractSvc) Create(ctx context.Context, req CreateContractReq) (*model
 		status = model.ContractDraft
 	}
 
+	ctype := model.ContractType(req.Type)
+	if !ctype.Valid() {
+		ctype = model.ContractLumpSum
+	}
+
 	ct := model.Contract{
-		ProjectID:         pid,
-		ContractorID:      ctrID,
-		Code:              req.Code,
-		Title:             req.Title,
-		Description:       req.Description,
-		Status:            status,
-		TotalPrice:        price,
-		Currency:          currency,
-		RetentionBps:      req.RetentionBps,
-		InsuranceRateBps:  req.InsuranceRateBps,
-		AddedValueRateBps: req.AddedValueRateBps,
-		ScanedFileUrl:     req.ScanedFileUrl,
+		CompanyID:            companyID,
+		ProjectID:            pid,
+		ContractorID:         ctrID,
+		ContractNo:           req.ContractNo,
+		Title:                req.Title,
+		Description:          req.Description,
+		Type:                 ctype,
+		Status:               status,
+		ContractValue:        price,
+		Currency:             currency,
+		RetentionPctBps:      req.RetentionPctBps,
+		AdvancePctBps:        req.AdvancePctBps,
+		VatPctBps:            req.VatPctBps,
+		SocialSecurityPctBps: req.SocialSecurityPctBps,
+		ScannedFileURL:       req.ScannedFileURL,
 	}
 	if req.SignedAt != nil && *req.SignedAt != "" {
 		ct.SignedAt = parseDate(*req.SignedAt)
@@ -543,21 +609,24 @@ func (s *ContractSvc) Update(ctx context.Context, id string, req UpdateContractR
 	if req.Currency != nil {
 		updates["currency"] = *req.Currency
 	}
-	if req.ScanedFileUrl != nil {
-		updates["scaned_file_url"] = *req.ScanedFileUrl
+	if req.ScannedFileURL != nil {
+		updates["scanned_file_url"] = *req.ScannedFileURL
 	}
-	if req.RetentionBps != nil {
-		updates["retention_bps"] = *req.RetentionBps
+	if req.RetentionPctBps != nil {
+		updates["retention_pct_bps"] = *req.RetentionPctBps
 	}
-	if req.InsuranceRateBps != nil {
-		updates["insurance_rate_bps"] = *req.InsuranceRateBps
+	if req.AdvancePctBps != nil {
+		updates["advance_pct_bps"] = *req.AdvancePctBps
 	}
-	if req.AddedValueRateBps != nil {
-		updates["added_value_rate_bps"] = *req.AddedValueRateBps
+	if req.VatPctBps != nil {
+		updates["vat_pct_bps"] = *req.VatPctBps
 	}
-	if req.TotalPrice != nil {
-		if v, err := decimal.NewFromString(*req.TotalPrice); err == nil {
-			updates["total_price"] = v
+	if req.SocialSecurityPctBps != nil {
+		updates["social_security_pct_bps"] = *req.SocialSecurityPctBps
+	}
+	if req.ContractValue != nil {
+		if v, err := decimal.NewFromString(*req.ContractValue); err == nil {
+			updates["contract_value"] = v
 		}
 	}
 	if req.SignedAt != nil {
@@ -594,36 +663,37 @@ func (s *ContractSvc) Delete(ctx context.Context, id string) error {
 }
 
 // ============================================================
-// WBS SERVICE (nested under Contract)
+// CONTRACT LINE ITEMS (formerly WBS)
 // ============================================================
 
-type CreateWBSReq struct {
-	ItemCode    string `json:"item_code"`
-	Description string `json:"description"`
-	Unit        string `json:"unit"`
-	Quantity    string `json:"quantity"`
-	UnitPrice   string `json:"unit_price"`
+type CreateLineItemReq struct {
+	SortOrder    int    `json:"sort_order"`
+	Description  string `json:"description"`
+	Unit         string `json:"unit"`
+	Quantity     string `json:"quantity"`
+	UnitRate     string `json:"unit_rate"`
+	CurrencyCode string `json:"currency_code"`
 }
 
-func (s *ContractSvc) ListWBS(ctx context.Context, contractID string) ([]model.WBS, error) {
+func (s *ContractSvc) ListLineItems(ctx context.Context, contractID string) ([]model.ContractLineItem, error) {
 	cid, err := uuid.Parse(contractID)
 	if err != nil {
 		return nil, &ServiceError{Message: "Invalid contract ID", Code: 400}
 	}
-	var items []model.WBS
-	if err := s.db.WithContext(ctx).Where("contract_id = ?", cid).Order("item_code ASC").Find(&items).Error; err != nil {
+	var items []model.ContractLineItem
+	if err := s.db.WithContext(ctx).Where("contract_id = ?", cid).Order("sort_order ASC").Find(&items).Error; err != nil {
 		return nil, &ServiceError{Message: "Query failed", Code: 500}
 	}
 	return items, nil
 }
 
-func (s *ContractSvc) CreateWBS(ctx context.Context, contractID string, req CreateWBSReq) (*model.WBS, error) {
+func (s *ContractSvc) CreateLineItem(ctx context.Context, contractID string, req CreateLineItemReq) (*model.ContractLineItem, error) {
 	cid, err := uuid.Parse(contractID)
 	if err != nil {
 		return nil, &ServiceError{Message: "Invalid contract ID", Code: 400}
 	}
-	if req.ItemCode == "" || req.Unit == "" {
-		return nil, &ServiceError{Message: "item_code and unit are required", Code: 400}
+	if req.Unit == "" {
+		return nil, &ServiceError{Message: "unit is required", Code: 400}
 	}
 	qty := decimal.Zero
 	if req.Quantity != "" {
@@ -632,21 +702,25 @@ func (s *ContractSvc) CreateWBS(ctx context.Context, contractID string, req Crea
 			return nil, &ServiceError{Message: "Invalid quantity", Code: 400}
 		}
 	}
-	price := decimal.Zero
-	if req.UnitPrice != "" {
-		price, err = decimal.NewFromString(req.UnitPrice)
+	rate := decimal.Zero
+	if req.UnitRate != "" {
+		rate, err = decimal.NewFromString(req.UnitRate)
 		if err != nil {
-			return nil, &ServiceError{Message: "Invalid unit_price", Code: 400}
+			return nil, &ServiceError{Message: "Invalid unit_rate", Code: 400}
 		}
 	}
-	item := model.WBS{
-		ContractID:  cid,
-		ItemCode:    req.ItemCode,
-		Description: req.Description,
-		Unit:        req.Unit,
-		Quantity:    qty,
-		UnitPrice:   price,
-		TotalPrice:  qty.Mul(price),
+	currency := req.CurrencyCode
+	if len(currency) != 3 {
+		currency = "IRR"
+	}
+	item := model.ContractLineItem{
+		ContractID:   cid,
+		SortOrder:    req.SortOrder,
+		Description:  req.Description,
+		Unit:         req.Unit,
+		Quantity:     qty,
+		UnitRate:     rate,
+		CurrencyCode: currency,
 	}
 	if err := s.db.WithContext(ctx).Create(&item).Error; err != nil {
 		return nil, dbErr(err)

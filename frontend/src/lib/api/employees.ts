@@ -6,12 +6,14 @@ export interface Employee {
   first_name: string;
   last_name: string;
   email: string;
+  phone?: string;
   national_id?: string;
-  employment_type?: string;
+  employment_type: string;
   roles: string[];
+  is_head: boolean;
   active: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreateEmployeeReq {
@@ -21,6 +23,7 @@ export interface CreateEmployeeReq {
   email: string;
   password: string;
   national_id?: string;
+  phone?: string;
   employment_type?: string;
   roles?: string[];
 }
@@ -30,6 +33,9 @@ export interface UpdateEmployeeReq {
   last_name?: string;
   email?: string;
   password?: string;
+  phone?: string;
+  company_id?: string;
+  employment_type?: string;
   roles?: string[];
   active?: boolean;
 }

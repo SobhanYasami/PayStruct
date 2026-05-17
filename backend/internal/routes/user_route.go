@@ -18,14 +18,20 @@ func SetupUserRoutes(router fiber.Router, h *handlers.UserHandler, jwtSecret str
 	me.Get("/", h.GetProfile)
 	me.Put("/", h.UpdateProfile)
 
-	// Super-admin protected
-	employees := users.Group("/employees",
+	// Head roles + admin/sudoer can read employees (company-scoped for non-admin)
+	employeesRead := users.Group("/employees",
+		middlewares.Authenticate(jwtSecret),
+		middlewares.RequireAnyRole("manager", "finance_head", "juridical_head", "engineering_head", "security_head"),
+	)
+	employeesRead.Get("/list", h.GetAllEmployee)
+	employeesRead.Get("/:id", h.GetEmployee)
+
+	// Mutations: sudoer only
+	employeesWrite := users.Group("/employees",
 		middlewares.Authenticate(jwtSecret),
 		middlewares.SuperAdminOnly(),
 	)
-	employees.Post("/create", h.CreateEmployee)
-	employees.Get("/list", h.GetAllEmployee)
-	employees.Get("/:id", h.GetEmployee)
-	employees.Put("/:id", h.UpdateEmployee)
-	employees.Delete("/:id", h.DeleteEmployee)
+	employeesWrite.Post("/create", h.CreateEmployee)
+	employeesWrite.Put("/:id", h.UpdateEmployee)
+	employeesWrite.Delete("/:id", h.DeleteEmployee)
 }

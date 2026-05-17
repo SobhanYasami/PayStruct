@@ -49,9 +49,18 @@ func (h *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Token generation failed"))
 	}
 
+	emp := auth.Employee
 	return c.JSON(SuccessResponse(fiber.Map{
 		"token": token,
-		"roles": auth.Roles,
+		"user": fiber.Map{
+			"id":              emp.ID.String(),
+			"first_name":      emp.FirstName,
+			"last_name":       emp.LastName,
+			"email":           emp.Email,
+			"company_id":      emp.CompanyID.String(),
+			"root_company_id": emp.CompanyID.String(),
+			"roles":           auth.Roles,
+		},
 	}, "Login successful"))
 }
 
@@ -96,9 +105,20 @@ func (h *UserHandler) UpdateEmployee(c *fiber.Ctx) error {
 
 // GET /users/employees/:id
 func (h *UserHandler) GetEmployee(c *fiber.Ctx) error {
-	id := c.Params("id")
+	claims, ok := c.Locals("claims").(*schemas.JWTClaims)
+	if !ok || claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
 
-	resp, err := h.userService.GetEmployee(id)
+	companyID := claims.CompanyID
+	for _, r := range claims.Roles {
+		if r == "sudoer" || r == "admin" {
+			companyID = ""
+			break
+		}
+	}
+
+	resp, err := h.userService.GetEmployee(c.Params("id"), companyID)
 	if err != nil {
 		if svcErr, ok := err.(*services.ServiceError); ok {
 			return c.Status(svcErr.Code).JSON(ErrorResponse(InternalError, svcErr.Message, svcErr.Details))
@@ -111,9 +131,13 @@ func (h *UserHandler) GetEmployee(c *fiber.Ctx) error {
 
 // GET /users/employees/list
 func (h *UserHandler) GetAllEmployee(c *fiber.Ctx) error {
+	claims, ok := c.Locals("claims").(*schemas.JWTClaims)
+	if !ok || claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
+
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)
-
 	if page < 1 {
 		page = 1
 	}
@@ -121,7 +145,15 @@ func (h *UserHandler) GetAllEmployee(c *fiber.Ctx) error {
 		limit = 10
 	}
 
-	resp, err := h.userService.GetEmployees(c.Context(), page, limit)
+	companyID := claims.CompanyID
+	for _, r := range claims.Roles {
+		if r == "sudoer" || r == "admin" {
+			companyID = ""
+			break
+		}
+	}
+
+	resp, err := h.userService.GetEmployees(c.Context(), companyID, page, limit)
 	if err != nil {
 		if svcErr, ok := err.(*services.ServiceError); ok {
 			return c.Status(svcErr.Code).JSON(ErrorResponse(InternalError, svcErr.Message))

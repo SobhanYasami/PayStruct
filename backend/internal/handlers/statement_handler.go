@@ -44,15 +44,6 @@ func (h *StatementHandler) ListStatements(c *fiber.Ctx) error {
 	}))
 }
 
-// GET /contracts/:contractId/wbs-progress
-func (h *StatementHandler) GetWBSProgress(c *fiber.Ctx) error {
-	progress, err := h.svc.GetWBSProgress(c.Context(), c.Params("contractId"))
-	if err != nil {
-		return serviceErr(c, err)
-	}
-	return c.JSON(SuccessResponse(progress))
-}
-
 // GET /statements/:id
 func (h *StatementHandler) GetStatement(c *fiber.Ctx) error {
 	stmt, err := h.svc.GetByID(c.Context(), c.Params("id"))
@@ -88,19 +79,6 @@ func (h *StatementHandler) AddExtraWork(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(ew, "Extra work added"))
 }
 
-// POST /statements/:id/deductions
-func (h *StatementHandler) AddDeduction(c *fiber.Ctx) error {
-	var req services.CreateDeductionReq
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
-	}
-	d, err := h.svc.AddDeduction(c.Context(), c.Params("id"), req)
-	if err != nil {
-		return serviceErr(c, err)
-	}
-	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(d, "Deduction added"))
-}
-
 // PATCH /statements/:id/transition
 func (h *StatementHandler) Transition(c *fiber.Ctx) error {
 	claims := jwtClaims(c)
@@ -112,7 +90,7 @@ func (h *StatementHandler) Transition(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
 	}
 	callerID, _ := uuid.Parse(claims.UserID)
-	stmt, err := h.svc.Transition(c.Context(), c.Params("id"), req, callerID)
+	stmt, err := h.svc.Transition(c.Context(), c.Params("id"), req, callerID, claims.Roles)
 	if err != nil {
 		return serviceErr(c, err)
 	}

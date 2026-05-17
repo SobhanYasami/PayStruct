@@ -16,14 +16,11 @@ func SetupStatementRoutes(router fiber.Router, h *handlers.StatementHandler, jwt
 	contracts := router.Group("/contracts", auth)
 	contracts.Post("/:contractId/statements", h.CreateStatement)
 	contracts.Get("/:contractId/statements", h.ListStatements)
-	contracts.Get("/:contractId/wbs-progress", h.GetWBSProgress)
-
 	// Flat statement operations
 	stmts := router.Group("/statements", auth)
 	stmts.Get("/:id", h.GetStatement)
 	stmts.Put("/:id/works-done", h.SetWorksDone)
 	stmts.Post("/:id/extra-works", h.AddExtraWork)
-	stmts.Post("/:id/deductions", h.AddDeduction)
 	stmts.Patch("/:id/transition", h.Transition)
 	stmts.Delete("/:id", h.DeleteStatement)
 }

@@ -4,8 +4,6 @@ import (
 	"database/sql/driver"
 )
 
-// EmploymentType is the disjoint specialization on Employee per the EER:
-// every employee is either Official or Contractual, never both.
 type EmploymentType string
 
 const (
@@ -36,35 +34,52 @@ func (t *EmploymentType) Scan(v any) error {
 
 func (t EmploymentType) Value() (driver.Value, error) { return string(t), nil }
 
-// Role is the overlapping specialization on Employee. Stored as TEXT[] on
-// the row; an employee can hold zero or more concurrently (the EER's "O"
-// circle = overlap, with no totality constraint).
 type Role string
 
 const (
-	RoleManager     Role = "manager"
-	RoleJuridical   Role = "juridical"
-	RoleFinancial   Role = "financial"
+	// Head/signature roles — employees with these have signing authority; IsHead = true.
+	RoleManager         Role = "manager"
+	RoleFinanceHead     Role = "finance_head"
+	RoleJuridicalHead   Role = "juridical_head"
+	RoleEngineeringHead Role = "engineering_head"
+	RoleSecurityHead    Role = "security_head" // optional department head
+
+	// Regular operational roles.
+	RoleAdmin       Role = "admin"
+	RoleFinance     Role = "finance"
 	RoleEngineering Role = "engineering"
 	RoleSecurity    Role = "security"
 )
 
 func (r Role) Valid() bool {
 	switch r {
-	case RoleManager, RoleJuridical, RoleFinancial, RoleEngineering, RoleSecurity:
+	case RoleManager, RoleFinanceHead, RoleJuridicalHead, RoleEngineeringHead, RoleSecurityHead,
+		RoleAdmin, RoleFinance, RoleEngineering, RoleSecurity:
 		return true
 	}
 	return false
 }
 
-// AllRoles returns every defined role. Useful for admin UIs and validation.
+// IsHeadRole reports whether r carries signature / department-head authority.
+func IsHeadRole(r Role) bool {
+	switch r {
+	case RoleManager, RoleFinanceHead, RoleJuridicalHead, RoleEngineeringHead, RoleSecurityHead:
+		return true
+	}
+	return false
+}
+
+func HeadRoles() []Role {
+	return []Role{RoleManager, RoleFinanceHead, RoleJuridicalHead, RoleEngineeringHead, RoleSecurityHead}
+}
+
 func AllRoles() []Role {
 	return []Role{
-		RoleManager, RoleJuridical, RoleFinancial, RoleEngineering, RoleSecurity,
+		RoleManager, RoleFinanceHead, RoleJuridicalHead, RoleEngineeringHead, RoleSecurityHead,
+		RoleAdmin, RoleFinance, RoleEngineering, RoleSecurity,
 	}
 }
 
-// ProjectStatus mirrors the lifecycle described in ProjectPageFeatures.md.
 type ProjectStatus string
 
 const (
@@ -163,20 +178,55 @@ func (s *ContractStatus) Scan(v any) error {
 
 func (s ContractStatus) Value() (driver.Value, error) { return string(s), nil }
 
-// StatementStatus tracks the Status Statement document workflow.
+type ContractType string
+
+const (
+	ContractLumpSum      ContractType = "lump_sum"
+	ContractUnitRate     ContractType = "unit_rate"
+	ContractCostPlus     ContractType = "cost_plus"
+	ContractTimeMaterial ContractType = "time_material"
+)
+
+func (t ContractType) Valid() bool {
+	switch t {
+	case ContractLumpSum, ContractUnitRate, ContractCostPlus, ContractTimeMaterial:
+		return true
+	}
+	return false
+}
+
+func (t *ContractType) Scan(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return enumScanErr("ContractType", v)
+	}
+	cast := ContractType(str)
+	if !cast.Valid() {
+		return enumScanErr("ContractType", v)
+	}
+	*t = cast
+	return nil
+}
+
+func (t ContractType) Value() (driver.Value, error) { return string(t), nil }
+
+// StatementStatus tracks the 5-stage approval workflow for InterimStatement.
 type StatementStatus string
 
 const (
-	StatementDraft     StatementStatus = "draft"
-	StatementSubmitted StatementStatus = "submitted"
-	StatementApproved  StatementStatus = "approved"
-	StatementRejected  StatementStatus = "rejected"
-	StatementPaid      StatementStatus = "paid"
+	StatementDraft          StatementStatus = "draft"
+	StatementSubmitted      StatementStatus = "submitted"
+	StatementFinanceReview  StatementStatus = "finance_review"
+	StatementPMReview       StatementStatus = "pm_review"
+	StatementDirectorReview StatementStatus = "director_review"
+	StatementApproved       StatementStatus = "approved"
+	StatementRejected       StatementStatus = "rejected"
 )
 
 func (s StatementStatus) Valid() bool {
 	switch s {
-	case StatementDraft, StatementSubmitted, StatementApproved, StatementRejected, StatementPaid:
+	case StatementDraft, StatementSubmitted, StatementFinanceReview,
+		StatementPMReview, StatementDirectorReview, StatementApproved, StatementRejected:
 		return true
 	}
 	return false
@@ -197,17 +247,48 @@ func (s *StatementStatus) Scan(v any) error {
 
 func (s StatementStatus) Value() (driver.Value, error) { return string(s), nil }
 
-// DeductionKind classifies a deduction line (tax, retention, penalty, …).
-// Kept open-ended (string) rather than an enum because each tenant's tax
-// regime introduces its own categories — but pin the common ones as
-// constants for type-safe use in code.
-type DeductionKind string
+type RetentionType string
 
 const (
-	DeductionTax       DeductionKind = "tax"
-	DeductionRetention DeductionKind = "retention"
-	DeductionPenalty   DeductionKind = "penalty"
-	DeductionAdvance   DeductionKind = "advance"
-	DeductionInsurance DeductionKind = "insurance"
-	DeductionOther     DeductionKind = "other"
+	RetentionPerformanceBond  RetentionType = "performance_bond"
+	RetentionDefectLiability  RetentionType = "defect_liability"
 )
+
+func (t RetentionType) Valid() bool {
+	switch t {
+	case RetentionPerformanceBond, RetentionDefectLiability:
+		return true
+	}
+	return false
+}
+
+type AdvanceRecordType string
+
+const (
+	AdvancePayment  AdvanceRecordType = "advance"
+	AdvanceRecovery AdvanceRecordType = "recovery"
+)
+
+func (t AdvanceRecordType) Valid() bool {
+	switch t {
+	case AdvancePayment, AdvanceRecovery:
+		return true
+	}
+	return false
+}
+
+type LDType string
+
+const (
+	LDDelay       LDType = "delay"
+	LDPerformance LDType = "performance"
+	LDOther       LDType = "other"
+)
+
+func (t LDType) Valid() bool {
+	switch t {
+	case LDDelay, LDPerformance, LDOther:
+		return true
+	}
+	return false
+}

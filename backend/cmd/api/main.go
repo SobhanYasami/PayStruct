@@ -59,7 +59,7 @@ func main() {
 	app := fiber.New(fiber.Config{
 		Prefork:       false,
 		CaseSensitive: true,
-		StrictRouting: true,
+		StrictRouting: false,
 		ServerHeader:  "Fiber",
 		AppName:       "Contractor Management Panel",
 		BodyLimit:     defaultBodyLimitMB * 1024 * 1024,
@@ -114,6 +114,9 @@ func main() {
 
 	statementHandler := handlers.NewStatementHandler(db)
 	routes.SetupStatementRoutes(v1, statementHandler, jwtSecret)
+
+	// Signature routes replaced by 5-stage approval via statement transition.
+	_ = handlers.NewSignatureHandler(db)
 
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {

@@ -47,10 +47,12 @@ type CreateEmployeeReq struct {
 }
 
 type CreateEmployeeRes struct {
-	ID       string   `json:"id"`
-	Email    string   `json:"email"`
-	FullName string   `json:"full_name"`
-	Roles    []string `json:"roles"`
+	ID             string   `json:"id"`
+	Email          string   `json:"email"`
+	FullName       string   `json:"full_name"`
+	Roles          []string `json:"roles"`
+	IsHead         bool     `json:"is_head"`
+	EmploymentType string   `json:"employment_type"`
 }
 
 func (s *UserService) CreateEmployee(req CreateEmployeeReq) (*CreateEmployeeRes, error) {
@@ -74,6 +76,17 @@ func (s *UserService) CreateEmployee(req CreateEmployeeReq) (*CreateEmployeeRes,
 		empType = model.EmploymentOfficial
 	}
 
+	isHead := false
+	for _, r := range req.Roles {
+		role := model.Role(r)
+		if !role.Valid() {
+			return nil, &ServiceError{Message: "Invalid role: " + r, Code: 400}
+		}
+		if model.IsHeadRole(role) {
+			isHead = true
+		}
+	}
+
 	employee := model.Employee{
 		CompanyID:      companyUUID,
 		NationalID:     req.NationalID,
@@ -83,6 +96,7 @@ func (s *UserService) CreateEmployee(req CreateEmployeeReq) (*CreateEmployeeRes,
 		Phone:          req.Phone,
 		EmploymentType: empType,
 		Roles:          pq.StringArray(req.Roles),
+		IsHead:         isHead,
 		PasswordHash:   hash,
 		Active:         true,
 	}
@@ -92,10 +106,12 @@ func (s *UserService) CreateEmployee(req CreateEmployeeReq) (*CreateEmployeeRes,
 	}
 
 	return &CreateEmployeeRes{
-		ID:       employee.ID.String(),
-		Email:    employee.Email,
-		FullName: employee.FullName(),
-		Roles:    req.Roles,
+		ID:             employee.ID.String(),
+		Email:          employee.Email,
+		FullName:       employee.FullName(),
+		Roles:          req.Roles,
+		IsHead:         isHead,
+		EmploymentType: string(empType),
 	}, nil
 }
 
@@ -172,7 +188,15 @@ func (s *UserService) UpdateEmployee(req UpdateEmployeeReq) (*UpdateEmployeeRes,
 		updates["employment_type"] = *req.EmploymentType
 	}
 	if req.Roles != nil {
+		isHead := false
+		for _, r := range req.Roles {
+			if model.IsHeadRole(model.Role(r)) {
+				isHead = true
+				break
+			}
+		}
 		updates["roles"] = pq.StringArray(req.Roles)
+		updates["is_head"] = isHead
 	}
 
 	if len(updates) > 0 {
@@ -195,24 +219,30 @@ func (s *UserService) UpdateEmployee(req UpdateEmployeeReq) (*UpdateEmployeeRes,
 // -----------------------------------------------------------------------
 
 type EmployeeResponse struct {
-	ID        string   `json:"id"`
-	FirstName string   `json:"first_name"`
-	LastName  string   `json:"last_name"`
-	Email     string   `json:"email"`
-	Phone     string   `json:"phone,omitempty"`
-	Active    bool     `json:"active"`
-	Roles     []string `json:"roles"`
-	CompanyID string   `json:"company_id"`
+	ID             string   `json:"id"`
+	FirstName      string   `json:"first_name"`
+	LastName       string   `json:"last_name"`
+	Email          string   `json:"email"`
+	Phone          string   `json:"phone,omitempty"`
+	Active         bool     `json:"active"`
+	Roles          []string `json:"roles"`
+	IsHead         bool     `json:"is_head"`
+	EmploymentType string   `json:"employment_type"`
+	CompanyID      string   `json:"company_id"`
 }
 
-func (s *UserService) GetEmployee(id string) (*EmployeeResponse, error) {
+func (s *UserService) GetEmployee(id, companyID string) (*EmployeeResponse, error) {
 	empUUID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, &ServiceError{Message: "Invalid employee ID", Code: 400}
 	}
 
 	var emp model.Employee
-	if err := s.db.First(&emp, "id = ?", empUUID).Error; err != nil {
+	q := s.db.Where("id = ?", empUUID)
+	if companyID != "" {
+		q = q.Where("company_id = ?", companyID)
+	}
+	if err := q.First(&emp).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, &ServiceError{Message: "Employee not found", Code: 404}
 		}
@@ -234,13 +264,16 @@ type PaginatedEmployeeResponse struct {
 	TotalPages int                `json:"total_pages"`
 }
 
-func (s *UserService) GetEmployees(ctx context.Context, page, limit int) (*PaginatedEmployeeResponse, error) {
+func (s *UserService) GetEmployees(ctx context.Context, companyID string, page, limit int) (*PaginatedEmployeeResponse, error) {
 	offset := (page - 1) * limit
 
 	var employees []model.Employee
 	var total int64
 
 	tx := s.db.WithContext(ctx)
+	if companyID != "" {
+		tx = tx.Where("company_id = ?", companyID)
+	}
 	if err := tx.Model(&model.Employee{}).Count(&total).Error; err != nil {
 		return nil, &ServiceError{Message: "Failed to count employees", Code: 500}
 	}
@@ -422,14 +455,16 @@ func (s *UserService) UpdateProfile(userID string, req UpdateProfileReq) (*Profi
 
 func employeeToResponse(e *model.Employee) *EmployeeResponse {
 	return &EmployeeResponse{
-		ID:        e.ID.String(),
-		FirstName: e.FirstName,
-		LastName:  e.LastName,
-		Email:     e.Email,
-		Phone:     e.Phone,
-		Active:    e.Active,
-		Roles:     []string(e.Roles),
-		CompanyID: e.CompanyID.String(),
+		ID:             e.ID.String(),
+		FirstName:      e.FirstName,
+		LastName:       e.LastName,
+		Email:          e.Email,
+		Phone:          e.Phone,
+		Active:         e.Active,
+		Roles:          []string(e.Roles),
+		IsHead:         e.IsHead,
+		EmploymentType: string(e.EmploymentType),
+		CompanyID:      e.CompanyID.String(),
 	}
 }
 
