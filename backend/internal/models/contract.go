@@ -7,27 +7,46 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Contractor is the external counterparty on a Contract. ContractorType
-// distinguishes individual persons from legal entities.
+// Contractor is the external counterparty on a Contract.
+// Type "individual" uses FirstName+LastName; "company" uses CompanyName.
 type Contractor struct {
 	BaseModel
-	Type           string `gorm:"type:varchar(16);not null;index;check:type IN ('individual','company')" json:"type"`
-	DisplayName    string `gorm:"size:255;not null;index" json:"display_name"`
-	LegalName      string `gorm:"size:255;not null" json:"legal_name"`
+
+	// Owning company — nullable so legacy rows remain accessible to all.
+	CompanyID   *uuid.UUID `gorm:"type:uuid;index"                                                                         json:"company_id,omitempty"`
+	CreatedByID *uuid.UUID `gorm:"type:uuid"                                                                               json:"created_by_id,omitempty"`
+
+	Type string `gorm:"type:varchar(16);not null;index;check:type IN ('individual','company')" json:"type"`
+
+	// Individual fields.
+	FirstName string `gorm:"size:128" json:"first_name,omitempty"`
+	LastName  string `gorm:"size:128" json:"last_name,omitempty"`
+
+	// Company fields.
+	CompanyName string `gorm:"size:255" json:"company_name,omitempty"`
+
+	// DisplayName is derived (FirstName+" "+LastName or CompanyName) and stored for indexing.
+	DisplayName string `gorm:"size:255;not null;index" json:"display_name"`
+
+	// LegalName is the formal registered name (optional; nullable in DB).
+	LegalName string `gorm:"size:255" json:"legal_name,omitempty"`
+
 	TaxID          *string `gorm:"size:64;uniqueIndex:idx_contractors_tax" json:"tax_id,omitempty"`
 	RegistrationNo *string `gorm:"size:64;uniqueIndex:idx_contractors_reg" json:"registration_no,omitempty"`
 
-	// NationalID is relevant for individual contractors.
-	NationalID      string `gorm:"size:32;index" json:"national_id,omitempty"`
+	NationalID     string `gorm:"size:32;index" json:"national_id,omitempty"`
+	PreferentialID string `gorm:"size:64"       json:"preferential_id,omitempty"`
+
 	DefaultCurrency string `gorm:"size:3;not null;default:'IRR'" json:"default_currency"`
 
-	// BankAccountJSON and ContactJSON store structured data as JSONB.
 	BankAccountJSON string `gorm:"type:jsonb;default:'{}'" json:"bank_account,omitempty"`
 	ContactJSON     string `gorm:"type:jsonb;default:'{}'" json:"contact,omitempty"`
 
 	Rating *float32 `gorm:"check:rating IS NULL OR (rating >= 0 AND rating <= 5)" json:"rating,omitempty"`
 
-	Contracts []Contract `gorm:"foreignKey:ContractorID" json:"-"`
+	OwnerCompany *Company  `gorm:"foreignKey:CompanyID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"  json:"-"`
+	CreatedBy    *Employee `gorm:"foreignKey:CreatedByID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"-"`
+	Contracts    []Contract `gorm:"foreignKey:ContractorID"                                                           json:"-"`
 }
 
 func (Contractor) TableName() string { return "contractors" }
@@ -62,9 +81,9 @@ type Contract struct {
 
 	ScannedFileURL string `gorm:"size:512" json:"scanned_file_url,omitempty"`
 
-	Company    *Company          `gorm:"foreignKey:CompanyID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"    json:"-"`
-	Project    *Project          `gorm:"foreignKey:ProjectID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"    json:"-"`
-	Contractor *Contractor       `gorm:"foreignKey:ContractorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"-"`
+	Company    *Company           `gorm:"foreignKey:CompanyID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"    json:"-"`
+	Project    *Project           `gorm:"foreignKey:ProjectID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"    json:"-"`
+	Contractor *Contractor        `gorm:"foreignKey:ContractorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"-"`
 	Statements []InterimStatement `gorm:"foreignKey:ContractID"                                                               json:"-"`
 	LineItems  []ContractLineItem `gorm:"foreignKey:ContractID"                                                               json:"-"`
 }

@@ -147,11 +147,15 @@ func NewContractorHandler(db *gorm.DB) *ContractorHandler {
 
 // POST /contractors
 func (h *ContractorHandler) CreateContractor(c *fiber.Ctx) error {
+	claims := jwtClaims(c)
+	if claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
 	var req services.CreateContractorReq
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
 	}
-	contractor, err := h.svc.Create(c.Context(), req)
+	contractor, err := h.svc.Create(c.Context(), claims.CompanyID, claims.UserID, req)
 	if err != nil {
 		return serviceErr(c, err)
 	}
@@ -160,6 +164,10 @@ func (h *ContractorHandler) CreateContractor(c *fiber.Ctx) error {
 
 // GET /contractors/:id
 func (h *ContractorHandler) GetContractor(c *fiber.Ctx) error {
+	claims := jwtClaims(c)
+	if claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
 	contractor, err := h.svc.GetByID(c.Context(), c.Params("id"))
 	if err != nil {
 		return serviceErr(c, err)
@@ -169,9 +177,19 @@ func (h *ContractorHandler) GetContractor(c *fiber.Ctx) error {
 
 // GET /contractors
 func (h *ContractorHandler) ListContractors(c *fiber.Ctx) error {
+	claims := jwtClaims(c)
+	if claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
 	page, limit := paginationQuery(c)
 	search := c.Query("search")
-	contractors, total, err := h.svc.List(c.Context(), search, page, limit)
+
+	callerCompanyID := claims.CompanyID
+	if slices.Contains(claims.Roles, "admin") || slices.Contains(claims.Roles, "sudoer") {
+		callerCompanyID = ""
+	}
+
+	contractors, total, err := h.svc.List(c.Context(), callerCompanyID, search, page, limit)
 	if err != nil {
 		return serviceErr(c, err)
 	}
@@ -185,11 +203,16 @@ func (h *ContractorHandler) ListContractors(c *fiber.Ctx) error {
 
 // PUT /contractors/:id
 func (h *ContractorHandler) UpdateContractor(c *fiber.Ctx) error {
+	claims := jwtClaims(c)
+	if claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
 	var req services.UpdateContractorReq
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
 	}
-	contractor, err := h.svc.Update(c.Context(), c.Params("id"), req)
+	isAdmin := slices.Contains(claims.Roles, "admin") || slices.Contains(claims.Roles, "sudoer")
+	contractor, err := h.svc.Update(c.Context(), c.Params("id"), claims.CompanyID, isAdmin, req)
 	if err != nil {
 		return serviceErr(c, err)
 	}
@@ -198,7 +221,12 @@ func (h *ContractorHandler) UpdateContractor(c *fiber.Ctx) error {
 
 // DELETE /contractors/:id
 func (h *ContractorHandler) DeleteContractor(c *fiber.Ctx) error {
-	if err := h.svc.Delete(c.Context(), c.Params("id")); err != nil {
+	claims := jwtClaims(c)
+	if claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
+	isAdmin := slices.Contains(claims.Roles, "admin") || slices.Contains(claims.Roles, "sudoer")
+	if err := h.svc.Delete(c.Context(), c.Params("id"), claims.CompanyID, isAdmin); err != nil {
 		return serviceErr(c, err)
 	}
 	return c.Status(fiber.StatusNoContent).Send(nil)

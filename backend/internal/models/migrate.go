@@ -167,6 +167,8 @@ func MigrateIndexes(db *gorm.DB) error {
 		// omit them without hitting the unique constraint on empty string.
 		`ALTER TABLE contractors ALTER COLUMN tax_id DROP NOT NULL`,
 		`ALTER TABLE contractors ALTER COLUMN registration_no DROP NOT NULL`,
+		// legal_name is now optional.
+		`ALTER TABLE contractors ALTER COLUMN legal_name DROP NOT NULL`,
 		// Same fix for companies.tax_id.
 		`ALTER TABLE companies ALTER COLUMN tax_id DROP NOT NULL`,
 		// Drop ALL stale NOT-NULL columns in contractors that are not in the
@@ -180,12 +182,19 @@ BEGIN
           AND is_nullable = 'NO'
           AND column_name NOT IN (
             'id','created_at','updated_at',
-            'type','display_name','legal_name','default_currency'
+            'type','display_name','default_currency'
           )
     LOOP
         EXECUTE format('ALTER TABLE contractors ALTER COLUMN %I DROP NOT NULL', col);
     END LOOP;
 END$$`,
+		// Stale unique index on national_id breaks multi-contractor inserts with empty value.
+		// Recreate as partial: enforce uniqueness only for non-empty, non-null values.
+		`DROP INDEX IF EXISTS idx_contractors_national_id`,
+		`CREATE INDEX IF NOT EXISTS idx_contractors_national_id
+		 ON contractors (national_id)
+		 WHERE national_id IS NOT NULL AND national_id != ''`,
+
 		`CREATE INDEX IF NOT EXISTS idx_employees_roles_gin
 		 ON employees USING GIN (roles)`,
 

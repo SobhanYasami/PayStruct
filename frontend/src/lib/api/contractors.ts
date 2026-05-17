@@ -2,12 +2,18 @@ import { apiFetch } from "./client";
 
 export interface Contractor {
   id: string;
+  company_id?: string;
+  created_by_id?: string;
   type: "individual" | "company";
+  first_name?: string;
+  last_name?: string;
+  company_name?: string;
   display_name: string;
-  legal_name: string;
+  legal_name?: string;
   tax_id?: string;
   registration_no?: string;
   national_id?: string;
+  preferential_id?: string;
   default_currency: string;
   bank_account?: string;
   contact?: string;
@@ -18,12 +24,16 @@ export interface Contractor {
 
 export interface CreateContractorReq {
   type: "individual" | "company";
-  display_name: string;
-  legal_name: string;
+  first_name?: string;
+  last_name?: string;
+  company_name?: string;
+  legal_name?: string;
   tax_id?: string;
   registration_no?: string;
   national_id?: string;
+  preferential_id?: string;
   default_currency?: string;
+  rating?: number;
 }
 
 export type UpdateContractorReq = Partial<CreateContractorReq>;

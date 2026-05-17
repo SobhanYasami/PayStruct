@@ -260,11 +260,14 @@ func NewContractorService(db *gorm.DB) *ContractorService { return &ContractorSe
 
 type CreateContractorReq struct {
 	Type            string   `json:"type"`
-	DisplayName     string   `json:"display_name"`
+	FirstName       string   `json:"first_name"`
+	LastName        string   `json:"last_name"`
+	CompanyName     string   `json:"company_name"`
 	LegalName       string   `json:"legal_name"`
 	TaxID           string   `json:"tax_id"`
 	RegistrationNo  string   `json:"registration_no"`
 	NationalID      string   `json:"national_id"`
+	PreferentialID  string   `json:"preferential_id"`
 	DefaultCurrency string   `json:"default_currency"`
 	BankAccountJSON string   `json:"bank_account"`
 	ContactJSON     string   `json:"contact"`
@@ -273,23 +276,44 @@ type CreateContractorReq struct {
 
 type UpdateContractorReq struct {
 	Type            *string  `json:"type"`
-	DisplayName     *string  `json:"display_name"`
+	FirstName       *string  `json:"first_name"`
+	LastName        *string  `json:"last_name"`
+	CompanyName     *string  `json:"company_name"`
 	LegalName       *string  `json:"legal_name"`
 	TaxID           *string  `json:"tax_id"`
 	DefaultCurrency *string  `json:"default_currency"`
+	PreferentialID  *string  `json:"preferential_id"`
+	NationalID      *string  `json:"national_id"`
 	BankAccountJSON *string  `json:"bank_account"`
 	ContactJSON     *string  `json:"contact"`
 	Rating          *float32 `json:"rating"`
 }
 
-func (s *ContractorService) Create(ctx context.Context, req CreateContractorReq) (*model.Contractor, error) {
-	if req.DisplayName == "" || req.LegalName == "" {
-		return nil, &ServiceError{Message: "display_name and legal_name are required", Code: 400}
+func deriveDisplayName(typ, firstName, lastName, companyName string) string {
+	if typ == "individual" {
+		dn := strings.TrimSpace(firstName + " " + lastName)
+		if dn != "" {
+			return dn
+		}
 	}
+	if companyName != "" {
+		return companyName
+	}
+	return strings.TrimSpace(firstName + " " + lastName)
+}
+
+func (s *ContractorService) Create(ctx context.Context, callerCompanyID, callerUserID string, req CreateContractorReq) (*model.Contractor, error) {
 	typ := req.Type
 	if typ != "individual" && typ != "company" {
 		typ = "individual"
 	}
+	if typ == "individual" && strings.TrimSpace(req.FirstName+req.LastName) == "" {
+		return nil, &ServiceError{Message: "first_name or last_name is required for individual", Code: 400}
+	}
+	if typ == "company" && strings.TrimSpace(req.CompanyName) == "" {
+		return nil, &ServiceError{Message: "company_name is required for company type", Code: 400}
+	}
+
 	currency := req.DefaultCurrency
 	if len(currency) != 3 {
 		currency = "IRR"
@@ -310,17 +334,32 @@ func (s *ContractorService) Create(ctx context.Context, req CreateContractorReq)
 	if contactJSON == "" {
 		contactJSON = "{}"
 	}
+
 	c := model.Contractor{
 		Type:            typ,
-		DisplayName:     req.DisplayName,
+		FirstName:       req.FirstName,
+		LastName:        req.LastName,
+		CompanyName:     req.CompanyName,
+		DisplayName:     deriveDisplayName(typ, req.FirstName, req.LastName, req.CompanyName),
 		LegalName:       req.LegalName,
 		TaxID:           taxID,
 		RegistrationNo:  regNo,
 		NationalID:      req.NationalID,
+		PreferentialID:  req.PreferentialID,
 		DefaultCurrency: currency,
 		BankAccountJSON: bankJSON,
 		ContactJSON:     contactJSON,
 		Rating:          req.Rating,
+	}
+	if callerCompanyID != "" {
+		if cid, err := uuid.Parse(callerCompanyID); err == nil {
+			c.CompanyID = &cid
+		}
+	}
+	if callerUserID != "" {
+		if uid, err := uuid.Parse(callerUserID); err == nil {
+			c.CreatedByID = &uid
+		}
 	}
 	if err := s.db.WithContext(ctx).Create(&c).Error; err != nil {
 		return nil, dbErr(err)
@@ -343,11 +382,23 @@ func (s *ContractorService) GetByID(ctx context.Context, id string) (*model.Cont
 	return &c, nil
 }
 
-func (s *ContractorService) List(ctx context.Context, search string, page, limit int) ([]model.Contractor, int64, error) {
+func (s *ContractorService) List(ctx context.Context, callerCompanyID string, search string, page, limit int) ([]model.Contractor, int64, error) {
 	q := s.db.WithContext(ctx).Model(&model.Contractor{})
+
+	if callerCompanyID != "" {
+		// Look up parent company to allow cross-company reads.
+		var co struct{ ParentID *uuid.UUID }
+		s.db.WithContext(ctx).Table("companies").Select("parent_id").Where("id = ?", callerCompanyID).Scan(&co)
+		if co.ParentID != nil {
+			q = q.Where("company_id IS NULL OR company_id = ? OR company_id = ?", callerCompanyID, *co.ParentID)
+		} else {
+			q = q.Where("company_id IS NULL OR company_id = ?", callerCompanyID)
+		}
+	}
+
 	if search != "" {
 		like := "%" + strings.TrimSpace(search) + "%"
-		q = q.Where("display_name ILIKE ? OR legal_name ILIKE ? OR national_id ILIKE ? OR tax_id ILIKE ?", like, like, like, like)
+		q = q.Where("display_name ILIKE ? OR legal_name ILIKE ? OR national_id ILIKE ? OR tax_id::text ILIKE ? OR preferential_id ILIKE ?", like, like, like, like, like)
 	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
@@ -360,7 +411,7 @@ func (s *ContractorService) List(ctx context.Context, search string, page, limit
 	return items, total, nil
 }
 
-func (s *ContractorService) Update(ctx context.Context, id string, req UpdateContractorReq) (*model.Contractor, error) {
+func (s *ContractorService) Update(ctx context.Context, id, callerCompanyID string, isAdmin bool, req UpdateContractorReq) (*model.Contractor, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, &ServiceError{Message: "Invalid contractor ID", Code: 400}
@@ -372,18 +423,45 @@ func (s *ContractorService) Update(ctx context.Context, id string, req UpdateCon
 		}
 		return nil, &ServiceError{Message: "Database error", Code: 500}
 	}
+	if !isAdmin && c.CompanyID != nil && c.CompanyID.String() != callerCompanyID {
+		return nil, &ServiceError{Message: "Access denied: contractor belongs to another company", Code: 403}
+	}
+
 	updates := make(map[string]any)
+	typ := c.Type
 	if req.Type != nil {
 		updates["type"] = *req.Type
+		typ = *req.Type
 	}
-	if req.DisplayName != nil {
-		updates["display_name"] = *req.DisplayName
+	fn := c.FirstName
+	ln := c.LastName
+	cn := c.CompanyName
+	if req.FirstName != nil {
+		updates["first_name"] = *req.FirstName
+		fn = *req.FirstName
+	}
+	if req.LastName != nil {
+		updates["last_name"] = *req.LastName
+		ln = *req.LastName
+	}
+	if req.CompanyName != nil {
+		updates["company_name"] = *req.CompanyName
+		cn = *req.CompanyName
+	}
+	if req.Type != nil || req.FirstName != nil || req.LastName != nil || req.CompanyName != nil {
+		updates["display_name"] = deriveDisplayName(typ, fn, ln, cn)
 	}
 	if req.LegalName != nil {
 		updates["legal_name"] = *req.LegalName
 	}
 	if req.TaxID != nil {
 		updates["tax_id"] = *req.TaxID
+	}
+	if req.NationalID != nil {
+		updates["national_id"] = *req.NationalID
+	}
+	if req.PreferentialID != nil {
+		updates["preferential_id"] = *req.PreferentialID
 	}
 	if req.DefaultCurrency != nil {
 		updates["default_currency"] = *req.DefaultCurrency
@@ -405,10 +483,20 @@ func (s *ContractorService) Update(ctx context.Context, id string, req UpdateCon
 	return &c, nil
 }
 
-func (s *ContractorService) Delete(ctx context.Context, id string) error {
+func (s *ContractorService) Delete(ctx context.Context, id, callerCompanyID string, isAdmin bool) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return &ServiceError{Message: "Invalid contractor ID", Code: 400}
+	}
+	var c model.Contractor
+	if err := s.db.WithContext(ctx).First(&c, "id = ?", uid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &ServiceError{Message: "Contractor not found", Code: 404}
+		}
+		return &ServiceError{Message: "Database error", Code: 500}
+	}
+	if !isAdmin && c.CompanyID != nil && c.CompanyID.String() != callerCompanyID {
+		return &ServiceError{Message: "Access denied: contractor belongs to another company", Code: 403}
 	}
 	result := s.db.WithContext(ctx).Where("id = ?", uid).Delete(&model.Contractor{})
 	if result.Error != nil {
