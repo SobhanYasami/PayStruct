@@ -98,10 +98,32 @@ func Connect() (*gorm.DB, error) {
 
 	DB = db
 
+	if os.Getenv("RESET_DB") == "true" {
+		if err := DropAll(DB); err != nil {
+			return nil, fmt.Errorf("drop all failed: %w", err)
+		}
+		log.Println("⚠️  RESET_DB: all tables dropped")
+	}
+
 	if err := model.AutoMigrate(DB); err != nil {
 		return nil, fmt.Errorf("migration failed: %w", err)
 	}
 
 	log.Println("Database connection established and models migrated successfully")
 	return DB, nil
+}
+
+// DropAll drops and recreates the public schema, removing every table, index,
+// sequence, and type in one shot. Postgres-only. Never call outside development.
+func DropAll(db *gorm.DB) error {
+	for _, stmt := range []string{
+		`DROP SCHEMA public CASCADE`,
+		`CREATE SCHEMA public`,
+		`GRANT ALL ON SCHEMA public TO public`,
+	} {
+		if err := db.Exec(stmt).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }

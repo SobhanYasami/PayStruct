@@ -79,6 +79,57 @@ func (h *StatementHandler) AddExtraWork(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(ew, "Extra work added"))
 }
 
+// DELETE /statements/:id/extra-works/:ewId
+func (h *StatementHandler) DeleteExtraWork(c *fiber.Ctx) error {
+	if err := h.svc.DeleteExtraWork(c.Context(), c.Params("id"), c.Params("ewId")); err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
+// GET /statements/:id/deductions
+func (h *StatementHandler) ListDeductions(c *fiber.Ctx) error {
+	items, err := h.svc.ListDeductions(c.Context(), c.Params("id"))
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(items))
+}
+
+// POST /statements/:id/deductions
+func (h *StatementHandler) AddDeduction(c *fiber.Ctx) error {
+	var req services.CreateDeductionReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	d, err := h.svc.AddDeduction(c.Context(), c.Params("id"), req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(d, "Deduction added"))
+}
+
+// PUT /statements/:id/deductions/:did
+func (h *StatementHandler) UpdateDeduction(c *fiber.Ctx) error {
+	var req services.UpdateDeductionReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	d, err := h.svc.UpdateDeduction(c.Context(), c.Params("id"), c.Params("did"), req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(d, "Deduction updated"))
+}
+
+// DELETE /statements/:id/deductions/:did
+func (h *StatementHandler) DeleteDeduction(c *fiber.Ctx) error {
+	if err := h.svc.DeleteDeduction(c.Context(), c.Params("id"), c.Params("did")); err != nil {
+		return serviceErr(c, err)
+	}
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
 // PATCH /statements/:id/transition
 func (h *StatementHandler) Transition(c *fiber.Ctx) error {
 	claims := jwtClaims(c)

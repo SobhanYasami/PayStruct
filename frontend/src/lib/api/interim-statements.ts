@@ -12,35 +12,63 @@ export interface InterimStatement {
   currency: string;
   gross_amount: string;
   extra_amount: string;
+  deduction_amount: string;
   retention_amount: string;
   advance_recovered: string;
   vat_amount: string;
   social_security_amount: string;
   ld_amount: string;
   net_amount: string;
+  prev_progress_pct?: string;
+  progress_pct?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
+  // Populated only by GET /statements/:id (not list)
+  work_done_items?: WorkDoneItem[];
+  extra_work_items?: ExtraWorkItem[];
+  deduction_items?: DeductionItem[];
 }
 
 export interface WorkDoneItem {
-  id?: string;
+  id: string;
+  statement_id: string;
+  line_item_id?: string;
+  line_no: number;
   boq_item_code?: string;
   description: string;
   unit_code?: string;
   quantity: string;
   unit_price: string;
+  amount: string;
 }
 
 export interface ExtraWorkItem {
-  id?: string;
+  id: string;
+  statement_id: string;
+  line_no: number;
   description: string;
-  reason?: string;
+  unit?: string;
+  quantity: string;
+  unit_price: string;
   amount: string;
+  reason?: string;
   variation_ref?: string;
-  approved_by_client?: boolean;
+  approved_by_client: boolean;
   approval_ref?: string;
-  created_at?: string;
+  created_at: string;
+}
+
+export interface DeductionItem {
+  id: string;
+  statement_id: string;
+  line_no: number;
+  description: string;
+  unit?: string;
+  quantity: string;
+  unit_price: string;
+  amount: string;
+  created_at: string;
 }
 
 export interface ApprovalEvent {
@@ -57,6 +85,35 @@ export interface ApprovalEvent {
 export interface TransitionPayload {
   status: string;
   comment?: string;
+}
+
+export interface CreateExtraWorkPayload {
+  description: string;
+  unit?: string;
+  quantity: string;
+  unit_price: string;
+  reason?: string;
+  variation_ref?: string;
+  approved_by_client?: boolean;
+  approval_ref?: string;
+}
+
+export interface CreateDeductionPayload {
+  description: string;
+  unit?: string;
+  quantity: string;
+  unit_price: string;
+}
+
+export interface UpdateDeductionPayload {
+  description?: string;
+  unit?: string;
+  quantity?: string;
+  unit_price?: string;
+}
+
+export interface SetWorksDonePayload {
+  items: { line_item_id: string; quantity_done: string }[];
 }
 
 interface Envelope<T> { status: string; data: T; message: string }
@@ -77,17 +134,38 @@ export const statementsApi = {
       body: JSON.stringify(payload),
     }),
 
-  setWorksDone: (id: string, items: WorkDoneItem[]) =>
+  setWorksDone: (id: string, payload: SetWorksDonePayload) =>
     apiFetch<Envelope<InterimStatement>>(`/statements/${id}/works-done`, {
       method: "PUT",
-      body: JSON.stringify({ items }),
+      body: JSON.stringify(payload),
     }),
 
-  addExtraWork: (id: string, item: Omit<ExtraWorkItem, "id" | "created_at">) =>
+  addExtraWork: (id: string, item: CreateExtraWorkPayload) =>
     apiFetch<Envelope<ExtraWorkItem>>(`/statements/${id}/extra-works`, {
       method: "POST",
       body: JSON.stringify(item),
     }),
+
+  deleteExtraWork: (id: string, ewId: string) =>
+    apiFetch<void>(`/statements/${id}/extra-works/${ewId}`, { method: "DELETE" }),
+
+  listDeductions: (id: string) =>
+    apiFetch<Envelope<DeductionItem[]>>(`/statements/${id}/deductions`),
+
+  addDeduction: (id: string, item: CreateDeductionPayload) =>
+    apiFetch<Envelope<DeductionItem>>(`/statements/${id}/deductions`, {
+      method: "POST",
+      body: JSON.stringify(item),
+    }),
+
+  updateDeduction: (id: string, did: string, item: UpdateDeductionPayload) =>
+    apiFetch<Envelope<DeductionItem>>(`/statements/${id}/deductions/${did}`, {
+      method: "PUT",
+      body: JSON.stringify(item),
+    }),
+
+  deleteDeduction: (id: string, did: string) =>
+    apiFetch<void>(`/statements/${id}/deductions/${did}`, { method: "DELETE" }),
 
   transition: (id: string, payload: TransitionPayload) =>
     apiFetch<Envelope<InterimStatement>>(`/statements/${id}/transition`, {

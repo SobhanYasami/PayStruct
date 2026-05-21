@@ -26,10 +26,10 @@ func SetupUserRoutes(router fiber.Router, h *handlers.UserHandler, jwtSecret str
 	employeesRead.Get("/list", h.GetAllEmployee)
 	employeesRead.Get("/:id", h.GetEmployee)
 
-	// Mutations: sudoer only
+	// Mutations: sudoer/admin + manager (scope-enforced in handler)
 	employeesWrite := users.Group("/employees",
 		middlewares.Authenticate(jwtSecret),
-		middlewares.SuperAdminOnly(),
+		middlewares.RequireAnyRole("manager"),
 	)
 	employeesWrite.Post("/create", h.CreateEmployee)
 	employeesWrite.Put("/:id", h.UpdateEmployee)

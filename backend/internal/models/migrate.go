@@ -30,6 +30,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&InterimStatement{},
 		&WorkDoneItem{},
 		&ExtraWorkItem{},
+		&StatementDeductionItem{},
 		&RetentionRecord{},
 		&AdvancePaymentRecord{},
 		&LiquidatedDamage{},
@@ -201,12 +202,18 @@ END$$`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_contracts_company_no
 		 ON contracts (company_id, contract_no) WHERE deleted_at IS NULL`,
 
-		// Old schema had a `code` column (NOT NULL, no default) and a stale
-		// unique index on (project_id, code). The column is now superseded by
-		// contract_no. Drop the stale index and relax the NOT NULL so new
-		// INSERTs (which omit `code`) are not rejected by Postgres.
+		// Old schema had a `code` column (NOT NULL, no default) — now superseded
+		// by contract_no. Guard with column existence check so fresh DBs don't fail.
 		`DROP INDEX IF EXISTS idx_contracts_project_code`,
-		`ALTER TABLE contracts ALTER COLUMN code DROP NOT NULL`,
+		`DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'contracts' AND column_name = 'code'
+    ) THEN
+        ALTER TABLE contracts ALTER COLUMN code DROP NOT NULL;
+    END IF;
+END$$`,
 
 		`CREATE INDEX IF NOT EXISTS idx_employees_roles_gin
 		 ON employees USING GIN (roles)`,

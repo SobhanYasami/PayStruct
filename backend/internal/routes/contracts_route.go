@@ -30,9 +30,9 @@ func SetupContractorRoutes(router fiber.Router, h *handlers.ContractorHandler, j
 	contractors.Delete("/:id", h.DeleteContractor)
 }
 
-// SetupContractRoutes mounts contract CRUD and WBS sub-resource under /contracts.
+// SetupContractRoutes mounts contract CRUD, WBS sub-resource, and attachments under /contracts.
 // All operations (read + write) require at least one of the head roles or admin/sudoer.
-func SetupContractRoutes(router fiber.Router, h *handlers.ContractHandler, jwtSecret string) {
+func SetupContractRoutes(router fiber.Router, h *handlers.ContractHandler, ah *handlers.AttachmentHandler, jwtSecret string) {
 	auth := middlewares.Authenticate(jwtSecret)
 	headOnly := middlewares.RequireAnyRole("manager", "engineering_head", "finance_head", "juridical_head")
 
@@ -47,4 +47,7 @@ func SetupContractRoutes(router fiber.Router, h *handlers.ContractHandler, jwtSe
 	contracts.Post("/:id/line-items", h.CreateLineItem)
 	contracts.Put("/:id/line-items/:itemId", h.UpdateLineItem)
 	contracts.Delete("/:id/line-items/:itemId", h.DeleteLineItem)
+
+	contracts.Get("/:id/attachments", ah.ListForContract)
+	contracts.Post("/:id/attachments", ah.Upload)
 }

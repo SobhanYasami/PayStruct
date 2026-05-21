@@ -81,6 +81,21 @@ export interface UpdateLineItemReq {
   sort_order?: number;
 }
 
+export interface Attachment {
+  id: string;
+  company_id: string;
+  entity_type: string;
+  entity_id: string;
+  file_name: string;
+  storage_key: string;
+  mime_type: string;
+  size_bytes: number;
+  url: string;
+  uploaded_by_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface Envelope<T> { status: string; data: T; message: string }
 interface ListPayload<T> { data: T[]; total: number; page: number; limit: number }
 
@@ -125,4 +140,19 @@ export const contractsApi = {
 
   deleteLineItem: (contractId: string, itemId: string) =>
     apiFetch<void>(`/contracts/${contractId}/line-items/${itemId}`, { method: "DELETE" }),
+
+  listAttachments: (contractId: string) =>
+    apiFetch<Envelope<Attachment[]>>(`/contracts/${contractId}/attachments`),
+
+  uploadAttachment: (contractId: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return apiFetch<Envelope<Attachment>>(`/contracts/${contractId}/attachments`, {
+      method: "POST",
+      body: fd,
+    });
+  },
+
+  deleteAttachment: (id: string) =>
+    apiFetch<void>(`/attachments/${id}`, { method: "DELETE" }),
 };

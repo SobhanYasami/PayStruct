@@ -21,6 +21,11 @@ func SetupStatementRoutes(router fiber.Router, h *handlers.StatementHandler, jwt
 	stmts.Get("/:id", h.GetStatement)
 	stmts.Put("/:id/works-done", h.SetWorksDone)
 	stmts.Post("/:id/extra-works", h.AddExtraWork)
+	stmts.Delete("/:id/extra-works/:ewId", h.DeleteExtraWork)
+	stmts.Get("/:id/deductions", h.ListDeductions)
+	stmts.Post("/:id/deductions", h.AddDeduction)
+	stmts.Put("/:id/deductions/:did", h.UpdateDeduction)
+	stmts.Delete("/:id/deductions/:did", h.DeleteDeduction)
 	stmts.Patch("/:id/transition", h.Transition)
 	stmts.Delete("/:id", h.DeleteStatement)
 }

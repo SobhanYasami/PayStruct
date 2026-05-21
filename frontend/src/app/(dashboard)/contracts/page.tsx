@@ -17,6 +17,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { DataTable } from "@/components/ui/DataTable";
 import { ApiError } from "@/lib/api/client";
 import { useAuthStore } from "@/lib/stores/auth";
+import { PersianDatePicker } from "@/components/ui/PersianDatePicker";
 
 // ─── role gates ────────────────────────────────────────────────────────────────
 
@@ -496,10 +497,14 @@ function ContractForm({
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="تاریخ شروع">
-          <input {...register("starts_on")} type="date" className={inputCls} dir="ltr" />
+          <Controller control={control} name="starts_on"
+            render={({ field }) => <PersianDatePicker value={field.value} onChange={field.onChange} inputClass={inputCls} />}
+          />
         </Field>
         <Field label="تاریخ پایان">
-          <input {...register("ends_on")} type="date" className={inputCls} dir="ltr" />
+          <Controller control={control} name="ends_on"
+            render={({ field }) => <PersianDatePicker value={field.value} onChange={field.onChange} inputClass={inputCls} />}
+          />
         </Field>
       </div>
 

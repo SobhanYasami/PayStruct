@@ -244,7 +244,9 @@ export default function EmployeesPage() {
 
 	const isSuperAdmin =
 		user?.roles?.includes("sudoer") || user?.roles?.includes("admin");
+	const isManager = !!user?.roles?.includes("manager");
 	const isHead = HEAD_ROLES.some((r) => user?.roles?.includes(r));
+	const canWrite = isSuperAdmin || isManager;
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["employees", page],
@@ -254,6 +256,14 @@ export default function EmployeesPage() {
 
 	const employees = data?.data?.data ?? [];
 	const total = data?.data?.total ?? 0;
+	const adminCount = employees.filter((e) => e.roles?.includes("admin") || e.roles?.includes("sudoer")).length;
+
+	const { data: companiesData } = useQuery({
+		queryKey: ["companies-all"],
+		queryFn: () => companiesApi.list(1, 200),
+		enabled: !!(isSuperAdmin || isHead),
+	});
+	const companyNameById = new Map((companiesData?.data?.data ?? []).map((c) => [c.id, c.name]));
 
 	const createForm = useForm<CreateFormData>({
 		resolver: zodResolver(createSchema),
@@ -380,7 +390,7 @@ export default function EmployeesPage() {
 		<div className='space-y-6'>
 			<div className='flex items-center justify-between'>
 				<h1 className='text-2xl font-bold text-primary'>کارمندان</h1>
-				{isSuperAdmin && (
+				{canWrite && (
 					<button
 						onClick={() => {
 							createForm.reset({
@@ -421,6 +431,15 @@ export default function EmployeesPage() {
 						key: "email",
 						header: "ایمیل",
 						render: (r) => <span className='font-mono text-sm'>{r.email}</span>,
+					},
+					{
+						key: "company",
+						header: "شرکت",
+						render: (r) => (
+							<span className='text-sm text-muted-foreground'>
+								{companyNameById.get(r.company_id) ?? "—"}
+							</span>
+						),
 					},
 					{
 						key: "employment_type",
@@ -464,7 +483,7 @@ export default function EmployeesPage() {
 							</span>
 						),
 					},
-					...(isSuperAdmin ? [{
+					...(canWrite ? [{
 						key: "actions",
 						header: "",
 						render: (r: Employee) => (
@@ -484,7 +503,8 @@ export default function EmployeesPage() {
 										e.stopPropagation();
 										setDeleteTarget(r.id);
 									}}
-									className='text-xs bg-red-600 px-2 py-0.5 rounded-md text-white hover:bg-red-700'
+									disabled={(r.roles?.includes("admin") || r.roles?.includes("sudoer")) && adminCount <= 1}
+									className='text-xs bg-red-600 px-2 py-0.5 rounded-md text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed'
 								>
 									حذف
 								</button>

@@ -231,7 +231,7 @@ type EmployeeResponse struct {
 	CompanyID      string   `json:"company_id"`
 }
 
-func (s *UserService) GetEmployee(id, companyID string) (*EmployeeResponse, error) {
+func (s *UserService) GetEmployee(id string, companyIDs []string) (*EmployeeResponse, error) {
 	empUUID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, &ServiceError{Message: "Invalid employee ID", Code: 400}
@@ -239,8 +239,8 @@ func (s *UserService) GetEmployee(id, companyID string) (*EmployeeResponse, erro
 
 	var emp model.Employee
 	q := s.db.Where("id = ?", empUUID)
-	if companyID != "" {
-		q = q.Where("company_id = ?", companyID)
+	if len(companyIDs) > 0 {
+		q = q.Where("company_id IN ?", companyIDs)
 	}
 	if err := q.First(&emp).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -250,6 +250,26 @@ func (s *UserService) GetEmployee(id, companyID string) (*EmployeeResponse, erro
 	}
 
 	return employeeToResponse(&emp), nil
+}
+
+// EmployeeInScope returns an error if the employee's company is not in companyIDs.
+// Pass nil/empty companyIDs to skip the check (admin path).
+func (s *UserService) EmployeeInScope(id string, companyIDs []string) error {
+	if len(companyIDs) == 0 {
+		return nil
+	}
+	empUUID, err := uuid.Parse(id)
+	if err != nil {
+		return &ServiceError{Message: "Invalid employee ID", Code: 400}
+	}
+	var emp model.Employee
+	if err := s.db.Where("id = ? AND company_id IN ?", empUUID, companyIDs).First(&emp).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &ServiceError{Message: "Employee not found or outside your scope", Code: 403}
+		}
+		return &ServiceError{Message: "Database error", Code: 500}
+	}
+	return nil
 }
 
 // -----------------------------------------------------------------------
@@ -264,15 +284,15 @@ type PaginatedEmployeeResponse struct {
 	TotalPages int                `json:"total_pages"`
 }
 
-func (s *UserService) GetEmployees(ctx context.Context, companyID string, page, limit int) (*PaginatedEmployeeResponse, error) {
+func (s *UserService) GetEmployees(ctx context.Context, companyIDs []string, page, limit int) (*PaginatedEmployeeResponse, error) {
 	offset := (page - 1) * limit
 
 	var employees []model.Employee
 	var total int64
 
 	tx := s.db.WithContext(ctx)
-	if companyID != "" {
-		tx = tx.Where("company_id = ?", companyID)
+	if len(companyIDs) > 0 {
+		tx = tx.Where("company_id IN ?", companyIDs)
 	}
 	if err := tx.Model(&model.Employee{}).Count(&total).Error; err != nil {
 		return nil, &ServiceError{Message: "Failed to count employees", Code: 500}
@@ -305,6 +325,24 @@ func (s *UserService) DeleteEmployee(id string) error {
 		return &ServiceError{Message: "Invalid employee ID", Code: 400}
 	}
 
+	var target model.Employee
+	if err := s.db.Where("id = ?", empUUID).First(&target).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &ServiceError{Message: "Employee not found", Code: 404}
+		}
+		return &ServiceError{Message: "Failed to fetch employee", Code: 500}
+	}
+
+	if hasAdminRole([]string(target.Roles)) {
+		var adminCount int64
+		s.db.Model(&model.Employee{}).
+			Where("'admin' = ANY(roles) OR 'sudoer' = ANY(roles)").
+			Count(&adminCount)
+		if adminCount <= 1 {
+			return &ServiceError{Message: "Cannot delete the last admin account", Code: 409}
+		}
+	}
+
 	result := s.db.Where("id = ?", empUUID).Delete(&model.Employee{})
 	if result.Error != nil {
 		return &ServiceError{Message: "Failed to delete employee", Code: 500, Details: result.Error.Error()}
@@ -313,6 +351,15 @@ func (s *UserService) DeleteEmployee(id string) error {
 		return &ServiceError{Message: "Employee not found", Code: 404}
 	}
 	return nil
+}
+
+func hasAdminRole(roles []string) bool {
+	for _, r := range roles {
+		if r == "admin" || r == "sudoer" {
+			return true
+		}
+	}
+	return false
 }
 
 // -----------------------------------------------------------------------

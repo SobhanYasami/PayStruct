@@ -109,8 +109,25 @@ func main() {
 	contractorHandler := handlers.NewContractorHandler(db)
 	routes.SetupContractorRoutes(v1, contractorHandler, jwtSecret)
 
+	storageRoot := os.Getenv("STORAGE_ROOT")
+	if storageRoot == "" {
+		storageRoot = "../storage"
+	}
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:" + func() string {
+			if p := os.Getenv("SERVER_PORT"); p != "" {
+				return p
+			}
+			return defaultPort
+		}()
+	}
+
+	attachmentHandler := handlers.NewAttachmentHandler(db, storageRoot, baseURL)
+
 	contractHandler := handlers.NewContractHandler(db)
-	routes.SetupContractRoutes(v1, contractHandler, jwtSecret)
+	routes.SetupContractRoutes(v1, contractHandler, attachmentHandler, jwtSecret)
+	routes.SetupAttachmentRoutes(v1, attachmentHandler, jwtSecret)
 
 	statementHandler := handlers.NewStatementHandler(db)
 	routes.SetupStatementRoutes(v1, statementHandler, jwtSecret)

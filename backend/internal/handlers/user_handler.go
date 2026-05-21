@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/sobhan-yasami/docs-db-panel/internal/config"
 	"github.com/sobhan-yasami/docs-db-panel/internal/schemas"
 	"github.com/sobhan-yasami/docs-db-panel/internal/services"
@@ -12,13 +13,35 @@ import (
 type UserHandler struct {
 	userService *services.UserService
 	tokenSvc    *services.TokenService
+	companySvc  *services.CompanyService
 }
 
 func NewUserHandler(db *gorm.DB) *UserHandler {
 	return &UserHandler{
 		userService: services.NewUserService(db),
 		tokenSvc:    services.NewTokenService(config.Load()),
+		companySvc:  services.NewCompanyService(db),
 	}
+}
+
+// scopeIDs resolves the list of company IDs the caller may access.
+// nil = no restriction (admin/sudoer). Non-nil = IN filter.
+func (h *UserHandler) scopeIDs(ctx *fiber.Ctx, claims *schemas.JWTClaims) ([]string, error) {
+	for _, r := range claims.Roles {
+		if r == "sudoer" || r == "admin" {
+			return nil, nil
+		}
+	}
+	companyUUID, err := uuid.Parse(claims.CompanyID)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range claims.Roles {
+		if r == "manager" {
+			return h.companySvc.ManagerScopeIDs(ctx.Context(), companyUUID)
+		}
+	}
+	return []string{claims.CompanyID}, nil
 }
 
 // POST /users/auth/signin
@@ -66,9 +89,31 @@ func (h *UserHandler) SigninEmployee(c *fiber.Ctx) error {
 
 // POST /users/employees/create
 func (h *UserHandler) CreateEmployee(c *fiber.Ctx) error {
+	claims, ok := c.Locals("claims").(*schemas.JWTClaims)
+	if !ok || claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
+
 	var req services.CreateEmployeeReq
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+
+	ids, err := h.scopeIDs(c, claims)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to resolve scope"))
+	}
+	if len(ids) > 0 {
+		found := false
+		for _, id := range ids {
+			if id == req.CompanyID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return c.Status(fiber.StatusForbidden).JSON(ErrorResponse(Forbidden, "Cannot create employee in that company"))
+		}
 	}
 
 	res, err := h.userService.CreateEmployee(req)
@@ -84,7 +129,23 @@ func (h *UserHandler) CreateEmployee(c *fiber.Ctx) error {
 
 // PUT /users/employees/:id
 func (h *UserHandler) UpdateEmployee(c *fiber.Ctx) error {
+	claims, ok := c.Locals("claims").(*schemas.JWTClaims)
+	if !ok || claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
+
 	id := c.Params("id")
+
+	ids, err := h.scopeIDs(c, claims)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to resolve scope"))
+	}
+	if err := h.userService.EmployeeInScope(id, ids); err != nil {
+		if svcErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(svcErr.Code).JSON(ErrorResponse(Forbidden, svcErr.Message))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Unexpected error"))
+	}
 
 	var req services.UpdateEmployeeReq
 	req.ID = id
@@ -110,15 +171,12 @@ func (h *UserHandler) GetEmployee(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
 	}
 
-	companyID := claims.CompanyID
-	for _, r := range claims.Roles {
-		if r == "sudoer" || r == "admin" {
-			companyID = ""
-			break
-		}
+	ids, err := h.scopeIDs(c, claims)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to resolve scope"))
 	}
 
-	resp, err := h.userService.GetEmployee(c.Params("id"), companyID)
+	resp, err := h.userService.GetEmployee(c.Params("id"), ids)
 	if err != nil {
 		if svcErr, ok := err.(*services.ServiceError); ok {
 			return c.Status(svcErr.Code).JSON(ErrorResponse(InternalError, svcErr.Message, svcErr.Details))
@@ -145,15 +203,12 @@ func (h *UserHandler) GetAllEmployee(c *fiber.Ctx) error {
 		limit = 10
 	}
 
-	companyID := claims.CompanyID
-	for _, r := range claims.Roles {
-		if r == "sudoer" || r == "admin" {
-			companyID = ""
-			break
-		}
+	ids, err := h.scopeIDs(c, claims)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to resolve scope"))
 	}
 
-	resp, err := h.userService.GetEmployees(c.Context(), companyID, page, limit)
+	resp, err := h.userService.GetEmployees(c.Context(), ids, page, limit)
 	if err != nil {
 		if svcErr, ok := err.(*services.ServiceError); ok {
 			return c.Status(svcErr.Code).JSON(ErrorResponse(InternalError, svcErr.Message))
@@ -207,9 +262,25 @@ func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 
 // DELETE /users/employees/:id
 func (h *UserHandler) DeleteEmployee(c *fiber.Ctx) error {
+	claims, ok := c.Locals("claims").(*schemas.JWTClaims)
+	if !ok || claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
+
 	id := c.Params("id")
 
-	err := h.userService.DeleteEmployee(id)
+	ids, err := h.scopeIDs(c, claims)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to resolve scope"))
+	}
+	if err := h.userService.EmployeeInScope(id, ids); err != nil {
+		if svcErr, ok := err.(*services.ServiceError); ok {
+			return c.Status(svcErr.Code).JSON(ErrorResponse(Forbidden, svcErr.Message))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Unexpected error"))
+	}
+
+	err = h.userService.DeleteEmployee(id)
 	if err != nil {
 		if svcErr, ok := err.(*services.ServiceError); ok {
 			return c.Status(svcErr.Code).JSON(ErrorResponse(InternalError, svcErr.Message))

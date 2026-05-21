@@ -7,6 +7,7 @@ import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Pencil } from "lucide-react";
+import { PersianDatePicker } from "@/components/ui/PersianDatePicker";
 import toast from "react-hot-toast";
 import {
 	projectsApi,
@@ -592,19 +593,13 @@ export default function ProjectsPage() {
 
 					<div className='grid grid-cols-2 gap-3'>
 						<Field label='تاریخ شروع'>
-							<input
-								{...createForm.register("start_date")}
-								type='date'
-								className={inputCls}
-								dir='ltr'
+							<Controller control={createForm.control} name='start_date'
+								render={({ field }) => <PersianDatePicker value={field.value} onChange={field.onChange} inputClass={inputCls} />}
 							/>
 						</Field>
 						<Field label='تاریخ پایان'>
-							<input
-								{...createForm.register("end_date")}
-								type='date'
-								className={inputCls}
-								dir='ltr'
+							<Controller control={createForm.control} name='end_date'
+								render={({ field }) => <PersianDatePicker value={field.value} onChange={field.onChange} inputClass={inputCls} />}
 							/>
 						</Field>
 					</div>
@@ -721,19 +716,13 @@ export default function ProjectsPage() {
 
 					<div className='grid grid-cols-2 gap-3'>
 						<Field label='تاریخ شروع'>
-							<input
-								{...editForm.register("start_date")}
-								type='date'
-								className={inputCls}
-								dir='ltr'
+							<Controller control={editForm.control} name='start_date'
+								render={({ field }) => <PersianDatePicker value={field.value} onChange={field.onChange} inputClass={inputCls} />}
 							/>
 						</Field>
 						<Field label='تاریخ پایان'>
-							<input
-								{...editForm.register("end_date")}
-								type='date'
-								className={inputCls}
-								dir='ltr'
+							<Controller control={editForm.control} name='end_date'
+								render={({ field }) => <PersianDatePicker value={field.value} onChange={field.onChange} inputClass={inputCls} />}
 							/>
 						</Field>
 					</div>

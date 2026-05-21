@@ -111,12 +111,38 @@ func (h *CompanyHandler) GetAllCompanies(c *fiber.Ctx) error {
 		limit = 10
 	}
 
-	// Non-admin heads only see their own company
+	// Non-admin: scope by role
 	if !isSuperAdmin(claims) {
 		companyUUID, err := uuid.Parse(claims.CompanyID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Invalid company in token"))
 		}
+
+		// Manager: own company + direct subcompanies
+		for _, r := range claims.Roles {
+			if r == "manager" {
+				companies, total, err := h.companySvc.ListManagerCompanies(c.Context(), companyUUID, search, page, limit)
+				if err != nil {
+					if svcErr, ok := err.(*services.ServiceError); ok {
+						return c.Status(svcErr.Code).JSON(ErrorResponse(InternalError, svcErr.Message))
+					}
+					return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to list companies"))
+				}
+				items := make([]companyResponse, 0, len(companies))
+				for _, co := range companies {
+					items = append(items, companyResponse{ID: co.ID, Name: co.Name, RegNum: co.RegNum, ParentID: co.ParentID})
+				}
+				return c.JSON(SuccessResponse(fiber.Map{
+					"data":        items,
+					"total":       total,
+					"page":        page,
+					"limit":       limit,
+					"total_pages": int(math.Ceil(float64(total) / float64(limit))),
+				}, "Companies retrieved successfully"))
+			}
+		}
+
+		// Other heads: own company only
 		company, err := h.companySvc.GetCompanyDetails(c.Context(), companyUUID)
 		if err != nil {
 			if svcErr, ok := err.(*services.ServiceError); ok {
@@ -224,13 +250,18 @@ func (h *CompanyHandler) UpdateCompany(c *fiber.Ctx) error {
 
 // DELETE /company/management/:id
 func (h *CompanyHandler) DeleteCompany(c *fiber.Ctx) error {
-	if _, ok := actorID(c); !ok {
+	claims, ok := c.Locals("claims").(*schemas.JWTClaims)
+	if !ok || claims == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Access denied"))
 	}
 
 	companyUUID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid company ID"))
+	}
+
+	if claims.CompanyID == companyUUID.String() {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse(Forbidden, "Cannot delete your own company"))
 	}
 
 	if err := h.companySvc.DeleteCompany(c.Context(), companyUUID); err != nil {

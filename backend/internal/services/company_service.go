@@ -213,6 +213,41 @@ func (s *CompanyService) ListCompanies(ctx context.Context, search string, page,
 	return companies, total, nil
 }
 
+// ManagerScopeIDs returns the given companyID + IDs of all direct subcompanies.
+func (s *CompanyService) ManagerScopeIDs(ctx context.Context, companyID uuid.UUID) ([]string, error) {
+	var companies []model.Company
+	if err := s.db.WithContext(ctx).
+		Where("id = ? OR parent_id = ?", companyID, companyID).
+		Select("id").Find(&companies).Error; err != nil {
+		return nil, &ServiceError{Message: "Failed to resolve company scope", Code: 500}
+	}
+	ids := make([]string, 0, len(companies))
+	for _, c := range companies {
+		ids = append(ids, c.ID.String())
+	}
+	return ids, nil
+}
+
+// ListManagerCompanies returns own company + direct subcompanies with search + pagination.
+func (s *CompanyService) ListManagerCompanies(ctx context.Context, companyID uuid.UUID, search string, page, pageSize int) ([]model.Company, int64, error) {
+	var companies []model.Company
+	var total int64
+
+	q := s.db.WithContext(ctx).Model(&model.Company{}).
+		Where("id = ? OR parent_id = ?", companyID, companyID)
+	if search != "" {
+		q = q.Where("name ILIKE ?", "%"+strings.TrimSpace(search)+"%")
+	}
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, &ServiceError{Message: "Failed to count companies", Code: 500}
+	}
+	offset := (page - 1) * pageSize
+	if err := q.Order("created_at DESC").Limit(pageSize).Offset(offset).Find(&companies).Error; err != nil {
+		return nil, 0, &ServiceError{Message: "Failed to list companies", Code: 500}
+	}
+	return companies, total, nil
+}
+
 // -----------------------------------------------------------------------
 // List Employees of a Company
 // -----------------------------------------------------------------------

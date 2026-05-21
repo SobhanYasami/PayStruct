@@ -172,6 +172,7 @@ export default function CompaniesPage() {
 
 	const companies = data?.data?.data ?? [];
 	const total = data?.data?.total ?? 0;
+	const companyNameById = new Map(companies.map((c) => [c.id, c.name]));
 
 	const createForm = useForm<FormData>({ resolver: zodResolver(schema) });
 	const editForm = useForm<FormData>({ resolver: zodResolver(schema) });
@@ -293,7 +294,7 @@ export default function CompaniesPage() {
 						header: "زیرمجموعه",
 						render: (r) => (
 							<span className='font-mono text-xs text-muted-foreground'>
-								{r.parent_id ? r.parent_id.slice(0, 8) + "…" : "—"}
+								{r.parent_id ? (companyNameById.get(r.parent_id) ?? r.parent_id.slice(0, 8) + "…") : "—"}
 							</span>
 						),
 					},
@@ -317,7 +318,8 @@ export default function CompaniesPage() {
 										e.stopPropagation();
 										setDeleteTarget(r.id);
 									}}
-									className='text-xs bg-red-600 rounded-sm px-2 py-0.5 text-amber-50 hover:bg-red-700 flex items-center gap-1'
+									disabled={r.id === user?.companyId}
+									className='text-xs bg-red-600 rounded-sm px-2 py-0.5 text-amber-50 hover:bg-red-700 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed'
 								>
 									حذف
 								</button>

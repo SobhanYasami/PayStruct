@@ -1,22 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Plus, Pencil, Trash2 } from "lucide-react";
+import { ArrowRight, Plus, Pencil, Trash2, FileUp, FileText, Image, Trash } from "lucide-react";
+import { PersianDatePicker } from "@/components/ui/PersianDatePicker";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import {
   contractsApi,
+  type Attachment,
   type ContractLineItem,
   type CreateLineItemReq,
   type UpdateLineItemReq,
 } from "@/lib/api/contracts";
+import DocumentViewer from "@/components/domain/DocumentViewer";
 import { contractorsApi } from "@/lib/api/contractors";
 import { projectsApi } from "@/lib/api/projects";
+import { statementsApi, type InterimStatement } from "@/lib/api/interim-statements";
 import { StatusBadge } from "@/components/domain/StatusBadge";
 import { Sheet } from "@/components/ui/Sheet";
 import { ConfirmDialog } from "@/components/domain/ConfirmDialog";
@@ -42,6 +46,17 @@ function totalLineItem(item: ContractLineItem): string {
   if (isNaN(qty) || isNaN(rate)) return "—";
   return (qty * rate).toLocaleString("fa-IR");
 }
+
+// ─── statement form schema ──────────────────────────────────────────────────────
+
+const stmtSchema = z.object({
+  period_start: z.string().min(1, "تاریخ شروع الزامی است"),
+  period_end: z.string().min(1, "تاریخ پایان الزامی است"),
+  issued_on: z.string().min(1, "تاریخ صدور الزامی است"),
+  notes: z.string().optional(),
+});
+type StmtForm = z.infer<typeof stmtSchema>;
+const stmtDefaults: StmtForm = { period_start: "", period_end: "", issued_on: "", notes: "" };
 
 // ─── WBS form schema ────────────────────────────────────────────────────────────
 
@@ -75,6 +90,10 @@ export default function ContractDetailPage() {
   const [editItem, setEditItem] = useState<ContractLineItem | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
 
+  const [createStmtOpen, setCreateStmtOpen] = useState(false);
+  const [viewerAttachment, setViewerAttachment] = useState<Attachment | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { data: contractRes, isLoading: loadingContract } = useQuery({
     queryKey: ["contract", id],
     queryFn: () => contractsApi.get(id),
@@ -101,16 +120,45 @@ export default function ContractDetailPage() {
     enabled: !!id,
   });
 
+  const { data: statementsRes, isLoading: loadingStmts } = useQuery({
+    queryKey: ["statements", id],
+    queryFn: () => statementsApi.list(id, 1, 50),
+    enabled: !!id,
+  });
+
   const contractor = contractorRes?.data;
   const project = projectRes?.data;
   const lineItems: ContractLineItem[] = Array.isArray(lineItemsRes?.data)
     ? lineItemsRes.data
     : [];
+  const statements: InterimStatement[] = statementsRes?.data?.data ?? [];
+
+  const { data: attachmentsRes } = useQuery({
+    queryKey: ["attachments", id],
+    queryFn: () => contractsApi.listAttachments(id),
+    enabled: !!id,
+  });
+  const attachments: Attachment[] = Array.isArray(attachmentsRes?.data) ? attachmentsRes.data : [];
 
   const invalidateItems = () => qc.invalidateQueries({ queryKey: ["line-items", id] });
+  const invalidateStmts = () => qc.invalidateQueries({ queryKey: ["statements", id] });
+  const invalidateAttachments = () => qc.invalidateQueries({ queryKey: ["attachments", id] });
 
   const createForm = useForm<WbsForm>({ resolver: zodResolver(wbsSchema), defaultValues: wbsDefaults });
   const editForm   = useForm<WbsForm>({ resolver: zodResolver(wbsSchema), defaultValues: wbsDefaults });
+  const stmtForm   = useForm<StmtForm>({ resolver: zodResolver(stmtSchema), defaultValues: stmtDefaults });
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => contractsApi.uploadAttachment(id, file),
+    onSuccess: () => { invalidateAttachments(); toast.success("سند بارگذاری شد"); },
+    onError: (e) => toast.error(e instanceof ApiError ? e.detail || e.title : "خطا در بارگذاری"),
+  });
+
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: (attId: string) => contractsApi.deleteAttachment(attId),
+    onSuccess: () => { invalidateAttachments(); toast.success("سند حذف شد"); },
+    onError: (e) => toast.error(e instanceof ApiError ? e.detail || e.title : "خطا"),
+  });
 
   const createMutation = useMutation({
     mutationFn: (req: CreateLineItemReq) => contractsApi.createLineItem(id, req),
@@ -141,6 +189,22 @@ export default function ContractDetailPage() {
       invalidateItems();
       setDeleteItemId(null);
       toast.success("آیتم حذف شد");
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.detail || e.title : "خطا"),
+  });
+
+  const createStmtMutation = useMutation({
+    mutationFn: (d: StmtForm) => statementsApi.create(id, {
+      period_start: d.period_start,
+      period_end: d.period_end,
+      issued_on: d.issued_on,
+      notes: d.notes || undefined,
+    }),
+    onSuccess: () => {
+      invalidateStmts();
+      setCreateStmtOpen(false);
+      stmtForm.reset(stmtDefaults);
+      toast.success("صورت وضعیت ایجاد شد");
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.detail || e.title : "خطا"),
   });
@@ -345,7 +409,149 @@ export default function ContractDetailPage() {
         </div>
       </div>
 
-      {/* ── create sheet ── */}
+      {/* ── Statements ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-primary">صورت وضعیت‌ها</h2>
+          <button
+            onClick={() => setCreateStmtOpen(true)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition"
+          >
+            <Plus size={15} />
+            صورت وضعیت جدید
+          </button>
+        </div>
+
+        <div className="bg-white border rounded-xl overflow-hidden">
+          {loadingStmts ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">در حال بارگذاری...</div>
+          ) : statements.length === 0 ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">صورت وضعیتی ثبت نشده است</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 border-b">
+                  <tr>
+                    <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-12">شماره</th>
+                    <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">دوره</th>
+                    <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-28">وضعیت</th>
+                    <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-24">پیشرفت قبلی</th>
+                    <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-24">پیشرفت کنونی</th>
+                    <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-32">مبلغ خالص</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statements.map((s) => (
+                    <tr
+                      key={s.id}
+                      onClick={() => router.push(`/contracts/${id}/statements/${s.id}`)}
+                      className="border-b last:border-0 hover:bg-muted/20 transition cursor-pointer"
+                    >
+                      <td className="px-4 py-3 text-muted-foreground font-mono">{s.sequence_no}</td>
+                      <td className="px-4 py-3 font-mono text-xs">
+                        {s.period_start.slice(0, 10)} — {s.period_end.slice(0, 10)}
+                      </td>
+                      <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
+                      <td className="px-4 py-3 font-mono">
+                        {s.prev_progress_pct ? `${parseFloat(s.prev_progress_pct).toFixed(1)}٪` : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-mono">
+                        {s.progress_pct ? `${parseFloat(s.progress_pct).toFixed(1)}٪` : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-money-in">
+                        {parseFloat(s.net_amount).toLocaleString("fa-IR")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Documents ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-primary">اسناد قرارداد</h2>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={attachments.length >= 3 || uploadMutation.isPending}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-40 transition"
+          >
+            <FileUp size={15} />
+            {uploadMutation.isPending ? "در حال بارگذاری..." : "بارگذاری سند"}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) uploadMutation.mutate(file);
+              e.target.value = "";
+            }}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {attachments.map((att) => (
+            <AttachmentCard
+              key={att.id}
+              att={att}
+              onView={() => setViewerAttachment(att)}
+              onDelete={() => deleteAttachmentMutation.mutate(att.id)}
+            />
+          ))}
+          {Array.from({ length: Math.max(0, 3 - attachments.length) }).map((_, i) => (
+            <div
+              key={`empty-${i}`}
+              className="border-2 border-dashed border-muted rounded-xl flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground text-sm cursor-pointer hover:border-primary/40 transition"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <FileUp size={20} className="opacity-40" />
+              <span>بارگذاری سند</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── document viewer modal ── */}
+      <DocumentViewer attachment={viewerAttachment} onClose={() => setViewerAttachment(null)} />
+
+      {/* ── create statement sheet ── */}
+      <Sheet open={createStmtOpen} onClose={() => { setCreateStmtOpen(false); stmtForm.reset(stmtDefaults); }} title="صورت وضعیت جدید">
+        <form onSubmit={stmtForm.handleSubmit((d) => createStmtMutation.mutate(d))} className="space-y-4">
+          <Field label="تاریخ شروع دوره" error={stmtForm.formState.errors.period_start?.message}>
+            <Controller control={stmtForm.control} name="period_start"
+              render={({ field }) => <PersianDatePicker value={field.value} onChange={field.onChange} inputClass={inputCls} />}
+            />
+          </Field>
+          <Field label="تاریخ پایان دوره" error={stmtForm.formState.errors.period_end?.message}>
+            <Controller control={stmtForm.control} name="period_end"
+              render={({ field }) => <PersianDatePicker value={field.value} onChange={field.onChange} inputClass={inputCls} />}
+            />
+          </Field>
+          <Field label="تاریخ صدور" error={stmtForm.formState.errors.issued_on?.message}>
+            <Controller control={stmtForm.control} name="issued_on"
+              render={({ field }) => <PersianDatePicker value={field.value} onChange={field.onChange} inputClass={inputCls} />}
+            />
+          </Field>
+          <Field label="یادداشت">
+            <textarea {...stmtForm.register("notes")} className={`${inputCls} resize-none`} rows={2} />
+          </Field>
+          <button
+            type="submit"
+            disabled={createStmtMutation.isPending}
+            className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition"
+          >
+            {createStmtMutation.isPending ? "در حال ایجاد..." : "ایجاد صورت وضعیت"}
+          </button>
+        </form>
+      </Sheet>
+
+      {/* ── create WBS sheet ── */}
       <Sheet open={createOpen} onClose={() => { setCreateOpen(false); createForm.reset(wbsDefaults); }} title="افزودن آیتم WBS">
         <WbsForm
           form={createForm}
@@ -475,6 +681,54 @@ function Row({ label, value }: { label: string; value: React.ReactNode; mono?: b
     <div className="flex gap-4 items-start">
       <span className="text-muted-foreground w-32 shrink-0">{label}</span>
       <span className="flex-1">{value}</span>
+    </div>
+  );
+}
+
+function AttachmentCard({
+  att,
+  onView,
+  onDelete,
+}: {
+  att: Attachment;
+  onView: () => void;
+  onDelete: () => void;
+}) {
+  const isImage = att.mime_type.startsWith("image/");
+  return (
+    <div className="border rounded-xl p-4 flex flex-col gap-3 bg-white hover:shadow-sm transition">
+      <div
+        className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+        onClick={onView}
+      >
+        {isImage ? (
+          <Image size={22} className="shrink-0 text-primary/60" />
+        ) : (
+          <FileText size={22} className="shrink-0 text-primary/60" />
+        )}
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate" title={att.file_name}>
+            {att.file_name}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {(att.size_bytes / 1024).toFixed(0)} KB
+          </p>
+        </div>
+      </div>
+      <div className="flex gap-2 border-t pt-2">
+        <button
+          onClick={onView}
+          className="flex-1 text-xs text-center text-primary hover:underline"
+        >
+          مشاهده
+        </button>
+        <button
+          onClick={onDelete}
+          className="p-1 rounded text-muted-foreground hover:text-status-rejected hover:bg-status-rejected/10 transition"
+        >
+          <Trash size={13} />
+        </button>
+      </div>
     </div>
   );
 }

@@ -47,6 +47,9 @@ type Attachment struct {
 	SizeBytes    int64     `gorm:"not null"                  json:"size_bytes"`
 	UploadedByID uuid.UUID `gorm:"type:uuid;not null;index"  json:"uploaded_by_id"`
 
+	// URL is computed at query time from StorageKey; not persisted.
+	URL string `gorm:"-" json:"url,omitempty"`
+
 	Company    *Company  `gorm:"foreignKey:CompanyID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"-"`
 	UploadedBy *Employee `gorm:"foreignKey:UploadedByID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"-"`
 }

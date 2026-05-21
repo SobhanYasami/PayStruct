@@ -26,6 +26,7 @@ type InterimStatement struct {
 	// Cached aggregates — recomputed by Recompute() before save.
 	GrossAmount          decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"gross_amount"`
 	ExtraAmount          decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"extra_amount"`
+	DeductionAmount      decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"deduction_amount"`
 	RetentionAmount      decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"retention_amount"`
 	AdvanceRecovered     decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"advance_recovered"`
 	VatAmount            decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"vat_amount"`
@@ -33,7 +34,8 @@ type InterimStatement struct {
 	LdAmount             decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"ld_amount"`
 	NetAmount            decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"net_amount"`
 
-	ProgressPct *decimal.Decimal `gorm:"type:numeric(5,2);check:progress_pct IS NULL OR (progress_pct >= 0 AND progress_pct <= 100)" json:"progress_pct,omitempty"`
+	PrevProgressPct *decimal.Decimal `gorm:"type:numeric(7,4)" json:"prev_progress_pct,omitempty"`
+	ProgressPct     *decimal.Decimal `gorm:"type:numeric(7,4)" json:"progress_pct,omitempty"`
 
 	// FX snapshot locked at approval time.
 	FxRate     decimal.Decimal `gorm:"type:numeric(20,8);not null;default:1" json:"fx_rate"`
@@ -44,16 +46,16 @@ type InterimStatement struct {
 	Company  *Company  `gorm:"foreignKey:CompanyID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"  json:"-"`
 	Contract *Contract `gorm:"foreignKey:ContractID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"-"`
 
-	WorkDoneItems  []WorkDoneItem  `gorm:"foreignKey:StatementID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"-"`
-	ExtraWorkItems []ExtraWorkItem `gorm:"foreignKey:StatementID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"-"`
+	WorkDoneItems    []WorkDoneItem           `gorm:"foreignKey:StatementID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"work_done_items,omitempty"`
+	ExtraWorkItems   []ExtraWorkItem          `gorm:"foreignKey:StatementID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"extra_work_items,omitempty"`
+	DeductionItems   []StatementDeductionItem `gorm:"foreignKey:StatementID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"deduction_items,omitempty"`
 }
 
 func (InterimStatement) TableName() string { return "interim_statements" }
 
-// Recompute updates cached aggregate fields from in-memory child slices.
-// The calculation follows the ContractLedger formula using the parent
-// contract's bps parameters (passed in).
-func (s *InterimStatement) Recompute(retentionBps, advanceBps, vatBps, socialSecBps int, advanceOutstanding decimal.Decimal) {
+// Recompute updates all cached aggregate fields from in-memory child slices.
+// grossBudget is the parent contract's gross_budget (used for progress %).
+func (s *InterimStatement) Recompute(retentionBps, advanceBps, vatBps, socialSecBps int, advanceOutstanding, grossBudget decimal.Decimal) {
 	gross := decimal.Zero
 	for i := range s.WorkDoneItems {
 		gross = gross.Add(s.WorkDoneItems[i].Amount)
@@ -61,6 +63,10 @@ func (s *InterimStatement) Recompute(retentionBps, advanceBps, vatBps, socialSec
 	extra := decimal.Zero
 	for i := range s.ExtraWorkItems {
 		extra = extra.Add(s.ExtraWorkItems[i].Amount)
+	}
+	customDeductions := decimal.Zero
+	for i := range s.DeductionItems {
+		customDeductions = customDeductions.Add(s.DeductionItems[i].Amount)
 	}
 
 	grossTotal := gross.Add(extra)
@@ -71,22 +77,30 @@ func (s *InterimStatement) Recompute(retentionBps, advanceBps, vatBps, socialSec
 	advance := decimal.Min(advanceRate, advanceOutstanding)
 	vat := grossTotal.Sub(retention).Mul(decimal.NewFromInt(int64(vatBps))).Div(bpsDivisor)
 	socialSec := grossTotal.Mul(decimal.NewFromInt(int64(socialSecBps))).Div(bpsDivisor)
-	net := grossTotal.Sub(retention).Sub(advance).Add(vat).Sub(socialSec).Sub(s.LdAmount)
+	net := grossTotal.Sub(retention).Sub(advance).Add(vat).Sub(socialSec).Sub(s.LdAmount).Sub(customDeductions)
 
 	s.GrossAmount = gross
 	s.ExtraAmount = extra
+	s.DeductionAmount = customDeductions
 	s.RetentionAmount = retention
 	s.AdvanceRecovered = advance
 	s.VatAmount = vat
 	s.SocialSecurityAmount = socialSec
 	s.NetAmount = net
+
+	if grossBudget.GreaterThan(decimal.Zero) {
+		pct := gross.Div(grossBudget).Mul(decimal.NewFromInt(100))
+		s.ProgressPct = &pct
+	}
 }
 
-// WorkDoneItem is a line item for completed contract scope (formerly WorksDone).
+// WorkDoneItem is a line item for completed contract scope tied to a ContractLineItem.
+// User provides only QuantityDone; Description/UnitCode/UnitPrice copied from the WBS item.
 type WorkDoneItem struct {
 	BaseModel
-	StatementID uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_work_done_stmt_line" json:"statement_id"`
-	LineNo      int             `gorm:"not null;uniqueIndex:idx_work_done_stmt_line;check:line_no > 0" json:"line_no"`
+	StatementID uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_work_done_stmt_line" json:"statement_id"`
+	LineItemID  *uuid.UUID `gorm:"type:uuid;index" json:"line_item_id,omitempty"`
+	LineNo      int        `gorm:"not null;uniqueIndex:idx_work_done_stmt_line;check:line_no > 0" json:"line_no"`
 	BoQItemCode string          `gorm:"size:64;index" json:"boq_item_code,omitempty"`
 	Description string          `gorm:"type:text;not null" json:"description"`
 	UnitCode    string          `gorm:"size:32" json:"unit_code,omitempty"`
@@ -99,21 +113,40 @@ type WorkDoneItem struct {
 
 func (WorkDoneItem) TableName() string { return "work_done_items" }
 
-// ExtraWorkItem records out-of-scope additions (formerly ExtraWork).
+// ExtraWorkItem records out-of-scope additions with unit/quantity/price breakdown.
 type ExtraWorkItem struct {
 	BaseModel
 	StatementID uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_extra_work_stmt_line" json:"statement_id"`
 	LineNo      int             `gorm:"not null;uniqueIndex:idx_extra_work_stmt_line;check:line_no > 0" json:"line_no"`
 	Description string          `gorm:"type:text;not null" json:"description"`
-	Reason      string          `gorm:"type:text" json:"reason,omitempty"`
+	Unit        string          `gorm:"size:32" json:"unit,omitempty"`
+	Quantity    decimal.Decimal `gorm:"type:numeric(20,4);not null;default:0" json:"quantity"`
+	UnitPrice   decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"unit_price"`
 	Amount      decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"amount"`
+	Reason      string          `gorm:"type:text" json:"reason,omitempty"`
 
 	// Variation / client approval tracking.
-	VariationRef      string `gorm:"size:128" json:"variation_ref,omitempty"`
-	ApprovedByClient  bool   `gorm:"not null;default:false" json:"approved_by_client"`
-	ApprovalRef       string `gorm:"size:128" json:"approval_ref,omitempty"`
+	VariationRef     string `gorm:"size:128" json:"variation_ref,omitempty"`
+	ApprovedByClient bool   `gorm:"not null;default:false" json:"approved_by_client"`
+	ApprovalRef      string `gorm:"size:128" json:"approval_ref,omitempty"`
 
 	Statement *InterimStatement `gorm:"foreignKey:StatementID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"-"`
 }
 
 func (ExtraWorkItem) TableName() string { return "extra_work_items" }
+
+// StatementDeductionItem is a user-provided deduction line (e.g. penalty, withholding).
+type StatementDeductionItem struct {
+	BaseModel
+	StatementID uuid.UUID       `gorm:"type:uuid;not null;index" json:"statement_id"`
+	LineNo      int             `gorm:"not null" json:"line_no"`
+	Description string          `gorm:"type:text;not null" json:"description"`
+	Unit        string          `gorm:"size:32" json:"unit,omitempty"`
+	Quantity    decimal.Decimal `gorm:"type:numeric(20,4);not null;default:0" json:"quantity"`
+	UnitPrice   decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"unit_price"`
+	Amount      decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"amount"`
+
+	Statement *InterimStatement `gorm:"foreignKey:StatementID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"-"`
+}
+
+func (StatementDeductionItem) TableName() string { return "statement_deduction_items" }

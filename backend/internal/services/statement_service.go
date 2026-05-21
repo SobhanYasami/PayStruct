@@ -25,25 +25,40 @@ type CreateStatementReq struct {
 	Notes       string `json:"notes"`
 }
 
+// WorksDoneItem — user supplies line_item_id (WBS ref) and accumulated quantity_done.
+// Description/unit/unit_price are copied from the ContractLineItem.
+type WorksDoneItem struct {
+	LineItemID   string `json:"line_item_id"`
+	QuantityDone string `json:"quantity_done"`
+}
+
 type SetWorksDoneReq struct {
 	Items []WorksDoneItem `json:"items"`
 }
 
-type WorksDoneItem struct {
-	BoQItemCode string `json:"boq_item_code"`
+type CreateExtraWorkReq struct {
+	Description      string `json:"description"`
+	Unit             string `json:"unit"`
+	Quantity         string `json:"quantity"`
+	UnitPrice        string `json:"unit_price"`
+	Reason           string `json:"reason"`
+	VariationRef     string `json:"variation_ref"`
+	ApprovedByClient bool   `json:"approved_by_client"`
+	ApprovalRef      string `json:"approval_ref"`
+}
+
+type CreateDeductionReq struct {
 	Description string `json:"description"`
-	UnitCode    string `json:"unit_code"`
+	Unit        string `json:"unit"`
 	Quantity    string `json:"quantity"`
 	UnitPrice   string `json:"unit_price"`
 }
 
-type CreateExtraWorkReq struct {
-	Description      string `json:"description"`
-	Reason           string `json:"reason"`
-	Amount           string `json:"amount"`
-	VariationRef     string `json:"variation_ref"`
-	ApprovedByClient bool   `json:"approved_by_client"`
-	ApprovalRef      string `json:"approval_ref"`
+type UpdateDeductionReq struct {
+	Description *string `json:"description"`
+	Unit        *string `json:"unit"`
+	Quantity    *string `json:"quantity"`
+	UnitPrice   *string `json:"unit_price"`
 }
 
 type TransitionReq struct {
@@ -87,16 +102,27 @@ func (s *StatementService) Create(ctx context.Context, contractID string, req Cr
 			Select("COALESCE(MAX(sequence_no), 0)").
 			Scan(&maxSeq)
 
+		// Snapshot prev progress from the latest statement.
+		var prevPct *decimal.Decimal
+		if maxSeq > 0 {
+			var prev model.InterimStatement
+			if tx.Where("contract_id = ? AND sequence_no = ?", cid, maxSeq).
+				First(&prev).Error == nil {
+				prevPct = prev.ProgressPct
+			}
+		}
+
 		stmt = model.InterimStatement{
-			CompanyID:   ct.CompanyID,
-			ContractID:  cid,
-			SequenceNo:  maxSeq + 1,
-			PeriodStart: ps,
-			PeriodEnd:   pe,
-			IssuedOn:    io,
-			Status:      model.StatementDraft,
-			Currency:    ct.Currency,
-			Notes:       req.Notes,
+			CompanyID:       ct.CompanyID,
+			ContractID:      cid,
+			SequenceNo:      maxSeq + 1,
+			PeriodStart:     ps,
+			PeriodEnd:       pe,
+			IssuedOn:        io,
+			Status:          model.StatementDraft,
+			Currency:        ct.Currency,
+			Notes:           req.Notes,
+			PrevProgressPct: prevPct,
 		}
 		if err := tx.Create(&stmt).Error; err != nil {
 			return dbErr(err)
@@ -120,6 +146,7 @@ func (s *StatementService) GetByID(ctx context.Context, id string) (*model.Inter
 	if err := s.db.WithContext(ctx).
 		Preload("WorkDoneItems").
 		Preload("ExtraWorkItems").
+		Preload("DeductionItems").
 		First(&stmt, "id = ?", uid).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, &ServiceError{Message: "Statement not found", Code: 404}
@@ -163,6 +190,7 @@ func (s *StatementService) SetWorksDone(ctx context.Context, statementID string,
 		if err := tx.
 			Preload("WorkDoneItems").
 			Preload("ExtraWorkItems").
+			Preload("DeductionItems").
 			First(&stmt, "id = ?", sid).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return &ServiceError{Message: "Statement not found", Code: 404}
@@ -173,7 +201,6 @@ func (s *StatementService) SetWorksDone(ctx context.Context, statementID string,
 			return &ServiceError{Message: "Only draft statements can be edited", Code: 422}
 		}
 
-		// Fetch parent contract for bps parameters.
 		var ct model.Contract
 		if err := tx.First(&ct, "id = ?", stmt.ContractID).Error; err != nil {
 			return &ServiceError{Message: "Contract not found", Code: 500}
@@ -186,20 +213,31 @@ func (s *StatementService) SetWorksDone(ctx context.Context, statementID string,
 		newItems := make([]model.WorkDoneItem, 0, len(req.Items))
 		lineNo := 1
 		for _, item := range req.Items {
-			qty, err := decimal.NewFromString(item.Quantity)
+			liID, err := uuid.Parse(item.LineItemID)
+			if err != nil {
+				continue
+			}
+			qty, err := decimal.NewFromString(item.QuantityDone)
 			if err != nil || qty.LessThanOrEqual(decimal.Zero) {
 				continue
 			}
-			price, _ := decimal.NewFromString(item.UnitPrice)
+
+			// Fetch WBS item to get description/unit/unit_rate.
+			var wbs model.ContractLineItem
+			if err := tx.First(&wbs, "id = ?", liID).Error; err != nil {
+				continue // skip invalid refs
+			}
+
 			newItems = append(newItems, model.WorkDoneItem{
 				StatementID: sid,
+				LineItemID:  &liID,
 				LineNo:      lineNo,
-				BoQItemCode: item.BoQItemCode,
-				Description: item.Description,
-				UnitCode:    item.UnitCode,
+				BoQItemCode: wbs.ID.String(),
+				Description: wbs.Description,
+				UnitCode:    wbs.Unit,
 				Quantity:    qty,
-				UnitPrice:   price,
-				Amount:      qty.Mul(price),
+				UnitPrice:   wbs.UnitRate,
+				Amount:      qty.Mul(wbs.UnitRate),
 			})
 			lineNo++
 		}
@@ -210,28 +248,32 @@ func (s *StatementService) SetWorksDone(ctx context.Context, statementID string,
 		}
 
 		stmt.WorkDoneItems = newItems
-		// Advance outstanding balance — fetch from advance payment records.
+
 		var advanceOutstanding decimal.Decimal
 		tx.Model(&model.AdvancePaymentRecord{}).
 			Where("contract_id = ? AND record_type = 'advance'", ct.ID).
 			Select("COALESCE(SUM(outstanding_balance), 0)").
 			Scan(&advanceOutstanding)
 
+		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
 		stmt.Recompute(
 			ct.RetentionPctBps, ct.AdvancePctBps,
 			ct.VatPctBps, ct.SocialSecurityPctBps,
-			advanceOutstanding,
+			advanceOutstanding, grossBudget,
 		)
 
-		if err := tx.Model(&stmt).Updates(map[string]any{
+		updates := map[string]any{
 			"gross_amount":           stmt.GrossAmount,
 			"extra_amount":           stmt.ExtraAmount,
+			"deduction_amount":       stmt.DeductionAmount,
 			"retention_amount":       stmt.RetentionAmount,
 			"advance_recovered":      stmt.AdvanceRecovered,
 			"vat_amount":             stmt.VatAmount,
 			"social_security_amount": stmt.SocialSecurityAmount,
 			"net_amount":             stmt.NetAmount,
-		}).Error; err != nil {
+			"progress_pct":           stmt.ProgressPct,
+		}
+		if err := tx.Model(&stmt).Updates(updates).Error; err != nil {
 			return &ServiceError{Message: "Failed to update aggregates", Code: 500}
 		}
 		return nil
@@ -249,15 +291,20 @@ func (s *StatementService) AddExtraWork(ctx context.Context, statementID string,
 	if err != nil {
 		return nil, &ServiceError{Message: "Invalid statement ID", Code: 400}
 	}
-	amt, err := decimal.NewFromString(req.Amount)
+	qty, err := decimal.NewFromString(req.Quantity)
 	if err != nil {
-		return nil, &ServiceError{Message: "Invalid amount", Code: 400}
+		return nil, &ServiceError{Message: "Invalid quantity", Code: 400}
 	}
+	unitPrice, err := decimal.NewFromString(req.UnitPrice)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid unit_price", Code: 400}
+	}
+	amt := qty.Mul(unitPrice)
 
 	var result *model.ExtraWorkItem
 	txErr := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var stmt model.InterimStatement
-		if err := tx.Preload("WorkDoneItems").Preload("ExtraWorkItems").
+		if err := tx.Preload("WorkDoneItems").Preload("ExtraWorkItems").Preload("DeductionItems").
 			First(&stmt, "id = ?", sid).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return &ServiceError{Message: "Statement not found", Code: 404}
@@ -276,8 +323,11 @@ func (s *StatementService) AddExtraWork(ctx context.Context, statementID string,
 			StatementID:      sid,
 			LineNo:           maxLine + 1,
 			Description:      req.Description,
-			Reason:           req.Reason,
+			Unit:             req.Unit,
+			Quantity:         qty,
+			UnitPrice:        unitPrice,
 			Amount:           amt,
+			Reason:           req.Reason,
 			VariationRef:     req.VariationRef,
 			ApprovedByClient: req.ApprovedByClient,
 			ApprovalRef:      req.ApprovalRef,
@@ -289,7 +339,8 @@ func (s *StatementService) AddExtraWork(ctx context.Context, statementID string,
 		stmt.ExtraWorkItems = append(stmt.ExtraWorkItems, ew)
 		var ct model.Contract
 		tx.First(&ct, "id = ?", stmt.ContractID)
-		stmt.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero)
+		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
+		stmt.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero, grossBudget)
 		tx.Model(&stmt).Updates(map[string]any{
 			"extra_amount": stmt.ExtraAmount,
 			"net_amount":   stmt.NetAmount,
@@ -303,9 +354,254 @@ func (s *StatementService) AddExtraWork(ctx context.Context, statementID string,
 	return result, nil
 }
 
+func (s *StatementService) DeleteExtraWork(ctx context.Context, statementID, extraWorkID string) error {
+	sid, err := uuid.Parse(statementID)
+	if err != nil {
+		return &ServiceError{Message: "Invalid statement ID", Code: 400}
+	}
+	ewID, err := uuid.Parse(extraWorkID)
+	if err != nil {
+		return &ServiceError{Message: "Invalid extra work ID", Code: 400}
+	}
+
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var stmt model.InterimStatement
+		if err := tx.First(&stmt, "id = ?", sid).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return &ServiceError{Message: "Statement not found", Code: 404}
+			}
+			return &ServiceError{Message: "Database error", Code: 500}
+		}
+		if stmt.Status != model.StatementDraft {
+			return &ServiceError{Message: "Only draft statements can be edited", Code: 422}
+		}
+		var ew model.ExtraWorkItem
+		if err := tx.First(&ew, "id = ? AND statement_id = ?", ewID, sid).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return &ServiceError{Message: "Extra work item not found", Code: 404}
+			}
+			return &ServiceError{Message: "Database error", Code: 500}
+		}
+		if err := tx.Delete(&ew).Error; err != nil {
+			return &ServiceError{Message: "Delete failed", Code: 500}
+		}
+		// Recompute aggregates.
+		var full model.InterimStatement
+		tx.Preload("WorkDoneItems").Preload("ExtraWorkItems").Preload("DeductionItems").
+			First(&full, "id = ?", sid)
+		var ct model.Contract
+		tx.First(&ct, "id = ?", full.ContractID)
+		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
+		full.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero, grossBudget)
+		tx.Model(&full).Updates(map[string]any{
+			"extra_amount": full.ExtraAmount,
+			"net_amount":   full.NetAmount,
+		})
+		return nil
+	})
+}
+
+// --------------- Deductions ---------------
+
+func (s *StatementService) AddDeduction(ctx context.Context, statementID string, req CreateDeductionReq) (*model.StatementDeductionItem, error) {
+	sid, err := uuid.Parse(statementID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid statement ID", Code: 400}
+	}
+	qty, err := decimal.NewFromString(req.Quantity)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid quantity", Code: 400}
+	}
+	unitPrice, err := decimal.NewFromString(req.UnitPrice)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid unit_price", Code: 400}
+	}
+
+	var result *model.StatementDeductionItem
+	txErr := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var stmt model.InterimStatement
+		if err := tx.Preload("WorkDoneItems").Preload("ExtraWorkItems").Preload("DeductionItems").
+			First(&stmt, "id = ?", sid).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return &ServiceError{Message: "Statement not found", Code: 404}
+			}
+			return &ServiceError{Message: "Database error", Code: 500}
+		}
+		if stmt.Status != model.StatementDraft {
+			return &ServiceError{Message: "Only draft statements can be edited", Code: 422}
+		}
+
+		var maxLine int
+		tx.Model(&model.StatementDeductionItem{}).Where("statement_id = ?", sid).
+			Select("COALESCE(MAX(line_no), 0)").Scan(&maxLine)
+
+		d := model.StatementDeductionItem{
+			StatementID: sid,
+			LineNo:      maxLine + 1,
+			Description: req.Description,
+			Unit:        req.Unit,
+			Quantity:    qty,
+			UnitPrice:   unitPrice,
+			Amount:      qty.Mul(unitPrice),
+		}
+		if err := tx.Create(&d).Error; err != nil {
+			return dbErr(err)
+		}
+
+		stmt.DeductionItems = append(stmt.DeductionItems, d)
+		var ct model.Contract
+		tx.First(&ct, "id = ?", stmt.ContractID)
+		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
+		stmt.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero, grossBudget)
+		tx.Model(&stmt).Updates(map[string]any{
+			"deduction_amount": stmt.DeductionAmount,
+			"net_amount":       stmt.NetAmount,
+		})
+		result = &d
+		return nil
+	})
+	if txErr != nil {
+		return nil, txErr
+	}
+	return result, nil
+}
+
+func (s *StatementService) UpdateDeduction(ctx context.Context, statementID, deductionID string, req UpdateDeductionReq) (*model.StatementDeductionItem, error) {
+	sid, err := uuid.Parse(statementID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid statement ID", Code: 400}
+	}
+	did, err := uuid.Parse(deductionID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid deduction ID", Code: 400}
+	}
+
+	var result *model.StatementDeductionItem
+	txErr := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var stmt model.InterimStatement
+		if err := tx.First(&stmt, "id = ?", sid).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return &ServiceError{Message: "Statement not found", Code: 404}
+			}
+			return &ServiceError{Message: "Database error", Code: 500}
+		}
+		if stmt.Status != model.StatementDraft {
+			return &ServiceError{Message: "Only draft statements can be edited", Code: 422}
+		}
+
+		var d model.StatementDeductionItem
+		if err := tx.First(&d, "id = ? AND statement_id = ?", did, sid).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return &ServiceError{Message: "Deduction not found", Code: 404}
+			}
+			return &ServiceError{Message: "Database error", Code: 500}
+		}
+
+		if req.Description != nil {
+			d.Description = *req.Description
+		}
+		if req.Unit != nil {
+			d.Unit = *req.Unit
+		}
+		if req.Quantity != nil {
+			if q, err := decimal.NewFromString(*req.Quantity); err == nil {
+				d.Quantity = q
+			}
+		}
+		if req.UnitPrice != nil {
+			if p, err := decimal.NewFromString(*req.UnitPrice); err == nil {
+				d.UnitPrice = p
+			}
+		}
+		d.Amount = d.Quantity.Mul(d.UnitPrice)
+
+		if err := tx.Save(&d).Error; err != nil {
+			return &ServiceError{Message: "Update failed", Code: 500}
+		}
+
+		// Recompute.
+		var full model.InterimStatement
+		tx.Preload("WorkDoneItems").Preload("ExtraWorkItems").Preload("DeductionItems").
+			First(&full, "id = ?", sid)
+		var ct model.Contract
+		tx.First(&ct, "id = ?", full.ContractID)
+		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
+		full.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero, grossBudget)
+		tx.Model(&full).Updates(map[string]any{
+			"deduction_amount": full.DeductionAmount,
+			"net_amount":       full.NetAmount,
+		})
+
+		result = &d
+		return nil
+	})
+	if txErr != nil {
+		return nil, txErr
+	}
+	return result, nil
+}
+
+func (s *StatementService) DeleteDeduction(ctx context.Context, statementID, deductionID string) error {
+	sid, err := uuid.Parse(statementID)
+	if err != nil {
+		return &ServiceError{Message: "Invalid statement ID", Code: 400}
+	}
+	did, err := uuid.Parse(deductionID)
+	if err != nil {
+		return &ServiceError{Message: "Invalid deduction ID", Code: 400}
+	}
+
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var stmt model.InterimStatement
+		if err := tx.First(&stmt, "id = ?", sid).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return &ServiceError{Message: "Statement not found", Code: 404}
+			}
+			return &ServiceError{Message: "Database error", Code: 500}
+		}
+		if stmt.Status != model.StatementDraft {
+			return &ServiceError{Message: "Only draft statements can be edited", Code: 422}
+		}
+		var d model.StatementDeductionItem
+		if err := tx.First(&d, "id = ? AND statement_id = ?", did, sid).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return &ServiceError{Message: "Deduction not found", Code: 404}
+			}
+			return &ServiceError{Message: "Database error", Code: 500}
+		}
+		if err := tx.Delete(&d).Error; err != nil {
+			return &ServiceError{Message: "Delete failed", Code: 500}
+		}
+		// Recompute.
+		var full model.InterimStatement
+		tx.Preload("WorkDoneItems").Preload("ExtraWorkItems").Preload("DeductionItems").
+			First(&full, "id = ?", sid)
+		var ct model.Contract
+		tx.First(&ct, "id = ?", full.ContractID)
+		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
+		full.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero, grossBudget)
+		tx.Model(&full).Updates(map[string]any{
+			"deduction_amount": full.DeductionAmount,
+			"net_amount":       full.NetAmount,
+		})
+		return nil
+	})
+}
+
+func (s *StatementService) ListDeductions(ctx context.Context, statementID string) ([]model.StatementDeductionItem, error) {
+	sid, err := uuid.Parse(statementID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid statement ID", Code: 400}
+	}
+	var items []model.StatementDeductionItem
+	if err := s.db.WithContext(ctx).Where("statement_id = ?", sid).Order("line_no ASC").Find(&items).Error; err != nil {
+		return nil, &ServiceError{Message: "Query failed", Code: 500}
+	}
+	return items, nil
+}
+
 // --------------- Status Transitions ---------------
 
-// validTransitions encodes the 5-stage approval state machine.
 var validTransitions = map[model.StatementStatus]map[model.StatementStatus][]string{
 	model.StatementDraft:          {model.StatementSubmitted: {"pm", "admin"}},
 	model.StatementSubmitted:      {model.StatementFinanceReview: {"finance", "admin"}, model.StatementRejected: {"finance", "admin"}},
@@ -353,12 +649,10 @@ func (s *StatementService) Transition(ctx context.Context, id string, req Transi
 			return &ServiceError{Message: "Comment is required when rejecting", Code: 400}
 		}
 
-		updates := map[string]any{"status": newStatus}
-		if err := tx.Model(&stmt).Updates(updates).Error; err != nil {
+		if err := tx.Model(&stmt).Updates(map[string]any{"status": newStatus}).Error; err != nil {
 			return &ServiceError{Message: "Transition failed", Code: 500}
 		}
 
-		// Write audit event.
 		evt := model.ApprovalEvent{
 			EntityType: "interim_statement",
 			EntityID:   stmt.ID,

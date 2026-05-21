@@ -1,27 +1,25 @@
 # ==========================
 # Global
 # ==========================
-# OS-specific files
 .DS_Store
 Thumbs.db
 
-# IDE / Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
-*.log
 *.tmp
 .claude/
 
-# Environment files
+# env — keep .env.example tracked
 .env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Build / cache
 dist/
 build/
 .cache/
@@ -33,8 +31,10 @@ tmp/
 # ==========================
 /backend/bin/
 /backend/tmp/
+/backend/api
 /backend/.env
 /backend/.env.*
+!backend/.env.example
 /backend/*.log
 /backend/coverage/
 /backend/tests/testdata/
@@ -51,8 +51,6 @@ tmp/
 *.dylib
 *.test
 *.out
-
-# Go coverage
 *.coverprofile
 *.cov
 
@@ -67,6 +65,7 @@ tmp/
 /frontend/.vercel/
 /frontend/.env
 /frontend/.env.*
+!frontend/.env.example
 /frontend/coverage/
 /frontend/npm-debug.log*
 /frontend/yarn-debug.log*
@@ -92,9 +91,8 @@ yarn-error.log*
 pnpm-debug.log*
 
 # ==========================
-# Misc
+# Secrets / Certs
 # ==========================
-*.DS_Store
 *.pem
 *.crt
 *.key
