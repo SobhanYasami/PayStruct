@@ -23,6 +23,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { ConfirmDialog } from "@/components/domain/ConfirmDialog";
 import { ApiError } from "@/lib/api/client";
 import { useAuthStore } from "@/lib/stores/auth";
+import { toJalali, fmtPct } from "@/lib/utils/date";
 
 // ─── types & helpers ───────────────────────────────────────────────────────────
 
@@ -57,10 +58,7 @@ function fmt(v?: string | number, currency?: string): string {
 }
 
 function pct(v?: string | null): string {
-  if (!v) return "—";
-  const n = parseFloat(v);
-  if (isNaN(n)) return "—";
-  return `${n.toFixed(2)}٪`;
+  return fmtPct(v, 2);
 }
 
 // ─── form schemas ──────────────────────────────────────────────────────────────
@@ -321,8 +319,8 @@ export default function StatementDetailPage() {
               <h1 className="text-xl font-bold text-primary">صورت وضعیت #{stmt.sequence_no}</h1>
               <StatusBadge status={stmt.status} />
             </div>
-            <p className="text-xs text-muted-foreground mt-1 font-mono">
-              {stmt.period_start.slice(0, 10)} — {stmt.period_end.slice(0, 10)}
+            <p className="text-xs text-muted-foreground mt-1">
+              {toJalali(stmt.period_start)} — {toJalali(stmt.period_end)}
             </p>
           </div>
           {availableTransitions.length > 0 && (

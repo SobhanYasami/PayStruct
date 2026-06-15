@@ -130,7 +130,8 @@ func main() {
 	routes.SetupAttachmentRoutes(v1, attachmentHandler, jwtSecret)
 
 	statementHandler := handlers.NewStatementHandler(db)
-	routes.SetupStatementRoutes(v1, statementHandler, jwtSecret)
+	reportHandler := handlers.NewReportHandler(db)
+	routes.SetupStatementRoutes(v1, statementHandler, reportHandler, jwtSecret)
 
 	// Signature routes replaced by 5-stage approval via statement transition.
 	_ = handlers.NewSignatureHandler(db)

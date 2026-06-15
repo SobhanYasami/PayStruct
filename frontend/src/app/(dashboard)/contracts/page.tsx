@@ -18,6 +18,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { ApiError } from "@/lib/api/client";
 import { useAuthStore } from "@/lib/stores/auth";
 import { PersianDatePicker } from "@/components/ui/PersianDatePicker";
+import { toJalali, fmtNum } from "@/lib/utils/date";
 
 // ─── role gates ────────────────────────────────────────────────────────────────
 
@@ -32,15 +33,8 @@ function percentToBps(pct: string): number {
   const n = parseFloat(pct);
   return isNaN(n) ? 0 : Math.round(n * 100);
 }
-function formatDate(iso?: string) {
-  if (!iso) return "—";
-  return iso.slice(0, 10);
-}
-function formatMoney(v: string) {
-  const n = parseFloat(v);
-  if (isNaN(n)) return "—";
-  return n.toLocaleString("fa-IR");
-}
+function formatDate(iso?: string) { return toJalali(iso); }
+function formatMoney(v: string) { return fmtNum(v); }
 
 // ─── searchable comboboxes ──────────────────────────────────────────────────────
 

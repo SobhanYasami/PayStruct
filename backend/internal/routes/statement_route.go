@@ -9,7 +9,7 @@ import (
 // SetupStatementRoutes mounts status-statement endpoints.
 // Routes under /contracts/:contractId/... are scoped to a contract.
 // Routes under /statements/:id are flat operations on a single statement.
-func SetupStatementRoutes(router fiber.Router, h *handlers.StatementHandler, jwtSecret string) {
+func SetupStatementRoutes(router fiber.Router, h *handlers.StatementHandler, rh *handlers.ReportHandler, jwtSecret string) {
 	auth := middlewares.Authenticate(jwtSecret)
 
 	// Nested under contract
@@ -28,4 +28,5 @@ func SetupStatementRoutes(router fiber.Router, h *handlers.StatementHandler, jwt
 	stmts.Delete("/:id/deductions/:did", h.DeleteDeduction)
 	stmts.Patch("/:id/transition", h.Transition)
 	stmts.Delete("/:id", h.DeleteStatement)
+	stmts.Get("/:id/report", rh.StatementReport)
 }

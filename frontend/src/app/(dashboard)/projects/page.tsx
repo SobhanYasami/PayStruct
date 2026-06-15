@@ -22,6 +22,7 @@ import { ConfirmDialog } from "@/components/domain/ConfirmDialog";
 import { Sheet } from "@/components/ui/Sheet";
 import { DataTable } from "@/components/ui/DataTable";
 import { ApiError } from "@/lib/api/client";
+import { toJalali } from "@/lib/utils/date";
 
 const STATUS_TABS = [
 	{ key: "", label: "همه" },
@@ -403,7 +404,7 @@ export default function ProjectsPage() {
 						header: "شروع",
 						render: (r) => (
 							<span className='text-sm'>
-								{r.start_date?.slice(0, 10) ?? "—"}
+								{toJalali(r.start_date)}
 							</span>
 						),
 					},

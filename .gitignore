@@ -80,6 +80,9 @@ tmp/
 /storage/*
 !/storage/.gitkeep
 
+/knowledge-graph/
+
+
 # ==========================
 # Logs
 # ==========================
@@ -96,3 +99,10 @@ pnpm-debug.log*
 *.pem
 *.crt
 *.key
+
+
+
+# ===============
+# agents
+# ===============
+./claude/

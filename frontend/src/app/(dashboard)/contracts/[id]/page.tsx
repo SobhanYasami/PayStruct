@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Plus, Pencil, Trash2, FileUp, FileText, Image, Trash } from "lucide-react";
+import { ArrowRight, Plus, Pencil, Trash2, FileUp, FileText, Image, Trash, Download } from "lucide-react";
 import { PersianDatePicker } from "@/components/ui/PersianDatePicker";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -25,6 +25,7 @@ import { StatusBadge } from "@/components/domain/StatusBadge";
 import { Sheet } from "@/components/ui/Sheet";
 import { ConfirmDialog } from "@/components/domain/ConfirmDialog";
 import { ApiError } from "@/lib/api/client";
+import { toJalali, fmtNum, fmtPct } from "@/lib/utils/date";
 
 // ─── helpers ───────────────────────────────────────────────────────────────────
 
@@ -34,10 +35,8 @@ function bpsToPercent(bps: number): string {
 }
 
 function formatMoney(v: string | number | undefined, currency = "IRR"): string {
-  if (v === undefined || v === null || v === "") return "—";
-  const n = typeof v === "string" ? parseFloat(v) : v;
-  if (isNaN(n)) return "—";
-  return `${n.toLocaleString("fa-IR")} ${currency}`;
+  const s = fmtNum(v);
+  return s === "—" ? "—" : `${s} ${currency}`;
 }
 
 function totalLineItem(item: ContractLineItem): string {
@@ -139,6 +138,22 @@ export default function ContractDetailPage() {
     enabled: !!id,
   });
   const attachments: Attachment[] = Array.isArray(attachmentsRes?.data) ? attachmentsRes.data : [];
+
+  const handleStmtDownload = async (stmtId: string) => {
+    try {
+      const { blob, filename } = await statementsApi.downloadReport(stmtId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("خطا در دریافت گزارش");
+    }
+  };
 
   const invalidateItems = () => qc.invalidateQueries({ queryKey: ["line-items", id] });
   const invalidateStmts = () => qc.invalidateQueries({ queryKey: ["statements", id] });
@@ -277,8 +292,8 @@ export default function ContractDetailPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t pt-4">
           <Kpi label="ارزش ناخالص" value={formatMoney(contract.gross_budget, contract.currency)} mono />
-          <Kpi label="تاریخ شروع" value={contract.starts_on ? contract.starts_on.slice(0, 10) : "—"} />
-          <Kpi label="تاریخ پایان" value={contract.ends_on ? contract.ends_on.slice(0, 10) : "—"} />
+          <Kpi label="تاریخ شروع" value={toJalali(contract.starts_on)} />
+          <Kpi label="تاریخ پایان" value={toJalali(contract.ends_on)} />
           <Kpi label="ارز" value={contract.currency} />
         </div>
 
@@ -301,8 +316,8 @@ export default function ContractDetailPage() {
               <Row label="کد" value={project.code} mono />
               <Row label="وضعیت" value={<StatusBadge status={project.status} />} />
               <Row label="اولویت" value={project.priority} />
-              {project.start_date && <Row label="شروع" value={project.start_date.slice(0, 10)} />}
-              {project.end_date && <Row label="پایان" value={project.end_date.slice(0, 10)} />}
+              {project.start_date && <Row label="شروع" value={toJalali(project.start_date)} />}
+              {project.end_date && <Row label="پایان" value={toJalali(project.end_date)} />}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">در حال بارگذاری...</p>
@@ -438,6 +453,7 @@ export default function ContractDetailPage() {
                     <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-24">پیشرفت قبلی</th>
                     <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-24">پیشرفت کنونی</th>
                     <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-32">مبلغ خالص</th>
+                    <th className="w-14"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -448,18 +464,27 @@ export default function ContractDetailPage() {
                       className="border-b last:border-0 hover:bg-muted/20 transition cursor-pointer"
                     >
                       <td className="px-4 py-3 text-muted-foreground font-mono">{s.sequence_no}</td>
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {s.period_start.slice(0, 10)} — {s.period_end.slice(0, 10)}
+                      <td className="px-4 py-3 text-xs">
+                        {toJalali(s.period_start)} — {toJalali(s.period_end)}
                       </td>
                       <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
                       <td className="px-4 py-3 font-mono">
-                        {s.prev_progress_pct ? `${parseFloat(s.prev_progress_pct).toFixed(1)}٪` : "—"}
+                        {fmtPct(s.prev_progress_pct)}
                       </td>
                       <td className="px-4 py-3 font-mono">
-                        {s.progress_pct ? `${parseFloat(s.progress_pct).toFixed(1)}٪` : "—"}
+                        {fmtPct(s.progress_pct)}
                       </td>
                       <td className="px-4 py-3 font-mono text-money-in">
                         {parseFloat(s.net_amount).toLocaleString("fa-IR")}
+                      </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => handleStmtDownload(s.id)}
+                          title="دریافت گزارش Excel"
+                          className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition"
+                        >
+                          <Download size={14} />
+                        </button>
                       </td>
                     </tr>
                   ))}

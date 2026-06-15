@@ -15,6 +15,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { FinancialSummary } from "@/components/domain/FinancialSummary";
 import { bpsToPercent, formatMoney } from "@/lib/utils/money";
 import Link from "next/link";
+import { toJalali } from "@/lib/utils/date";
 
 type Tab = "statements" | "lineitems" | "info";
 
@@ -129,7 +130,7 @@ export default function ContractDetailPage() {
                 header: "دوره",
                 render: (r) => (
                   <span className="text-sm">
-                    {r.period_start?.slice(0, 10)} تا {r.period_end?.slice(0, 10)}
+                    {toJalali(r.period_start)} تا {toJalali(r.period_end)}
                   </span>
                 ),
               },
@@ -150,7 +151,7 @@ export default function ContractDetailPage() {
               {
                 key: "issued_on",
                 header: "تاریخ صدور",
-                render: (r) => <span className="text-sm">{r.issued_on?.slice(0, 10)}</span>,
+                render: (r) => <span className="text-sm">{toJalali(r.issued_on)}</span>,
               },
             ]}
             data={statements}
@@ -185,8 +186,8 @@ export default function ContractDetailPage() {
       {tab === "info" && (
         <div className="bg-white border rounded-xl p-6 space-y-4 text-sm">
           <InfoRow label="شرح" value={contract.description ?? "—"} />
-          <InfoRow label="تاریخ شروع" value={contract.starts_on?.slice(0, 10) ?? "—"} />
-          <InfoRow label="تاریخ پایان" value={contract.ends_on?.slice(0, 10) ?? "—"} />
+          <InfoRow label="تاریخ شروع" value={toJalali(contract.starts_on)} />
+          <InfoRow label="تاریخ پایان" value={toJalali(contract.ends_on)} />
           <InfoRow label="بیمه تأمین اجتماعی" value={bpsToPercent(contract.social_security_pct_bps)} />
         </div>
       )}

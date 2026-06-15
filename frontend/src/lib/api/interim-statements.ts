@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import { useAuthStore } from "@/lib/stores/auth";
 
 export interface InterimStatement {
   id: string;
@@ -175,4 +176,17 @@ export const statementsApi = {
 
   delete: (id: string) =>
     apiFetch<void>(`/statements/${id}`, { method: "DELETE" }),
+
+  downloadReport: async (id: string): Promise<{ blob: Blob; filename: string }> => {
+    const token = useAuthStore.getState().token;
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1";
+    const res = await fetch(`${base}/statements/${id}/report`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error("خطا در دریافت گزارش");
+    const blob = await res.blob();
+    const cd = res.headers.get("Content-Disposition") ?? "";
+    const match = cd.match(/filename="?([^";\n]+)"?/);
+    return { blob, filename: match?.[1] ?? `statement-${id}.xlsx` };
+  },
 };

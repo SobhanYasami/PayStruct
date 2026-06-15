@@ -15,6 +15,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { DataTable } from "@/components/ui/DataTable";
 import { formatMoney } from "@/lib/utils/money";
 import Link from "next/link";
+import { toJalali } from "@/lib/utils/date";
 
 type Tab = "contracts" | "info";
 
@@ -151,7 +152,7 @@ export default function ProjectDetailPage() {
               {
                 key: "starts_on",
                 header: "شروع",
-                render: (r) => <span className="text-sm">{r.starts_on?.slice(0, 10) ?? "—"}</span>,
+                render: (r) => <span className="text-sm">{toJalali(r.starts_on)}</span>,
               },
             ]}
             data={contracts}
@@ -170,8 +171,8 @@ export default function ProjectDetailPage() {
           <InfoRow label="دسته‌بندی" value={project.category ?? "—"} />
           <InfoRow label="اولویت" value={project.priority} />
           <InfoRow label="بودجه تخمینی" value={project.budget_estimate ? `${project.budget_estimate} ${project.currency}` : "—"} />
-          <InfoRow label="تاریخ شروع" value={project.start_date?.slice(0, 10) ?? "—"} />
-          <InfoRow label="تاریخ پایان" value={project.end_date?.slice(0, 10) ?? "—"} />
+          <InfoRow label="تاریخ شروع" value={toJalali(project.start_date)} />
+          <InfoRow label="تاریخ پایان" value={toJalali(project.end_date)} />
         </div>
       )}
 
