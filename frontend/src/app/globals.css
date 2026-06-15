@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 @theme inline {
@@ -11,13 +11,15 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* ContractLedger design tokens */
+  /* Core palette */
   --color-primary: oklch(27% 0.07 230);
   --color-primary-foreground: oklch(98% 0 0);
   --color-accent: oklch(55% 0.15 175);
   --color-saffron: oklch(72% 0.16 72);
   --color-money-in: oklch(40% 0.12 170);
   --color-money-out: oklch(42% 0.18 25);
+
+  /* Status colors */
   --color-status-draft: oklch(50% 0 0);
   --color-status-submitted: oklch(55% 0.12 240);
   --color-status-finance: oklch(60% 0.15 60);
@@ -26,30 +28,79 @@
   --color-status-approved: oklch(50% 0.15 155);
   --color-status-rejected: oklch(45% 0.20 25);
 
-  /* shadcn CSS variables */
-  --color-border: oklch(90% 0 0);
-  --color-input: oklch(90% 0 0);
+  /* shadcn tokens */
+  --color-border: oklch(91% 0 0);
+  --color-input: oklch(91% 0 0);
   --color-ring: oklch(27% 0.07 230);
   --color-card: oklch(100% 0 0);
   --color-card-foreground: oklch(10% 0 0);
-  --color-muted: oklch(95% 0 0);
-  --color-muted-foreground: oklch(50% 0 0);
+  --color-muted: oklch(96% 0 0);
+  --color-muted-foreground: oklch(52% 0 0);
   --radius: 0.5rem;
+
+  /* Animations */
+  --animate-sheet-enter: sheet-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-sheet-exit: sheet-exit 180ms ease-in forwards;
+  --animate-overlay-enter: overlay-enter 180ms ease forwards;
+  --animate-overlay-exit: overlay-exit 140ms ease forwards;
+  --animate-dialog-in: dialog-scale-in 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-dialog-out: dialog-scale-out 140ms ease-in forwards;
+  --animate-fade-up: fade-up 200ms ease forwards;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f1117;
-    --foreground: #ededed;
-  }
+@keyframes sheet-enter {
+  from { transform: translateX(100%); opacity: 0.6; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
+@keyframes sheet-exit {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+@keyframes overlay-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes overlay-exit {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes dialog-scale-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.95); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes dialog-scale-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, -48%) scale(0.95); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: oklch(82% 0 0); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(68% 0 0); }
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid oklch(27% 0.07 230);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Font inheritance */
+input, select, textarea, button { font-family: inherit; }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans, Arial, sans-serif);
+  -webkit-font-smoothing: antialiased;
 }
 
-* {
-  border-color: var(--color-border);
-}
+* { border-color: var(--color-border); }
+
+/* Smooth transitions for interactive elements */
+a, button { transition-property: color, background-color, border-color, opacity, box-shadow; transition-duration: 150ms; }

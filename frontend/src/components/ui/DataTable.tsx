@@ -24,79 +24,74 @@ export function DataTable<T>({
   onRowClick,
   keyExtractor,
 }: Props<T>) {
-  if (isLoading) {
-    return (
-      <div className="rounded-xl border bg-white overflow-hidden">
+  return (
+    <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
+          <thead>
+            <tr className="bg-muted/60 border-b">
               {columns.map((col) => (
-                <th key={col.key} className="px-4 py-3 text-right font-medium text-muted-foreground">
+                <th
+                  key={col.key}
+                  className={cn(
+                    "px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap",
+                    col.className
+                  )}
+                >
                   {col.header}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <tr key={i} className="border-t">
-                {columns.map((col) => (
-                  <td key={col.key} className="px-4 py-3">
-                    <div className="h-4 bg-muted animate-pulse rounded" />
-                  </td>
-                ))}
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-t border-muted/50">
+                  {columns.map((col) => (
+                    <td key={col.key} className="px-4 py-3.5">
+                      <div
+                        className="h-3.5 bg-muted animate-pulse rounded-md"
+                        style={{ width: `${55 + ((i * 17 + col.key.length * 7) % 35)}%` }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : data.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-30">
+                      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
+                    </svg>
+                    <p className="text-sm">{emptyMessage}</p>
+                  </div>
+                </td>
               </tr>
-            ))}
+            ) : (
+              data.map((row, ri) => (
+                <tr
+                  key={keyExtractor(row)}
+                  className={cn(
+                    "border-t border-muted/50 transition-colors",
+                    onRowClick && "cursor-pointer hover:bg-primary/3",
+                    ri % 2 === 1 && "bg-muted/20"
+                  )}
+                  onClick={() => onRowClick?.(row)}
+                >
+                  {columns.map((col) => (
+                    <td key={col.key} className={cn("px-4 py-3", col.className)}>
+                      {col.render
+                        ? col.render(row)
+                        : String((row as Record<string, unknown>)[col.key] ?? "—")}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
-    );
-  }
-
-  return (
-    <div className="rounded-xl border bg-white overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-muted/50">
-          <tr>
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className={cn("px-4 py-3 text-right font-medium text-muted-foreground", col.className)}
-              >
-                {col.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            data.map((row) => (
-              <tr
-                key={keyExtractor(row)}
-                className={cn(
-                  "border-t hover:bg-muted/30 transition-colors",
-                  onRowClick && "cursor-pointer"
-                )}
-                onClick={() => onRowClick?.(row)}
-              >
-                {columns.map((col) => (
-                  <td key={col.key} className={cn("px-4 py-3", col.className)}>
-                    {col.render
-                      ? col.render(row)
-                      : String((row as Record<string, unknown>)[col.key] ?? "—")}
-                  </td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
     </div>
   );
 }
