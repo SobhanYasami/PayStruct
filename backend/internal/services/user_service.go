@@ -516,8 +516,13 @@ func employeeToResponse(e *model.Employee) *EmployeeResponse {
 }
 
 func dbErr(err error) *ServiceError {
-	if errors.Is(err, gorm.ErrDuplicatedKey) {
+	switch {
+	case errors.Is(err, gorm.ErrDuplicatedKey):
 		return &ServiceError{Message: "Record already exists", Code: 409}
+	case errors.Is(err, gorm.ErrForeignKeyViolated):
+		return &ServiceError{Message: "Referenced record not found", Code: 422}
+	case errors.Is(err, gorm.ErrCheckConstraintViolated):
+		return &ServiceError{Message: "Value out of allowed range", Code: 422}
 	}
 	return &ServiceError{Message: "Database error", Code: 500, Details: err.Error()}
 }

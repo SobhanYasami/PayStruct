@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/employees";
 import { companiesApi } from "@/lib/api/companies";
 import { ConfirmDialog } from "@/components/domain/ConfirmDialog";
+import { CompanyCombobox } from "@/components/domain/CompanyCombobox";
 import { Sheet } from "@/components/ui/Sheet";
 import { DataTable } from "@/components/ui/DataTable";
 import { useAuthStore } from "@/lib/stores/auth";
@@ -77,106 +78,6 @@ const editSchema = z.object({
 type CreateFormData = z.infer<typeof createSchema>;
 type EditFormData = z.infer<typeof editSchema>;
 
-// Searchable company combobox
-function CompanyCombobox({
-	value,
-	onChange,
-}: {
-	value: string | undefined;
-	onChange: (id: string | undefined) => void;
-}) {
-	const [query, setQuery] = useState("");
-	const [open, setOpen] = useState(false);
-	const [selectedLabel, setSelectedLabel] = useState("");
-	const [debouncedQuery, setDebouncedQuery] = useState("");
-	const containerRef = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		const t = setTimeout(() => setDebouncedQuery(query), 300);
-		return () => clearTimeout(t);
-	}, [query]);
-
-	const { data, isFetching } = useQuery({
-		queryKey: ["companies-search", debouncedQuery],
-		queryFn: () => companiesApi.list(1, 30, debouncedQuery),
-		enabled: open,
-		staleTime: 10_000,
-	});
-
-	const results = data?.data?.data ?? [];
-
-	useEffect(() => {
-		function handler(e: MouseEvent) {
-			if (
-				containerRef.current &&
-				!containerRef.current.contains(e.target as Node)
-			) {
-				setOpen(false);
-			}
-		}
-		document.addEventListener("mousedown", handler);
-		return () => document.removeEventListener("mousedown", handler);
-	}, []);
-
-	const displayValue = value ? selectedLabel || value.slice(0, 8) + "…" : query;
-
-	return (
-		<div
-			ref={containerRef}
-			className='relative'
-		>
-			<input
-				value={displayValue}
-				onChange={(e) => {
-					setQuery(e.target.value);
-					if (value) {
-						onChange(undefined);
-						setSelectedLabel("");
-					}
-					setOpen(true);
-				}}
-				onFocus={() => setOpen(true)}
-				placeholder='جستجوی شرکت...'
-				className={inputCls}
-				dir='rtl'
-				autoComplete='off'
-			/>
-			{open && (
-				<div className='absolute z-50 w-full bg-white border border-border rounded-lg shadow-lg mt-1 max-h-52 overflow-y-auto'>
-					{isFetching && (
-						<p className='px-3 py-2 text-xs text-muted-foreground'>
-							در حال جستجو...
-						</p>
-					)}
-					{!isFetching && results.length === 0 && (
-						<p className='px-3 py-2 text-xs text-muted-foreground'>
-							نتیجه‌ای یافت نشد
-						</p>
-					)}
-					{results.map((c) => (
-						<button
-							key={c.id}
-							type='button'
-							onClick={() => {
-								onChange(c.id);
-								setSelectedLabel(c.name);
-								setQuery("");
-								setOpen(false);
-							}}
-							className={`w-full text-right px-3 py-2 text-sm hover:bg-primary/5 flex items-center justify-between gap-2 ${value === c.id ? "bg-primary/10 font-medium" : ""}`}
-						>
-							<span>{c.name}</span>
-							<span className='font-mono text-xs text-muted-foreground'>
-								{c.reg_num}
-							</span>
-						</button>
-					))}
-				</div>
-			)}
-		</div>
-	);
-}
-
 function RolePicker({
 	value,
 	onChange,
@@ -238,6 +139,7 @@ export default function EmployeesPage() {
 	const { user } = useAuthStore();
 	const qc = useQueryClient();
 	const [page, setPage] = useState(1);
+	const [companyFilter, setCompanyFilter] = useState<string | undefined>(undefined);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<Employee | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -249,8 +151,8 @@ export default function EmployeesPage() {
 	const canWrite = isSuperAdmin || isManager;
 
 	const { data, isLoading } = useQuery({
-		queryKey: ["employees", page],
-		queryFn: () => employeesApi.list(page, 20),
+		queryKey: ["employees", page, companyFilter],
+		queryFn: () => employeesApi.list(page, 20, isSuperAdmin ? companyFilter : undefined),
 		enabled: !!(isSuperAdmin || isHead),
 	});
 
@@ -388,24 +290,34 @@ export default function EmployeesPage() {
 
 	return (
 		<div className='space-y-6'>
-			<div className='flex items-center justify-between'>
+			<div className='flex items-center justify-between flex-wrap gap-3'>
 				<h1 className='text-2xl font-bold text-primary'>کارمندان</h1>
-				{canWrite && (
-					<button
-						onClick={() => {
-							createForm.reset({
-								company_id: user?.companyId ?? "",
-								employment_type: "official",
-								roles: [],
-							});
-							setCreateOpen(true);
-						}}
-						className='flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition'
-					>
-						<Plus size={16} />
-						کارمند جدید
-					</button>
-				)}
+				<div className='flex gap-3 flex-wrap'>
+					{isSuperAdmin && (
+						<div className='w-52'>
+							<CompanyCombobox
+								value={companyFilter}
+								onChange={(id) => { setCompanyFilter(id); setPage(1); }}
+							/>
+						</div>
+					)}
+					{canWrite && (
+						<button
+							onClick={() => {
+								createForm.reset({
+									company_id: user?.companyId ?? "",
+									employment_type: "official",
+									roles: [],
+								});
+								setCreateOpen(true);
+							}}
+							className='flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition'
+						>
+							<Plus size={16} />
+							کارمند جدید
+						</button>
+					)}
+				</div>
 			</div>
 
 			<DataTable

@@ -2,38 +2,18 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Plus } from "lucide-react";
 import { projectsApi } from "@/lib/api/projects";
-import { contractsApi, type CreateContractReq } from "@/lib/api/contracts";
-import { contractorsApi } from "@/lib/api/contractors";
+import { contractsApi } from "@/lib/api/contracts";
 import { StatusBadge } from "@/components/domain/StatusBadge";
-import { Sheet } from "@/components/ui/Sheet";
+import { CreateContractSheet } from "@/components/domain/CreateContractSheet";
 import { DataTable } from "@/components/ui/DataTable";
 import { formatMoney } from "@/lib/utils/money";
 import Link from "next/link";
 import { toJalali } from "@/lib/utils/date";
 
 type Tab = "contracts" | "info";
-
-const contractSchema = z.object({
-  contractor_id: z.string().min(1, "پیمانکار الزامی است"),
-  contract_no: z.string().min(1, "شماره قرارداد الزامی است"),
-  title: z.string().min(1, "عنوان الزامی است"),
-  type: z.string().optional(),
-  contract_value: z.string().optional(),
-  currency: z.string().optional(),
-  retention_pct_bps: z.number().optional(),
-  advance_pct_bps: z.number().optional(),
-  vat_pct_bps: z.number().optional(),
-  social_security_pct_bps: z.number().optional(),
-  starts_on: z.string().optional(),
-  ends_on: z.string().optional(),
-});
-type ContractForm = z.infer<typeof contractSchema>;
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -52,32 +32,8 @@ export default function ProjectDetailPage() {
     queryFn: () => contractsApi.list(1, 100, id),
   });
 
-  const { data: contractorsRes } = useQuery({
-    queryKey: ["contractors"],
-    queryFn: () => contractorsApi.list(1, 100),
-  });
-
   const project = projectRes?.data;
   const contracts = contractsRes?.data?.data ?? [];
-  const contractors = contractorsRes?.data?.data ?? [];
-
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ContractForm>({
-    resolver: zodResolver(contractSchema),
-    defaultValues: { currency: "IRR", type: "lump_sum" },
-  });
-
-  const createContract = useMutation({
-    mutationFn: (req: CreateContractReq) => contractsApi.create(req),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["contracts", id] });
-      setSheetOpen(false);
-      reset();
-    },
-  });
-
-  const onSubmit = (data: ContractForm) => {
-    createContract.mutate({ ...data, project_id: id });
-  };
 
   if (loadingProject) {
     return <div className="text-muted-foreground text-sm p-6">در حال بارگذاری...</div>;
@@ -90,7 +46,7 @@ export default function ProjectDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/dashboard/projects" className="text-muted-foreground hover:text-foreground transition">
+        <Link href="/projects" className="text-muted-foreground hover:text-foreground transition">
           <ArrowRight size={18} />
         </Link>
         <div>
@@ -158,7 +114,7 @@ export default function ProjectDetailPage() {
             data={contracts}
             isLoading={loadingContracts}
             keyExtractor={(r) => r.id}
-            onRowClick={(r) => router.push(`/dashboard/projects/${id}/contracts/${r.id}`)}
+            onRowClick={(r) => router.push(`/projects/${id}/contracts/${r.id}`)}
             emptyMessage="قراردادی یافت نشد"
           />
         </div>
@@ -176,83 +132,12 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      <Sheet open={sheetOpen} onClose={() => { setSheetOpen(false); reset(); }} title="قرارداد جدید">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Field label="پیمانکار" error={errors.contractor_id?.message}>
-            <select {...register("contractor_id")} className={inputCls}>
-              <option value="">انتخاب کنید</option>
-              {contractors.map((c) => (
-                <option key={c.id} value={c.id}>{c.display_name}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="شماره قرارداد" error={errors.contract_no?.message}>
-            <input {...register("contract_no")} className={inputCls} dir="ltr" placeholder="C-001" />
-          </Field>
-          <Field label="عنوان" error={errors.title?.message}>
-            <input {...register("title")} className={inputCls} />
-          </Field>
-          <Field label="نوع قرارداد">
-            <select {...register("type")} className={inputCls}>
-              <option value="lump_sum">مقطوع</option>
-              <option value="unit_rate">واحد بها</option>
-              <option value="cost_plus">هزینه به‌علاوه</option>
-              <option value="time_material">زمان و مواد</option>
-            </select>
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="ارزش قرارداد">
-              <input {...register("contract_value")} className={inputCls} dir="ltr" placeholder="0" />
-            </Field>
-            <Field label="ارز">
-              <input {...register("currency")} className={inputCls} dir="ltr" maxLength={3} />
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="حسن انجام کار (bps)">
-              <input {...register("retention_pct_bps")} type="number" className={inputCls} dir="ltr" defaultValue={0} />
-            </Field>
-            <Field label="پیش‌پرداخت (bps)">
-              <input {...register("advance_pct_bps")} type="number" className={inputCls} dir="ltr" defaultValue={0} />
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="ارزش افزوده (bps)">
-              <input {...register("vat_pct_bps")} type="number" className={inputCls} dir="ltr" defaultValue={0} />
-            </Field>
-            <Field label="بیمه (bps)">
-              <input {...register("social_security_pct_bps")} type="number" className={inputCls} dir="ltr" defaultValue={0} />
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="تاریخ شروع">
-              <input {...register("starts_on")} type="date" className={inputCls} dir="ltr" />
-            </Field>
-            <Field label="تاریخ پایان">
-              <input {...register("ends_on")} type="date" className={inputCls} dir="ltr" />
-            </Field>
-          </div>
-          <button
-            type="submit"
-            disabled={createContract.isPending}
-            className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition"
-          >
-            {createContract.isPending ? "در حال ذخیره..." : "ذخیره"}
-          </button>
-        </form>
-      </Sheet>
-    </div>
-  );
-}
-
-const inputCls = "w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary";
-
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium mb-1">{label}</label>
-      {children}
-      {error && <p className="text-xs text-status-rejected mt-1">{error}</p>}
+      <CreateContractSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        defaultProjectId={id}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ["contracts", id] })}
+      />
     </div>
   );
 }
@@ -260,7 +145,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-6">
-      <span className="text-sm text-muted-foreground w-36 flex-shrink-0">{label}</span>
+      <span className="text-sm text-muted-foreground w-36 shrink-0">{label}</span>
       <span className="text-sm">{value}</span>
     </div>
   );

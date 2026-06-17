@@ -1,0 +1,218 @@
+{
+  "main": {
+    "id": "35e301eaa06e6778",
+    "type": "split",
+    "children": [
+      {
+        "id": "fe8371240cc0ad9e",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f87039ced2b9219e",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "99a6820369981f0e",
+    "type": "split",
+    "children": [
+      {
+        "id": "79720df4b0616c81",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "af60096fd4265c64",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "9a7adc7e5ee4aafc",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "2cad9c042dd5a596",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200
+  },
+  "right": {
+    "id": "54cae15770d64cc6",
+    "type": "split",
+    "children": [
+      {
+        "id": "7795f860fcda0bde",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "931b579e0586e5c9",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "629908901bbefefb",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "f00294707bde114f",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "a27da84ce2258ac0",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "55e36915993cebc4",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "f87039ced2b9219e",
+  "lastOpenFiles": [
+    "models/Project.md",
+    "frontend/State Management.md",
+    "frontend/API Layer.md",
+    "frontend/Components.md",
+    "frontend/Pages.md",
+    "frontend/Frontend Overview.md",
+    "backend/Attachment Service.md",
+    "backend/Attachment Service.md.tmp.172821.937a6637c0f8",
+    "backend/Auth & JWT.md",
+    "backend/Backend Overview.md",
+    "flows/Contract Creation.md",
+    "flows/Contract Creation.md.tmp.172821.1374d3570d88",
+    "flows/Report Generation.md",
+    "flows/Report Generation.md.tmp.172821.a8bad0e3916b",
+    "flows/Financial Calculations.md",
+    "flows/Financial Calculations.md.tmp.172821.0def4459c82c",
+    "flows/Statement Approval Workflow.md",
+    "models/Attachment.md",
+    "models/Attachment.md.tmp.172821.359f31e34d1a",
+    "models/ApprovalEvent.md",
+    "models/ApprovalEvent.md.tmp.172821.df470332b262",
+    "models/InterimStatement.md",
+    "models/Contract.md",
+    "models/Contract.md.tmp.172821.d3dc633047b9",
+    "Welcome.md",
+    "models/Contractor.md",
+    "models/Employee.md",
+    "models/Employee.md.tmp.172821.ff1dd8a6f17e",
+    "models/Company.md",
+    "models/Company.md.tmp.172821.05780f1f2e6d",
+    "RBAC.md",
+    "RBAC.md.tmp.172821.29b241a96e03",
+    "API Routes.md",
+    "Data Model.md",
+    "Architecture.md",
+    "00 - Index.md"
+  ]
+}

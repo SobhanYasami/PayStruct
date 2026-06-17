@@ -207,6 +207,11 @@ func (h *UserHandler) GetAllEmployee(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse(InternalError, "Failed to resolve scope"))
 	}
+	if ids == nil {
+		if cid := c.Query("company_id"); cid != "" {
+			ids = []string{cid}
+		}
+	}
 
 	resp, err := h.userService.GetEmployees(c.Context(), ids, page, limit)
 	if err != nil {

@@ -64,7 +64,7 @@ type Contract struct {
 	ContractNo  string       `gorm:"size:64;not null;uniqueIndex:idx_contracts_company_no" json:"contract_no"`
 	Title       string       `gorm:"size:255;not null" json:"title"`
 	Description string       `gorm:"type:text" json:"description,omitempty"`
-	Type        ContractType `gorm:"type:varchar(24);not null;default:'lump_sum';check:type IN ('lump_sum','unit_rate','cost_plus','time_material')" json:"type"`
+	Type        ContractType `gorm:"type:varchar(32);not null;default:'lump_sum';check:type IN ('lump_sum','unit_rate','cost_plus','time_material','construction_management','design_bid_build','design_build','labor_only','turnkey','percentage')" json:"type"`
 
 	Status      ContractStatus  `gorm:"type:varchar(16);not null;default:'draft';index;check:status IN ('draft','signed','active','closed','cancelled')" json:"status"`
 	GrossBudget decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"gross_budget"`

@@ -206,7 +206,11 @@ func (h *ContractorHandler) ListContractors(c *fiber.Ctx) error {
 
 	callerCompanyID := claims.CompanyID
 	if slices.Contains(claims.Roles, "admin") || slices.Contains(claims.Roles, "sudoer") {
-		callerCompanyID = ""
+		if cid := c.Query("company_id"); cid != "" {
+			callerCompanyID = cid
+		} else {
+			callerCompanyID = ""
+		}
 	}
 
 	contractors, total, err := h.svc.List(c.Context(), callerCompanyID, search, page, limit)

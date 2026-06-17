@@ -35,7 +35,7 @@ const (
 )
 
 func init() {
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load("../.env"); err != nil {
 		log.Printf("Warning: Could not load .env file: %v", err)
 	}
 }

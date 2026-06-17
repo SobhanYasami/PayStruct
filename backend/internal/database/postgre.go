@@ -68,8 +68,9 @@ func Connect() (*gorm.DB, error) {
 	for i := 0; i < defaultMaxRetries; i++ {
 		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 			Logger:                                   logger.Default.LogMode(logger.Silent),
-			DisableForeignKeyConstraintWhenMigrating: true, // break the cycle
-			PrepareStmt:                              true, // free perf win for the rest of the app
+			DisableForeignKeyConstraintWhenMigrating: true,
+			PrepareStmt:                              true,
+			TranslateError:                           true, // map PG error codes → gorm sentinel errors
 		})
 
 		if err == nil {

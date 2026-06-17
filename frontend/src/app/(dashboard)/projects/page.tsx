@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -15,10 +15,10 @@ import {
 	type CreateProjectReq,
 	type UpdateProjectReq,
 } from "@/lib/api/projects";
-import { companiesApi } from "@/lib/api/companies";
 import { useAuthStore } from "@/lib/stores/auth";
 import { StatusBadge } from "@/components/domain/StatusBadge";
 import { ConfirmDialog } from "@/components/domain/ConfirmDialog";
+import { CompanyCombobox } from "@/components/domain/CompanyCombobox";
 import { Sheet } from "@/components/ui/Sheet";
 import { DataTable } from "@/components/ui/DataTable";
 import { ApiError } from "@/lib/api/client";
@@ -72,103 +72,6 @@ const editSchema = z.object({
 type CreateFormData = z.infer<typeof createSchema>;
 type EditFormData = z.infer<typeof editSchema>;
 
-function CompanyCombobox({
-	value,
-	onChange,
-}: {
-	value: string | undefined;
-	onChange: (id: string | undefined) => void;
-}) {
-	const [query, setQuery] = useState("");
-	const [open, setOpen] = useState(false);
-	const [selectedLabel, setSelectedLabel] = useState("");
-	const [debouncedQuery, setDebouncedQuery] = useState("");
-	const containerRef = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		const t = setTimeout(() => setDebouncedQuery(query), 300);
-		return () => clearTimeout(t);
-	}, [query]);
-
-	const { data, isFetching } = useQuery({
-		queryKey: ["companies-search", debouncedQuery],
-		queryFn: () => companiesApi.list(1, 30, debouncedQuery),
-		enabled: open,
-		staleTime: 10_000,
-	});
-
-	const results = data?.data?.data ?? [];
-
-	useEffect(() => {
-		function handler(e: MouseEvent) {
-			if (
-				containerRef.current &&
-				!containerRef.current.contains(e.target as Node)
-			) {
-				setOpen(false);
-			}
-		}
-		document.addEventListener("mousedown", handler);
-		return () => document.removeEventListener("mousedown", handler);
-	}, []);
-
-	return (
-		<div
-			ref={containerRef}
-			className='relative'
-		>
-			<input
-				value={value ? selectedLabel || value.slice(0, 8) + "…" : query}
-				onChange={(e) => {
-					setQuery(e.target.value);
-					if (value) {
-						onChange(undefined);
-						setSelectedLabel("");
-					}
-					setOpen(true);
-				}}
-				onFocus={() => setOpen(true)}
-				placeholder='جستجوی شرکت...'
-				className={inputCls}
-				dir='rtl'
-				autoComplete='off'
-			/>
-			{open && (
-				<div className='absolute z-50 w-full bg-white border border-border rounded-lg shadow-lg mt-1 max-h-52 overflow-y-auto'>
-					{isFetching && (
-						<p className='px-3 py-2 text-xs text-muted-foreground'>
-							در حال جستجو...
-						</p>
-					)}
-					{!isFetching && results.length === 0 && (
-						<p className='px-3 py-2 text-xs text-muted-foreground'>
-							نتیجه‌ای یافت نشد
-						</p>
-					)}
-					{results.map((c) => (
-						<button
-							key={c.id}
-							type='button'
-							onClick={() => {
-								onChange(c.id);
-								setSelectedLabel(c.name);
-								setQuery("");
-								setOpen(false);
-							}}
-							className={`w-full text-right px-3 py-2 text-sm hover:bg-primary/5 flex items-center justify-between gap-2 ${value === c.id ? "bg-primary/10 font-medium" : ""}`}
-						>
-							<span>{c.name}</span>
-							<span className='font-mono text-xs text-muted-foreground'>
-								{c.reg_num}
-							</span>
-						</button>
-					))}
-				</div>
-			)}
-		</div>
-	);
-}
-
 const WRITE_ROLES = ["manager", "engineering_head", "sudoer", "admin"];
 
 export default function ProjectsPage() {
@@ -178,14 +81,15 @@ export default function ProjectsPage() {
 	const canWrite = user?.roles?.some((r) => WRITE_ROLES.includes(r)) ?? false;
 	const isSuperAdmin = user?.roles?.some((r) => ["sudoer", "admin"].includes(r)) ?? false;
 	const [statusFilter, setStatusFilter] = useState("");
+	const [companyFilter, setCompanyFilter] = useState<string | undefined>(undefined);
 	const [page, setPage] = useState(1);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<Project | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
 	const { data, isLoading } = useQuery({
-		queryKey: ["projects", statusFilter, page],
-		queryFn: () => projectsApi.list(page, 20, statusFilter || undefined),
+		queryKey: ["projects", statusFilter, companyFilter, page],
+		queryFn: () => projectsApi.list(page, 20, statusFilter || undefined, undefined, companyFilter),
 	});
 
 	const projects = data?.data?.data ?? [];
@@ -252,6 +156,19 @@ export default function ProjectsPage() {
 		onError: (e) =>
 			toast.error(
 				e instanceof ApiError ? e.detail || e.title : "خطا در حذف پروژه",
+			),
+	});
+
+	const statusMutation = useMutation({
+		mutationFn: ({ id, status }: { id: string; status: string }) =>
+			projectsApi.update(id, { status }),
+		onSuccess: () => {
+			invalidate();
+			toast.success("وضعیت پروژه به‌روز شد");
+		},
+		onError: (e) =>
+			toast.error(
+				e instanceof ApiError ? e.detail || e.title : "خطا در تغییر وضعیت",
 			),
 	});
 
@@ -330,6 +247,15 @@ export default function ProjectsPage() {
 					</button>
 				)}
 			</div>
+
+			{isSuperAdmin && (
+				<div className='w-64'>
+					<CompanyCombobox
+						value={companyFilter}
+						onChange={(id) => { setCompanyFilter(id); setPage(1); }}
+					/>
+				</div>
+			)}
 
 			<div className='flex gap-2 flex-wrap'>
 				{STATUS_TABS.map(({ key, label }) => (
@@ -414,22 +340,30 @@ export default function ProjectsPage() {
 									key: "actions",
 									header: "",
 									render: (r: Project) => (
-										<div className='flex gap-2'>
+										<div className='flex gap-2 items-center' onClick={(e) => e.stopPropagation()}>
+											<select
+												value={r.status}
+												onChange={(e) =>
+													statusMutation.mutate({ id: r.id, status: e.target.value })
+												}
+												disabled={statusMutation.isPending}
+												className='text-xs border rounded-md px-1.5 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50'
+											>
+												<option value="planning">برنامه‌ریزی</option>
+												<option value="active">فعال</option>
+												<option value="on_hold">متوقف</option>
+												<option value="completed">تکمیل شده</option>
+												<option value="cancelled">لغو شده</option>
+											</select>
 											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													openEdit(r);
-												}}
+												onClick={() => openEdit(r)}
 												className='text-xs text-primary hover:bg-slate-200 rounded-md px-1 py-0.5 flex items-center gap-1'
 											>
 												<Pencil size={12} />
 												ویرایش
 											</button>
 											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													setDeleteTarget(r.id);
-												}}
+												onClick={() => setDeleteTarget(r.id)}
 												className='text-xs bg-red-600 px-2 py-0.5 rounded-md text-white hover:bg-red-700'
 											>
 												حذف
@@ -531,11 +465,12 @@ export default function ProjectsPage() {
 					</Field>
 
 					<Field label='فاز پروژه'>
-						<input
-							{...createForm.register("phase")}
-							className={inputCls}
-							placeholder='مثلاً: مطالعه، طراحی، اجرا...'
-						/>
+						<select {...createForm.register("phase")} className={inputCls}>
+							<option value="">انتخاب کنید</option>
+							{[0, 1, 2, 3, 4].map((n) => (
+								<option key={n} value={String(n)}>{n}</option>
+							))}
+						</select>
 					</Field>
 
 					<Field label='توضیحات'>
@@ -639,11 +574,12 @@ export default function ProjectsPage() {
 					</Field>
 
 					<Field label='فاز پروژه'>
-						<input
-							{...editForm.register("phase")}
-							className={inputCls}
-							placeholder='مثلاً: مطالعه، طراحی، اجرا...'
-						/>
+						<select {...editForm.register("phase")} className={inputCls}>
+							<option value="">انتخاب کنید</option>
+							{[0, 1, 2, 3, 4].map((n) => (
+								<option key={n} value={String(n)}>{n}</option>
+							))}
+						</select>
 					</Field>
 
 					<Field label='دسته‌بندی'>

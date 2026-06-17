@@ -8,7 +8,7 @@ export interface Contract {
   contract_no: string;
   title: string;
   description?: string;
-  type: "lump_sum" | "unit_rate" | "cost_plus" | "time_material";
+  type: "lump_sum" | "unit_rate" | "cost_plus" | "time_material" | "construction_management" | "design_bid_build" | "design_build" | "labor_only" | "turnkey" | "percentage";
   status: string;
   gross_budget: string;
   currency: string;
@@ -100,9 +100,9 @@ interface Envelope<T> { status: string; data: T; message: string }
 interface ListPayload<T> { data: T[]; total: number; page: number; limit: number }
 
 export const contractsApi = {
-  list: (page = 1, limit = 20, projectId?: string, search?: string) =>
+  list: (page = 1, limit = 20, projectId?: string, search?: string, companyId?: string) =>
     apiFetch<Envelope<ListPayload<Contract>>>(
-      `/contracts?page=${page}&limit=${limit}${projectId ? `&project_id=${projectId}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`
+      `/contracts?page=${page}&limit=${limit}${projectId ? `&project_id=${projectId}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}${companyId ? `&company_id=${companyId}` : ""}`
     ),
 
   get: (id: string) =>

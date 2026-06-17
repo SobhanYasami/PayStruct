@@ -297,13 +297,11 @@ export default function ContractDetailPage() {
           <Kpi label="ارز" value={contract.currency} />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 border-t pt-4">
-          <BpsBadge label="حسن انجام کار" bps={contract.performance_bond_pct_bps} />
-          <BpsBadge label="بیمه" bps={contract.insurance_rate_pct_bps} />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t pt-4">
+          <BpsBadge label="ضمانت حسن انجام" bps={contract.retention_pct_bps} />
           <BpsBadge label="ارزش افزوده" bps={contract.vat_pct_bps} />
           <BpsBadge label="حق بیمه تامین اجتماعی" bps={contract.social_security_pct_bps} />
           <BpsBadge label="پیش‌پرداخت" bps={contract.advance_pct_bps} />
-          <BpsBadge label="ضمانت حسن انجام" bps={contract.retention_pct_bps} />
         </div>
       </div>
 

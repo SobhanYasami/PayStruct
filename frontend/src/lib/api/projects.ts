@@ -56,9 +56,9 @@ interface Envelope<T> { status: string; data: T; message: string }
 interface ListPayload<T> { data: T[]; total: number; page: number; limit: number }
 
 export const projectsApi = {
-  list: (page = 1, limit = 20, status?: string, search?: string) =>
+  list: (page = 1, limit = 20, status?: string, search?: string, companyId?: string) =>
     apiFetch<Envelope<ListPayload<Project>>>(
-      `/projects?page=${page}&limit=${limit}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`
+      `/projects?page=${page}&limit=${limit}${status ? `&status=${status}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}${companyId ? `&company_id=${companyId}` : ""}`
     ),
 
   get: (id: string) =>

@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/contractors";
 import { StatusBadge } from "@/components/domain/StatusBadge";
 import { ConfirmDialog } from "@/components/domain/ConfirmDialog";
+import { CompanyCombobox } from "@/components/domain/CompanyCombobox";
 import { Sheet } from "@/components/ui/Sheet";
 import { DataTable } from "@/components/ui/DataTable";
 import { ApiError } from "@/lib/api/client";
@@ -84,6 +85,7 @@ export default function ContractorsPage() {
 	const user = useAuthStore((s) => s.user);
 	const [page, setPage] = useState(1);
 	const [search, setSearch] = useState("");
+	const [companyFilter, setCompanyFilter] = useState<string | undefined>(undefined);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<Contractor | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -97,8 +99,8 @@ export default function ContractorsPage() {
 		contractor.company_id === user?.companyId;
 
 	const { data, isLoading } = useQuery({
-		queryKey: ["contractors", page, search],
-		queryFn: () => contractorsApi.list(page, 20, search || undefined),
+		queryKey: ["contractors", page, search, companyFilter],
+		queryFn: () => contractorsApi.list(page, 20, search || undefined, companyFilter),
 	});
 
 	const contractors = data?.data?.data ?? [];
@@ -181,7 +183,15 @@ export default function ContractorsPage() {
 		<div className='space-y-6'>
 			<div className='flex items-center justify-between flex-wrap gap-3'>
 				<h1 className='text-2xl font-bold text-primary'>پیمانکاران</h1>
-				<div className='flex gap-3'>
+				<div className='flex gap-3 flex-wrap'>
+					{isAdmin && (
+						<div className='w-52'>
+							<CompanyCombobox
+								value={companyFilter}
+								onChange={(id) => { setCompanyFilter(id); setPage(1); }}
+							/>
+						</div>
+					)}
 					<input
 						value={search}
 						onChange={(e) => {

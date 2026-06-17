@@ -79,7 +79,7 @@ export default function ContractDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 flex-wrap">
-        <Link href={`/dashboard/projects/${id}`} className="text-muted-foreground hover:text-foreground transition">
+        <Link href={`/projects/${id}`} className="text-muted-foreground hover:text-foreground transition">
           <ArrowRight size={18} />
         </Link>
         <div>
@@ -157,7 +157,7 @@ export default function ContractDetailPage() {
             data={statements}
             isLoading={loadingStatements}
             keyExtractor={(r) => r.id}
-            onRowClick={(r) => router.push(`/dashboard/projects/${id}/contracts/${cid}/statements/${r.id}`)}
+            onRowClick={(r) => router.push(`/projects/${id}/contracts/${cid}/statements/${r.id}`)}
             emptyMessage="صورت وضعیتی یافت نشد"
           />
         </div>

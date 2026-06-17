@@ -8,11 +8,13 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Pencil, ShieldAlert, X, Paperclip } from "lucide-react";
 import toast from "react-hot-toast";
-import { contractsApi, type Contract, type CreateContractReq, type UpdateContractReq } from "@/lib/api/contracts";
+import { contractsApi, type Contract, type UpdateContractReq } from "@/lib/api/contracts";
+import { CompanyCombobox } from "@/components/domain/CompanyCombobox";
 import { contractorsApi, type Contractor } from "@/lib/api/contractors";
 import { projectsApi, type Project } from "@/lib/api/projects";
 import { StatusBadge } from "@/components/domain/StatusBadge";
 import { ConfirmDialog } from "@/components/domain/ConfirmDialog";
+import { CreateContractSheet } from "@/components/domain/CreateContractSheet";
 import { Sheet } from "@/components/ui/Sheet";
 import { DataTable } from "@/components/ui/DataTable";
 import { ApiError } from "@/lib/api/client";
@@ -164,15 +166,16 @@ const schema = z.object({
   contract_no: z.string().optional(),
   title: z.string().min(1, "عنوان الزامی است"),
   description: z.string().optional(),
-  type: z.enum(["lump_sum", "unit_rate", "cost_plus", "time_material"]),
+  type: z.enum(["lump_sum", "unit_rate", "cost_plus", "construction_management", "design_bid_build", "design_build", "labor_only", "turnkey", "percentage"]),
   status: z.enum(["draft", "signed", "active", "closed", "cancelled"]),
   gross_budget: z.string().optional(),
   currency: z.string().max(3).optional(),
   starts_on: z.string().optional(),
   ends_on: z.string().optional(),
-  performance_bond_pct: z.string().optional(),
-  insurance_rate_pct: z.string().optional(),
+  retention_pct: z.string().optional(),
+  advance_pct: z.string().optional(),
   vat_pct: z.string().optional(),
+  social_security_pct: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -188,37 +191,25 @@ const defaultValues: FormData = {
   currency: "IRR",
   starts_on: "",
   ends_on: "",
-  performance_bond_pct: "",
-  insurance_rate_pct: "",
+  retention_pct: "",
+  advance_pct: "",
   vat_pct: "",
+  social_security_pct: "",
 };
-
-function toReq(d: FormData): CreateContractReq {
-  return {
-    project_id: d.project_id,
-    contractor_id: d.contractor_id,
-    contract_no: d.contract_no || undefined,
-    title: d.title,
-    description: d.description || undefined,
-    type: d.type,
-    status: d.status,
-    gross_budget: d.gross_budget || undefined,
-    currency: d.currency || "IRR",
-    starts_on: d.starts_on || undefined,
-    ends_on: d.ends_on || undefined,
-    performance_bond_pct_bps: percentToBps(d.performance_bond_pct ?? ""),
-    insurance_rate_pct_bps: percentToBps(d.insurance_rate_pct ?? ""),
-    vat_pct_bps: percentToBps(d.vat_pct ?? ""),
-  };
-}
 
 // ─── page ──────────────────────────────────────────────────────────────────────
 
 const TYPE_LABELS: Record<string, string> = {
-  lump_sum: "مقطوع",
-  unit_rate: "واحد بها",
-  cost_plus: "هزینه + سود",
-  time_material: "زمان و مصالح",
+  lump_sum:                "مقطوع",
+  unit_rate:               "فهرست‌بها",
+  cost_plus:               "امانی",
+  time_material:           "زمان و مصالح",
+  construction_management: "مدیریت پیمان",
+  design_bid_build:        "طراحی-مناقصه-ساخت",
+  design_build:            "طراحی-ساخت / EPC",
+  labor_only:              "دستمزدی",
+  turnkey:                 "کلید در دست",
+  percentage:              "درصدی",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -236,15 +227,16 @@ export default function ContractsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const [createFiles, setCreateFiles] = useState<File[]>([]);
   const [editTarget, setEditTarget] = useState<Contract | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const canWrite = user?.roles?.some((r) => WRITE_ROLES.includes(r)) ?? false;
+  const isSuperAdmin = user?.roles?.some((r) => r === "sudoer" || r === "admin") ?? false;
+  const [companyFilter, setCompanyFilter] = useState<string | undefined>(undefined);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["contracts", page, search],
-    queryFn: () => contractsApi.list(page, 20, undefined, search || undefined),
+    queryKey: ["contracts", page, search, companyFilter],
+    queryFn: () => contractsApi.list(page, 20, undefined, search || undefined, companyFilter),
     enabled: canWrite,
   });
 
@@ -253,27 +245,7 @@ export default function ContractsPage() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["contracts"] });
 
-  const createForm = useForm<FormData>({ resolver: zodResolver(schema), defaultValues });
-  const editForm   = useForm<FormData>({ resolver: zodResolver(schema), defaultValues });
-
-  const createMutation = useMutation({
-    mutationFn: async (req: CreateContractReq) => {
-      const res = await contractsApi.create(req);
-      const contractId = res.data.id;
-      for (const file of createFiles.slice(0, 3)) {
-        await contractsApi.uploadAttachment(contractId, file);
-      }
-      return res;
-    },
-    onSuccess: () => {
-      invalidate();
-      setCreateOpen(false);
-      createForm.reset(defaultValues);
-      setCreateFiles([]);
-      toast.success("قرارداد با موفقیت ایجاد شد");
-    },
-    onError: (e) => toast.error(e instanceof ApiError ? e.detail || e.title : "خطا در ایجاد قرارداد"),
-  });
+  const editForm = useForm<FormData>({ resolver: zodResolver(schema), defaultValues });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, req }: { id: string; req: UpdateContractReq }) => contractsApi.update(id, req),
@@ -303,15 +275,16 @@ export default function ContractsPage() {
       contract_no: c.contract_no,
       title: c.title,
       description: c.description ?? "",
-      type: c.type,
+      type: c.type as FormData["type"],
       status: c.status as FormData["status"],
       gross_budget: c.gross_budget ?? "",
       currency: c.currency,
       starts_on: c.starts_on ? c.starts_on.slice(0, 10) : "",
       ends_on: c.ends_on ? c.ends_on.slice(0, 10) : "",
-      performance_bond_pct: bpsToPercent(c.performance_bond_pct_bps),
-      insurance_rate_pct: bpsToPercent(c.insurance_rate_pct_bps),
+      retention_pct: bpsToPercent(c.retention_pct_bps),
+      advance_pct: bpsToPercent(c.advance_pct_bps),
       vat_pct: bpsToPercent(c.vat_pct_bps),
+      social_security_pct: bpsToPercent(c.social_security_pct_bps),
     });
     setEditTarget(c);
   };
@@ -320,7 +293,15 @@ export default function ContractsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-primary">قراردادها</h1>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          {isSuperAdmin && (
+            <div className="w-52">
+              <CompanyCombobox
+                value={companyFilter}
+                onChange={(id) => { setCompanyFilter(id); setPage(1); }}
+              />
+            </div>
+          )}
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -328,7 +309,7 @@ export default function ContractsPage() {
             className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-48"
           />
           <button
-            onClick={() => { createForm.reset(defaultValues); setCreateOpen(true); }}
+            onClick={() => setCreateOpen(true)}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"
           >
             <Plus size={16} />
@@ -386,15 +367,11 @@ export default function ContractsPage() {
         </div>
       )}
 
-      {/* Create sheet */}
-      <Sheet open={createOpen} onClose={() => { setCreateOpen(false); createForm.reset(defaultValues); setCreateFiles([]); }} title="قرارداد جدید">
-        <ContractForm form={createForm} isPending={createMutation.isPending}
-          onSubmit={createForm.handleSubmit((d) => createMutation.mutate(toReq(d)))}
-          submitLabel="ذخیره"
-          files={createFiles}
-          onFilesChange={setCreateFiles}
-        />
-      </Sheet>
+      <CreateContractSheet
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={invalidate}
+      />
 
       {/* Edit sheet */}
       <Sheet open={!!editTarget} onClose={() => { setEditTarget(null); editForm.reset(defaultValues); }} title="ویرایش قرارداد">
@@ -410,9 +387,10 @@ export default function ContractsPage() {
               currency: d.currency || "IRR",
               starts_on: d.starts_on || undefined,
               ends_on: d.ends_on || undefined,
-              performance_bond_pct_bps: percentToBps(d.performance_bond_pct ?? ""),
-              insurance_rate_pct_bps: percentToBps(d.insurance_rate_pct ?? ""),
+              retention_pct_bps: percentToBps(d.retention_pct ?? ""),
+              advance_pct_bps: percentToBps(d.advance_pct ?? ""),
               vat_pct_bps: percentToBps(d.vat_pct ?? ""),
+              social_security_pct_bps: percentToBps(d.social_security_pct ?? ""),
             };
             updateMutation.mutate({ id: editTarget.id, req });
           })}
@@ -483,10 +461,21 @@ function ContractForm({
       <div className="grid grid-cols-2 gap-3">
         <Field label="نوع قرارداد" error={errors.type?.message}>
           <select {...register("type")} className={inputCls}>
-            <option value="lump_sum">مقطوع</option>
-            <option value="unit_rate">واحد بها</option>
-            <option value="cost_plus">هزینه + سود</option>
-            <option value="time_material">زمان و مصالح</option>
+            <optgroup label="بر اساس نحوه پرداخت">
+              <option value="lump_sum">مقطوع (Lump Sum)</option>
+              <option value="unit_rate">فهرست‌بها (Unit Price)</option>
+              <option value="cost_plus">امانی (Cost-Plus)</option>
+            </optgroup>
+            <optgroup label="بر اساس روش اجرا">
+              <option value="construction_management">مدیریت پیمان</option>
+              <option value="design_bid_build">طراحی-مناقصه-ساخت (DBB)</option>
+              <option value="design_build">طراحی-ساخت / EPC</option>
+            </optgroup>
+            <optgroup label="بر اساس نحوه واگذاری">
+              <option value="labor_only">پیمانکاری دستمزدی</option>
+              <option value="turnkey">کلید در دست (Turnkey)</option>
+              <option value="percentage">پیمانکاری درصدی</option>
+            </optgroup>
           </select>
         </Field>
         <Field label="وضعیت" error={errors.status?.message}>
@@ -523,15 +512,20 @@ function ContractForm({
       </div>
 
       <p className="text-xs font-semibold text-muted-foreground border-t pt-3">پارامترهای مالی (درصد)</p>
-      <div className="grid grid-cols-3 gap-3">
-        <Field label="حسن انجام کار %">
-          <input {...register("performance_bond_pct")} className={inputCls} dir="ltr" placeholder="0" />
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="ضمانت حسن انجام %">
+          <input {...register("retention_pct")} className={inputCls} dir="ltr" placeholder="0" />
         </Field>
-        <Field label="نرخ بیمه %">
-          <input {...register("insurance_rate_pct")} className={inputCls} dir="ltr" placeholder="0" />
+        <Field label="پیش‌پرداخت %">
+          <input {...register("advance_pct")} className={inputCls} dir="ltr" placeholder="0" />
         </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
         <Field label="مالیات بر ارزش افزوده %">
           <input {...register("vat_pct")} className={inputCls} dir="ltr" placeholder="0" />
+        </Field>
+        <Field label="حق بیمه تامین اجتماعی %">
+          <input {...register("social_security_pct")} className={inputCls} dir="ltr" placeholder="0" />
         </Field>
       </div>
 

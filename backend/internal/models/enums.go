@@ -181,15 +181,28 @@ func (s ContractStatus) Value() (driver.Value, error) { return string(s), nil }
 type ContractType string
 
 const (
-	ContractLumpSum      ContractType = "lump_sum"
-	ContractUnitRate     ContractType = "unit_rate"
-	ContractCostPlus     ContractType = "cost_plus"
-	ContractTimeMaterial ContractType = "time_material"
+	// Payment-based types
+	ContractLumpSum      ContractType = "lump_sum"       // مقطوع
+	ContractUnitRate     ContractType = "unit_rate"       // فهرست‌بها
+	ContractCostPlus     ContractType = "cost_plus"       // امانی
+	ContractTimeMaterial ContractType = "time_material"   // legacy — kept for existing rows
+
+	// Execution / management types
+	ContractConstructionManagement ContractType = "construction_management" // مدیریت پیمان
+	ContractDesignBidBuild         ContractType = "design_bid_build"        // طراحی-مناقصه-ساخت
+	ContractDesignBuild            ContractType = "design_build"            // طراحی-ساخت / EPC
+
+	// Work delegation types
+	ContractLaborOnly   ContractType = "labor_only"  // پیمانکاری دستمزدی
+	ContractTurnkey     ContractType = "turnkey"     // کلید در دست
+	ContractPercentage  ContractType = "percentage"  // پیمانکاری درصدی
 )
 
 func (t ContractType) Valid() bool {
 	switch t {
-	case ContractLumpSum, ContractUnitRate, ContractCostPlus, ContractTimeMaterial:
+	case ContractLumpSum, ContractUnitRate, ContractCostPlus, ContractTimeMaterial,
+		ContractConstructionManagement, ContractDesignBidBuild, ContractDesignBuild,
+		ContractLaborOnly, ContractTurnkey, ContractPercentage:
 		return true
 	}
 	return false
