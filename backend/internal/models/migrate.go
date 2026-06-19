@@ -23,6 +23,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&RefreshToken{},
 		// Depends on Company + Project.
 		&Contractor{},
+		&Consultant{},
 		&Contract{},
 		&ContractLineItem{},
 		// Depends on Contract.
@@ -214,6 +215,9 @@ BEGIN
         ALTER TABLE contracts ALTER COLUMN code DROP NOT NULL;
     END IF;
 END$$`,
+
+		`ALTER TABLE consultants ALTER COLUMN registration_no DROP NOT NULL`,
+		`ALTER TABLE consultants ALTER COLUMN tax_id DROP NOT NULL`,
 
 		`CREATE INDEX IF NOT EXISTS idx_employees_roles_gin
 		 ON employees USING GIN (roles)`,

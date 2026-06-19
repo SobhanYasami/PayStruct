@@ -40,6 +40,7 @@ func AllModels() []any {
 		&RefreshToken{},
 		// contract side
 		&Contractor{},
+		&Consultant{},
 		&Contract{},
 		&ContractLineItem{},
 		// financial

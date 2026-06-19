@@ -41,6 +41,7 @@ type Attachment struct {
 	CompanyID    uuid.UUID `gorm:"type:uuid;not null;index"  json:"company_id"`
 	EntityType   string    `gorm:"size:64;not null;index"    json:"entity_type"`
 	EntityID     uuid.UUID `gorm:"type:uuid;not null;index"  json:"entity_id"`
+	DocumentType string    `gorm:"size:64;index"             json:"document_type,omitempty"`
 	FileName     string    `gorm:"size:255;not null"         json:"file_name"`
 	StorageKey   string    `gorm:"size:512;not null"         json:"storage_key"`
 	MimeType     string    `gorm:"size:128;not null"         json:"mime_type"`

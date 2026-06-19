@@ -5,6 +5,8 @@ export interface Contract {
   company_id: string;
   project_id: string;
   contractor_id: string;
+  employer_id?: string;
+  consultant_id?: string;
   contract_no: string;
   title: string;
   description?: string;
@@ -44,6 +46,8 @@ export interface ContractLineItem {
 export interface CreateContractReq {
   project_id: string;
   contractor_id: string;
+  employer_id?: string;
+  consultant_id?: string;
   contract_no?: string;
   title: string;
   description?: string;
@@ -86,6 +90,7 @@ export interface Attachment {
   company_id: string;
   entity_type: string;
   entity_id: string;
+  document_type?: string;
   file_name: string;
   storage_key: string;
   mime_type: string;
@@ -144,9 +149,10 @@ export const contractsApi = {
   listAttachments: (contractId: string) =>
     apiFetch<Envelope<Attachment[]>>(`/contracts/${contractId}/attachments`),
 
-  uploadAttachment: (contractId: string, file: File) => {
+  uploadAttachment: (contractId: string, file: File, documentType?: string) => {
     const fd = new FormData();
     fd.append("file", file);
+    if (documentType) fd.append("document_type", documentType);
     return apiFetch<Envelope<Attachment>>(`/contracts/${contractId}/attachments`, {
       method: "POST",
       body: fd,

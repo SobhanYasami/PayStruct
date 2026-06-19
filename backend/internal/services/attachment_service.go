@@ -53,10 +53,21 @@ func sanitizeFilename(name string) string {
 
 func (s *AttachmentService) Upload(
 	_ context.Context,
-	contractID, companyID, uploaderID string,
+	contractID, companyID, uploaderID, documentType string,
 	fh *multipart.FileHeader,
 ) (*model.Attachment, error) {
-	// Count existing non-deleted attachments for this contract.
+	// If a document_type is given and a file for that type already exists, replace it.
+	if documentType != "" {
+		var existing model.Attachment
+		if err := s.db.First(&existing,
+			"entity_type = 'contract' AND entity_id = ? AND document_type = ? AND deleted_at IS NULL",
+			contractID, documentType).Error; err == nil {
+			_ = os.Remove(filepath.Join(s.storageRoot, existing.StorageKey))
+			s.db.Delete(&existing)
+		}
+	}
+
+	// Count remaining non-deleted attachments for this contract.
 	var count int64
 	if err := s.db.Model(&model.Attachment{}).
 		Where("entity_type = 'contract' AND entity_id = ? AND deleted_at IS NULL", contractID).
@@ -134,6 +145,7 @@ func (s *AttachmentService) Upload(
 		CompanyID:    compID,
 		EntityType:   "contract",
 		EntityID:     cid,
+		DocumentType: documentType,
 		FileName:     safeName,
 		StorageKey:   storageKey,
 		MimeType:     mime,

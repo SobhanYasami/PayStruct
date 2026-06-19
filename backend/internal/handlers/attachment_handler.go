@@ -29,11 +29,14 @@ func (h *AttachmentHandler) Upload(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "file field required"))
 	}
 
+	documentType := c.FormValue("document_type")
+
 	att, err := h.svc.Upload(
 		c.Context(),
 		c.Params("id"),
 		claims.CompanyID,
 		claims.UserID,
+		documentType,
 		fh,
 	)
 	if err != nil {

@@ -109,6 +109,9 @@ func main() {
 	contractorHandler := handlers.NewContractorHandler(db)
 	routes.SetupContractorRoutes(v1, contractorHandler, jwtSecret)
 
+	consultantHandler := handlers.NewConsultantHandler(db)
+	routes.SetupConsultantRoutes(v1, consultantHandler, jwtSecret)
+
 	storageRoot := os.Getenv("STORAGE_ROOT")
 	if storageRoot == "" {
 		storageRoot = "../storage"

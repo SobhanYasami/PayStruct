@@ -520,6 +520,8 @@ func NewContractSvc(db *gorm.DB) *ContractSvc { return &ContractSvc{db: db} }
 type CreateContractReq struct {
 	ProjectID             string  `json:"project_id"`
 	ContractorID          string  `json:"contractor_id"`
+	EmployerID            string  `json:"employer_id"`
+	ConsultantID          string  `json:"consultant_id"`
 	ContractNo            string  `json:"contract_no"`
 	Title                 string  `json:"title"`
 	Description           string  `json:"description"`
@@ -546,6 +548,8 @@ type UpdateContractReq struct {
 	Currency              *string `json:"currency"`
 	StartsOn              *string `json:"starts_on"`
 	EndsOn                *string `json:"ends_on"`
+	EmployerID            *string `json:"employer_id"`
+	ConsultantID          *string `json:"consultant_id"`
 	PerformanceBondPctBps *int    `json:"performance_bond_pct_bps"`
 	InsuranceRatePctBps   *int    `json:"insurance_rate_pct_bps"`
 	VatPctBps             *int    `json:"vat_pct_bps"`
@@ -666,6 +670,16 @@ func (s *ContractSvc) Create(ctx context.Context, callerCompanyID string, req Cr
 		SocialSecurityPctBps:  req.SocialSecurityPctBps,
 		ScannedFileURL:        req.ScannedFileURL,
 	}
+	if req.EmployerID != "" {
+		if eid, err := uuid.Parse(req.EmployerID); err == nil {
+			ct.EmployerID = &eid
+		}
+	}
+	if req.ConsultantID != "" {
+		if csid, err := uuid.Parse(req.ConsultantID); err == nil {
+			ct.ConsultantID = &csid
+		}
+	}
 	if req.StartsOn != nil && *req.StartsOn != "" {
 		ct.StartsOn = parseDate(*req.StartsOn)
 	}
@@ -760,6 +774,20 @@ func (s *ContractSvc) Update(ctx context.Context, id string, req UpdateContractR
 	}
 	if req.ScannedFileURL != nil {
 		updates["scanned_file_url"] = *req.ScannedFileURL
+	}
+	if req.EmployerID != nil {
+		if *req.EmployerID == "" {
+			updates["employer_id"] = nil
+		} else if eid, err := uuid.Parse(*req.EmployerID); err == nil {
+			updates["employer_id"] = eid
+		}
+	}
+	if req.ConsultantID != nil {
+		if *req.ConsultantID == "" {
+			updates["consultant_id"] = nil
+		} else if csid, err := uuid.Parse(*req.ConsultantID); err == nil {
+			updates["consultant_id"] = csid
+		}
 	}
 	if req.PerformanceBondPctBps != nil {
 		updates["performance_bond_pct_bps"] = *req.PerformanceBondPctBps

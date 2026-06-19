@@ -5,13 +5,15 @@ import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Paperclip, AlertCircle } from "lucide-react";
+import { X, AlertCircle, FileUp } from "lucide-react";
 import toast from "react-hot-toast";
 import { Sheet } from "@/components/ui/Sheet";
 import { PersianDatePicker } from "@/components/ui/PersianDatePicker";
 import { contractsApi, type CreateContractReq } from "@/lib/api/contracts";
 import { projectsApi, type Project } from "@/lib/api/projects";
 import { contractorsApi, type Contractor } from "@/lib/api/contractors";
+import { consultantsApi, type Consultant } from "@/lib/api/consultants";
+import { companiesApi, type Company } from "@/lib/api/companies";
 import { ApiError } from "@/lib/api/client";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -45,15 +47,27 @@ const CURRENCIES = [
   { code: "JPY", label: "ین ژاپن (JPY)" },
 ];
 
+const DOC_SLOTS = [
+  { key: "full_contract_text", label: "متن کامل قرارداد (PDF)" },
+  { key: "bill_of_quantities",  label: "فهرست‌بها (در صورت واحدبها)" },
+  { key: "drawings_specs",      label: "نقشه‌ها و مشخصات فنی" },
+  { key: "guarantees",          label: "ضمانت‌نامه‌ها" },
+  { key: "approved_schedule",   label: "برنامه زمان‌بندی تأییدشده" },
+] as const;
+
+type DocKey = typeof DOC_SLOTS[number]["key"];
+
 // ─── schema ───────────────────────────────────────────────────────────────────
 
 const schema = z.object({
   project_id: z.string().min(1, "پروژه الزامی است"),
   contractor_id: z.string().min(1, "پیمانکار الزامی است"),
+  employer_id: z.string().optional(),
+  consultant_id: z.string().optional(),
   contract_no: z.string().optional(),
   title: z.string().min(1, "عنوان الزامی است"),
   description: z.string().optional(),
-  type: z.enum(["lump_sum", "unit_rate", "cost_plus", "construction_management", "design_bid_build", "design_build", "labor_only", "turnkey", "percentage"]),
+  type: z.enum(["lump_sum", "unit_rate", "cost_plus"]),
   status: z.enum(["draft", "signed", "active", "closed", "cancelled"]),
   gross_budget: z.string().optional(),
   currency: z.string().max(3).optional(),
@@ -69,6 +83,8 @@ type FormData = z.infer<typeof schema>;
 const defaultValues: FormData = {
   project_id: "",
   contractor_id: "",
+  employer_id: "",
+  consultant_id: "",
   contract_no: "",
   title: "",
   description: "",
@@ -88,6 +104,8 @@ function toReq(d: FormData): CreateContractReq {
   return {
     project_id: d.project_id,
     contractor_id: d.contractor_id,
+    employer_id: d.employer_id || undefined,
+    consultant_id: d.consultant_id || undefined,
     contract_no: d.contract_no || undefined,
     title: d.title,
     description: d.description || undefined,
@@ -311,6 +329,141 @@ function ContractorCombobox({
   );
 }
 
+function EmployerCombobox({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const { data, isFetching } = useQuery({
+    queryKey: ["companies-search-employer", debounced],
+    queryFn: () => companiesApi.list(1, 30, debounced || ""),
+    enabled: open,
+    staleTime: 10_000,
+  });
+  const results: Company[] = data?.data?.data ?? [];
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="flex items-center">
+        <input
+          value={value ? label || value.slice(0, 8) + "…" : query}
+          onChange={(e) => { setQuery(e.target.value); if (value) onChange(""); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder="جستجوی کارفرما..."
+          className={inputCls}
+          dir="rtl"
+          autoComplete="off"
+        />
+        {value && (
+          <button type="button" onClick={() => { onChange(""); setLabel(""); setQuery(""); }}
+            className="absolute left-2 text-muted-foreground hover:text-foreground">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="absolute z-50 w-full bg-white border border-border rounded-lg shadow-lg mt-1 max-h-52 overflow-y-auto">
+          {isFetching && <p className="px-3 py-2 text-xs text-muted-foreground">در حال جستجو...</p>}
+          {!isFetching && results.length === 0 && (
+            <p className="px-3 py-2 text-xs text-muted-foreground">نتیجه‌ای یافت نشد</p>
+          )}
+          {results.map((c) => (
+            <button key={c.id} type="button"
+              onClick={() => { onChange(c.id); setLabel(c.name); setQuery(""); setOpen(false); }}
+              className={`w-full text-right px-3 py-2 text-sm hover:bg-primary/5 ${value === c.id ? "bg-primary/10 font-medium" : ""}`}>
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConsultantCombobox({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const { data, isFetching } = useQuery({
+    queryKey: ["consultants-search", debounced],
+    queryFn: () => consultantsApi.list(1, 30, debounced || undefined),
+    enabled: open,
+    staleTime: 10_000,
+  });
+  const results: Consultant[] = data?.data?.data ?? [];
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="flex items-center">
+        <input
+          value={value ? label || value.slice(0, 8) + "…" : query}
+          onChange={(e) => { setQuery(e.target.value); if (value) onChange(""); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder="جستجوی مشاور مهندسی..."
+          className={inputCls}
+          dir="rtl"
+          autoComplete="off"
+        />
+        {value && (
+          <button type="button" onClick={() => { onChange(""); setLabel(""); setQuery(""); }}
+            className="absolute left-2 text-muted-foreground hover:text-foreground">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="absolute z-50 w-full bg-white border border-border rounded-lg shadow-lg mt-1 max-h-52 overflow-y-auto">
+          {isFetching && <p className="px-3 py-2 text-xs text-muted-foreground">در حال جستجو...</p>}
+          {!isFetching && results.length === 0 && (
+            <p className="px-3 py-2 text-xs text-muted-foreground">نتیجه‌ای یافت نشد</p>
+          )}
+          {results.map((c) => (
+            <button key={c.id} type="button"
+              onClick={() => { onChange(c.id); setLabel(c.name); setQuery(""); setOpen(false); }}
+              className={`w-full text-right px-3 py-2 text-sm hover:bg-primary/5 ${value === c.id ? "bg-primary/10 font-medium" : ""}`}>
+              <span>{c.name}</span>
+              {c.specialization && (
+                <span className="text-xs text-muted-foreground mr-2">({c.specialization})</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── field wrapper ─────────────────────────────────────────────────────────────
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
@@ -337,8 +490,8 @@ export function CreateContractSheet({
   onSuccess?(): void;
 }) {
   const qc = useQueryClient();
-  const [files, setFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [slotFiles, setSlotFiles] = useState<Partial<Record<DocKey, File>>>({});
+  const slotInputRefs = useRef<Partial<Record<DocKey, HTMLInputElement | null>>>({});
 
   const form = useForm<FormData>({ resolver: zodResolver(schema), defaultValues });
   const { register, control, formState: { errors }, handleSubmit, reset } = form;
@@ -354,15 +507,15 @@ export function CreateContractSheet({
   useEffect(() => {
     if (open) {
       reset({ ...defaultValues, project_id: defaultProjectId ?? "" });
-      setFiles([]);
+      setSlotFiles({});
     }
   }, [open, defaultProjectId, reset]);
 
   const mutation = useMutation({
     mutationFn: async (req: CreateContractReq) => {
       const res = await contractsApi.create(req);
-      for (const file of files.slice(0, 3)) {
-        await contractsApi.uploadAttachment(res.data.id, file);
+      for (const [docType, file] of Object.entries(slotFiles)) {
+        if (file) await contractsApi.uploadAttachment(res.data.id, file, docType);
       }
       return res;
     },
@@ -378,7 +531,7 @@ export function CreateContractSheet({
 
   const handleClose = () => {
     reset(defaultValues);
-    setFiles([]);
+    setSlotFiles({});
     onClose();
   };
 
@@ -416,6 +569,20 @@ export function CreateContractSheet({
             )} />
         </Field>
 
+        <Field label="کارفرما (مالک پروژه)">
+          <Controller control={control} name="employer_id"
+            render={({ field }) => (
+              <EmployerCombobox value={field.value ?? ""} onChange={(id) => field.onChange(id)} />
+            )} />
+        </Field>
+
+        <Field label="مشاور مهندسی">
+          <Controller control={control} name="consultant_id"
+            render={({ field }) => (
+              <ConsultantCombobox value={field.value ?? ""} onChange={(id) => field.onChange(id)} />
+            )} />
+        </Field>
+
         <Field label="شماره قرارداد (خودکار در صورت خالی ماندن)">
           <input {...register("contract_no")} className={inputCls} dir="ltr" placeholder="مثال: ۱۴۰۴/۱" />
         </Field>
@@ -431,21 +598,9 @@ export function CreateContractSheet({
         <div className="grid grid-cols-2 gap-3">
           <Field label="نوع قرارداد" error={errors.type?.message}>
             <select {...register("type")} className={inputCls}>
-              <optgroup label="بر اساس نحوه پرداخت">
-                <option value="lump_sum">مقطوع (Lump Sum)</option>
-                <option value="unit_rate">فهرست‌بها (Unit Price)</option>
-                <option value="cost_plus">امانی (Cost-Plus)</option>
-              </optgroup>
-              <optgroup label="بر اساس روش اجرا">
-                <option value="construction_management">مدیریت پیمان</option>
-                <option value="design_bid_build">طراحی-مناقصه-ساخت (DBB)</option>
-                <option value="design_build">طراحی-ساخت / EPC</option>
-              </optgroup>
-              <optgroup label="بر اساس نحوه واگذاری">
-                <option value="labor_only">پیمانکاری دستمزدی</option>
-                <option value="turnkey">کلید در دست (Turnkey)</option>
-                <option value="percentage">پیمانکاری درصدی</option>
-              </optgroup>
+              <option value="lump_sum">قرارداد مقاطعه‌کاری (مقطوع / Lump Sum)</option>
+              <option value="unit_rate">قرارداد بر اساس فهرست‌بها (Unit Price)</option>
+              <option value="cost_plus">قرارداد امانی (Cost-Plus)</option>
             </select>
           </Field>
           <Field label="وضعیت" error={errors.status?.message}>
@@ -521,45 +676,59 @@ export function CreateContractSheet({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">مستندات قرارداد (حداکثر ۳ فایل)</label>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              const selected = Array.from(e.target.files ?? []);
-              setFiles((prev) => [...prev, ...selected].slice(0, 3));
-              e.target.value = "";
-            }}
-          />
-          {files.length < 3 && (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 border border-dashed rounded-lg px-4 py-2.5 text-sm text-muted-foreground hover:border-primary hover:text-primary transition w-full justify-center"
-            >
-              <Paperclip size={15} />
-              افزودن فایل
-            </button>
-          )}
-          {files.length > 0 && (
-            <ul className="mt-2 space-y-1">
-              {files.map((f, i) => (
-                <li key={i} className="flex items-center justify-between text-sm bg-muted/40 rounded px-3 py-1.5">
-                  <span className="truncate max-w-55">{f.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                    className="text-muted-foreground hover:text-status-rejected transition"
-                  >
-                    <X size={14} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium">مستندات قرارداد</label>
+            <span className="text-xs text-muted-foreground">
+              {Object.keys(slotFiles).length} / ۳ فایل
+            </span>
+          </div>
+          <div className="space-y-2">
+            {DOC_SLOTS.map(({ key, label }) => {
+              const file = slotFiles[key];
+              const totalSelected = Object.keys(slotFiles).length;
+              const canAdd = !file && totalSelected < 3;
+              return (
+                <div key={key} className="border rounded-lg px-3 py-2 flex items-center gap-3">
+                  <span className="flex-1 text-xs text-muted-foreground truncate">{label}</span>
+                  {file ? (
+                    <>
+                      <span className="text-xs truncate max-w-32 text-foreground">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSlotFiles((prev) => { const n = { ...prev }; delete n[key]; return n; })}
+                        className="text-muted-foreground hover:text-status-rejected transition shrink-0"
+                      >
+                        <X size={13} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        ref={(el) => { slotInputRefs.current[key] = el; }}
+                        type="file"
+                        accept=".pdf,image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setSlotFiles((prev) => ({ ...prev, [key]: f }));
+                          e.target.value = "";
+                        }}
+                      />
+                      <button
+                        type="button"
+                        disabled={!canAdd}
+                        onClick={() => slotInputRefs.current[key]?.click()}
+                        className="flex items-center gap-1 text-xs text-primary disabled:text-muted-foreground disabled:cursor-not-allowed hover:underline shrink-0"
+                      >
+                        <FileUp size={12} />
+                        بارگذاری
+                      </button>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <button

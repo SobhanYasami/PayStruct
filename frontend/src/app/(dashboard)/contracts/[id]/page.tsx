@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Plus, Pencil, Trash2, FileUp, FileText, Image, Trash, Download } from "lucide-react";
+import { ArrowRight, Plus, Pencil, Trash2, FileUp, FileText, Image as ImageIcon, Trash, Download } from "lucide-react";
 import { PersianDatePicker } from "@/components/ui/PersianDatePicker";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -26,6 +26,18 @@ import { Sheet } from "@/components/ui/Sheet";
 import { ConfirmDialog } from "@/components/domain/ConfirmDialog";
 import { ApiError } from "@/lib/api/client";
 import { toJalali, fmtNum, fmtPct } from "@/lib/utils/date";
+
+// ─── document slot definitions ─────────────────────────────────────────────────
+
+const DOC_SLOTS = [
+  { key: "full_contract_text", label: "متن کامل قرارداد (PDF)" },
+  { key: "bill_of_quantities",  label: "فهرست‌بها (در صورت واحدبها)" },
+  { key: "drawings_specs",      label: "نقشه‌ها و مشخصات فنی" },
+  { key: "guarantees",          label: "ضمانت‌نامه‌ها" },
+  { key: "approved_schedule",   label: "برنامه زمان‌بندی تأییدشده" },
+] as const;
+
+type DocKey = typeof DOC_SLOTS[number]["key"];
 
 // ─── helpers ───────────────────────────────────────────────────────────────────
 
@@ -91,7 +103,7 @@ export default function ContractDetailPage() {
 
   const [createStmtOpen, setCreateStmtOpen] = useState(false);
   const [viewerAttachment, setViewerAttachment] = useState<Attachment | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const slotInputRefs = useRef<Partial<Record<DocKey, HTMLInputElement | null>>>({});
 
   const { data: contractRes, isLoading: loadingContract } = useQuery({
     queryKey: ["contract", id],
@@ -164,7 +176,8 @@ export default function ContractDetailPage() {
   const stmtForm   = useForm<StmtForm>({ resolver: zodResolver(stmtSchema), defaultValues: stmtDefaults });
 
   const uploadMutation = useMutation({
-    mutationFn: (file: File) => contractsApi.uploadAttachment(id, file),
+    mutationFn: ({ file, documentType }: { file: File; documentType: DocKey }) =>
+      contractsApi.uploadAttachment(id, file, documentType),
     onSuccess: () => { invalidateAttachments(); toast.success("سند بارگذاری شد"); },
     onError: (e) => toast.error(e instanceof ApiError ? e.detail || e.title : "خطا در بارگذاری"),
   });
@@ -497,46 +510,62 @@ export default function ContractDetailPage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-primary">اسناد قرارداد</h2>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={attachments.length >= 3 || uploadMutation.isPending}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-40 transition"
-          >
-            <FileUp size={15} />
-            {uploadMutation.isPending ? "در حال بارگذاری..." : "بارگذاری سند"}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) uploadMutation.mutate(file);
-              e.target.value = "";
-            }}
-          />
+          <span className="text-xs text-muted-foreground">{attachments.length} / ۳ فایل</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {attachments.map((att) => (
-            <AttachmentCard
-              key={att.id}
-              att={att}
-              onView={() => setViewerAttachment(att)}
-              onDelete={() => deleteAttachmentMutation.mutate(att.id)}
-            />
-          ))}
-          {Array.from({ length: Math.max(0, 3 - attachments.length) }).map((_, i) => (
-            <div
-              key={`empty-${i}`}
-              className="border-2 border-dashed border-muted rounded-xl flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground text-sm cursor-pointer hover:border-primary/40 transition"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <FileUp size={20} className="opacity-40" />
-              <span>بارگذاری سند</span>
-            </div>
-          ))}
+        <div className="bg-white border rounded-xl divide-y overflow-hidden">
+          {DOC_SLOTS.map(({ key, label }) => {
+            const att = attachments.find((a) => a.document_type === key);
+            const canUpload = !att && attachments.length < 3;
+            return (
+              <div key={key} className="flex items-center gap-3 px-4 py-3">
+                <span className="flex-1 text-sm text-muted-foreground">{label}</span>
+                {att ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setViewerAttachment(att)}
+                      className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                    >
+                      {att.mime_type.startsWith("image/") ? (
+                        <ImageIcon size={13} />
+                      ) : (
+                        <FileText size={13} />
+                      )}
+                      <span className="max-w-32 truncate">{att.file_name}</span>
+                    </button>
+                    <button
+                      onClick={() => deleteAttachmentMutation.mutate(att.id)}
+                      className="p-1 rounded text-muted-foreground hover:text-status-rejected hover:bg-status-rejected/10 transition"
+                    >
+                      <Trash size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      ref={(el) => { slotInputRefs.current[key] = el; }}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadMutation.mutate({ file, documentType: key });
+                        e.target.value = "";
+                      }}
+                    />
+                    <button
+                      disabled={!canUpload || uploadMutation.isPending}
+                      onClick={() => slotInputRefs.current[key]?.click()}
+                      className="flex items-center gap-1 text-xs text-primary disabled:text-muted-foreground disabled:cursor-not-allowed hover:underline"
+                    >
+                      <FileUp size={13} />
+                      بارگذاری
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -704,54 +733,6 @@ function Row({ label, value }: { label: string; value: React.ReactNode; mono?: b
     <div className="flex gap-4 items-start">
       <span className="text-muted-foreground w-32 shrink-0">{label}</span>
       <span className="flex-1">{value}</span>
-    </div>
-  );
-}
-
-function AttachmentCard({
-  att,
-  onView,
-  onDelete,
-}: {
-  att: Attachment;
-  onView: () => void;
-  onDelete: () => void;
-}) {
-  const isImage = att.mime_type.startsWith("image/");
-  return (
-    <div className="border rounded-xl p-4 flex flex-col gap-3 bg-white hover:shadow-sm transition">
-      <div
-        className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
-        onClick={onView}
-      >
-        {isImage ? (
-          <Image size={22} className="shrink-0 text-primary/60" />
-        ) : (
-          <FileText size={22} className="shrink-0 text-primary/60" />
-        )}
-        <div className="min-w-0">
-          <p className="text-sm font-medium truncate" title={att.file_name}>
-            {att.file_name}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {(att.size_bytes / 1024).toFixed(0)} KB
-          </p>
-        </div>
-      </div>
-      <div className="flex gap-2 border-t pt-2">
-        <button
-          onClick={onView}
-          className="flex-1 text-xs text-center text-primary hover:underline"
-        >
-          مشاهده
-        </button>
-        <button
-          onClick={onDelete}
-          className="p-1 rounded text-muted-foreground hover:text-status-rejected hover:bg-status-rejected/10 transition"
-        >
-          <Trash size={13} />
-        </button>
-      </div>
     </div>
   );
 }

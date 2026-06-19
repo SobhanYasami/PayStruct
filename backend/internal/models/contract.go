@@ -56,9 +56,11 @@ func (Contractor) TableName() string { return "contractors" }
 type Contract struct {
 	BaseModel
 	// CompanyID + ContractNo form a composite unique index (contract numbers are scoped per company).
-	CompanyID    uuid.UUID `gorm:"type:uuid;not null;index;uniqueIndex:idx_contracts_company_no" json:"company_id"`
-	ProjectID    uuid.UUID `gorm:"type:uuid;not null;index" json:"project_id"`
-	ContractorID uuid.UUID `gorm:"type:uuid;not null;index" json:"contractor_id"`
+	CompanyID    uuid.UUID  `gorm:"type:uuid;not null;index;uniqueIndex:idx_contracts_company_no" json:"company_id"`
+	ProjectID    uuid.UUID  `gorm:"type:uuid;not null;index"                                       json:"project_id"`
+	ContractorID uuid.UUID  `gorm:"type:uuid;not null;index"                                       json:"contractor_id"`
+	EmployerID   *uuid.UUID `gorm:"type:uuid;index"                                                json:"employer_id,omitempty"`
+	ConsultantID *uuid.UUID `gorm:"type:uuid;index"                                                json:"consultant_id,omitempty"`
 
 	// ContractNo format: <jalali-year>/<sequence>, e.g. "1404/3". Unique per company.
 	ContractNo  string       `gorm:"size:64;not null;uniqueIndex:idx_contracts_company_no" json:"contract_no"`
@@ -89,6 +91,8 @@ type Contract struct {
 	Company    *Company           `gorm:"foreignKey:CompanyID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"    json:"-"`
 	Project    *Project           `gorm:"foreignKey:ProjectID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"    json:"-"`
 	Contractor *Contractor        `gorm:"foreignKey:ContractorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"-"`
+	Employer   *Company           `gorm:"foreignKey:EmployerID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"   json:"-"`
+	Consultant *Consultant        `gorm:"foreignKey:ConsultantID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"-"`
 	Statements []InterimStatement `gorm:"foreignKey:ContractID"                                                               json:"-"`
 	LineItems  []ContractLineItem `gorm:"foreignKey:ContractID"                                                               json:"-"`
 }

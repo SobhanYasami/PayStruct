@@ -12,6 +12,7 @@ import {
   Building2,
   ScrollText,
   LogOut,
+  HardHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useAuthStore } from "@/lib/stores/auth";
@@ -41,6 +42,7 @@ const NAV_GROUPS: { label: string | null; items: { href: string; label: string; 
       { href: "/projects",     label: "پروژه‌ها",   icon: FolderKanban },
       { href: "/contracts",    label: "قراردادها",  icon: ScrollText },
       { href: "/contractors",  label: "پیمانکاران", icon: UserCheck },
+      { href: "/consultants", label: "مشاوران",    icon: HardHat },
     ],
   },
   {
