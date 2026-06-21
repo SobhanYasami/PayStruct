@@ -148,16 +148,23 @@ func (p Priority) Value() (driver.Value, error) { return string(p), nil }
 type ContractStatus string
 
 const (
-	ContractDraft     ContractStatus = "draft"
-	ContractSigned    ContractStatus = "signed"
-	ContractActive    ContractStatus = "active"
-	ContractClosed    ContractStatus = "closed"
-	ContractCancelled ContractStatus = "cancelled"
+	ContractDraft              ContractStatus = "draft"
+	ContractPendingEngineering ContractStatus = "pending_engineering"
+	ContractPendingFinance     ContractStatus = "pending_finance"
+	ContractPendingLegal       ContractStatus = "pending_legal"
+	ContractPendingCEO         ContractStatus = "pending_ceo"
+	ContractReadyToPrint       ContractStatus = "ready_to_print"
+	ContractSigned             ContractStatus = "signed"
+	ContractActive             ContractStatus = "active"
+	ContractClosed             ContractStatus = "closed"
+	ContractCancelled          ContractStatus = "cancelled"
 )
 
 func (s ContractStatus) Valid() bool {
 	switch s {
-	case ContractDraft, ContractSigned, ContractActive, ContractClosed, ContractCancelled:
+	case ContractDraft, ContractPendingEngineering, ContractPendingFinance,
+		ContractPendingLegal, ContractPendingCEO, ContractReadyToPrint,
+		ContractSigned, ContractActive, ContractClosed, ContractCancelled:
 		return true
 	}
 	return false

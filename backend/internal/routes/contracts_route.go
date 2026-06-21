@@ -48,6 +48,9 @@ func SetupContractRoutes(router fiber.Router, h *handlers.ContractHandler, ah *h
 	contracts.Put("/:id/line-items/:itemId", h.UpdateLineItem)
 	contracts.Delete("/:id/line-items/:itemId", h.DeleteLineItem)
 
+	contracts.Post("/:id/transition", h.TransitionContract)
+	contracts.Get("/:id/approvals", h.ListContractApprovals)
+
 	contracts.Get("/:id/attachments", ah.ListForContract)
 	contracts.Post("/:id/attachments", ah.Upload)
 }

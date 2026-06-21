@@ -538,6 +538,12 @@ type CreateContractReq struct {
 	AdvancePctBps         int     `json:"advance_pct_bps"`
 	SocialSecurityPctBps  int     `json:"social_security_pct_bps"`
 	ScannedFileURL        string  `json:"scanned_file_url"`
+	// Unit-rate fields.
+	BOQVersion          string `json:"boq_version"`
+	ContractCoefficient string `json:"contract_coefficient"`
+	// Cost-plus fields.
+	ManagementFeePctBps  int    `json:"management_fee_pct_bps"`
+	FeeCalculationMethod string `json:"fee_calculation_method"`
 }
 
 type UpdateContractReq struct {
@@ -557,6 +563,10 @@ type UpdateContractReq struct {
 	AdvancePctBps         *int    `json:"advance_pct_bps"`
 	SocialSecurityPctBps  *int    `json:"social_security_pct_bps"`
 	ScannedFileURL        *string `json:"scanned_file_url"`
+	BOQVersion            *string `json:"boq_version"`
+	ContractCoefficient   *string `json:"contract_coefficient"`
+	ManagementFeePctBps   *int    `json:"management_fee_pct_bps"`
+	FeeCalculationMethod  *string `json:"fee_calculation_method"`
 }
 
 // ContractListItem embeds Contract and adds denormalized display fields.
@@ -679,6 +689,16 @@ func (s *ContractSvc) Create(ctx context.Context, callerCompanyID string, req Cr
 		if csid, err := uuid.Parse(req.ConsultantID); err == nil {
 			ct.ConsultantID = &csid
 		}
+	}
+	ct.BOQVersion = req.BOQVersion
+	ct.FeeCalculationMethod = req.FeeCalculationMethod
+	ct.ManagementFeePctBps = req.ManagementFeePctBps
+	if req.ContractCoefficient != "" {
+		if v, err := decimal.NewFromString(req.ContractCoefficient); err == nil {
+			ct.ContractCoefficient = v
+		}
+	} else {
+		ct.ContractCoefficient = decimal.NewFromInt(1)
 	}
 	if req.StartsOn != nil && *req.StartsOn != "" {
 		ct.StartsOn = parseDate(*req.StartsOn)
@@ -818,6 +838,20 @@ func (s *ContractSvc) Update(ctx context.Context, id string, req UpdateContractR
 	if req.EndsOn != nil {
 		updates["ends_on"] = parseDate(*req.EndsOn)
 	}
+	if req.BOQVersion != nil {
+		updates["boq_version"] = *req.BOQVersion
+	}
+	if req.ContractCoefficient != nil {
+		if v, err := decimal.NewFromString(*req.ContractCoefficient); err == nil {
+			updates["contract_coefficient"] = v
+		}
+	}
+	if req.ManagementFeePctBps != nil {
+		updates["management_fee_pct_bps"] = *req.ManagementFeePctBps
+	}
+	if req.FeeCalculationMethod != nil {
+		updates["fee_calculation_method"] = *req.FeeCalculationMethod
+	}
 
 	if len(updates) > 0 {
 		if err := s.db.WithContext(ctx).Model(&ct).Updates(updates).Error; err != nil {
@@ -840,6 +874,146 @@ func (s *ContractSvc) Delete(ctx context.Context, id string) error {
 		return &ServiceError{Message: "Contract not found", Code: 404}
 	}
 	return nil
+}
+
+// ============================================================
+// CONTRACT APPROVAL WORKFLOW
+// ============================================================
+
+type contractTransitionRule struct {
+	next     model.ContractStatus
+	required model.Role // empty = any head role passes
+}
+
+var contractStateMachine = map[model.ContractStatus]map[string]contractTransitionRule{
+	model.ContractDraft: {
+		"submit": {next: model.ContractPendingEngineering, required: ""},
+	},
+	model.ContractPendingEngineering: {
+		"approve": {next: model.ContractPendingFinance, required: model.RoleEngineeringHead},
+		"reject":  {next: model.ContractDraft, required: model.RoleEngineeringHead},
+	},
+	model.ContractPendingFinance: {
+		"approve": {next: model.ContractPendingLegal, required: model.RoleFinanceHead},
+		"reject":  {next: model.ContractDraft, required: model.RoleFinanceHead},
+	},
+	model.ContractPendingLegal: {
+		"approve": {next: model.ContractPendingCEO, required: model.RoleJuridicalHead},
+		"reject":  {next: model.ContractDraft, required: model.RoleJuridicalHead},
+	},
+	model.ContractPendingCEO: {
+		"approve": {next: model.ContractReadyToPrint, required: model.RoleManager},
+		"reject":  {next: model.ContractDraft, required: model.RoleManager},
+	},
+	model.ContractReadyToPrint: {
+		"sign": {next: model.ContractSigned, required: model.RoleManager},
+	},
+}
+
+func hasRole(roles []string, role model.Role) bool {
+	for _, r := range roles {
+		if r == string(role) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasAnyHeadRole(roles []string) bool {
+	for _, r := range roles {
+		if model.IsHeadRole(model.Role(r)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *ContractSvc) Transition(ctx context.Context, contractID, actorID string, actorRoles []string, action, comment string) (*model.Contract, error) {
+	cid, err := uuid.Parse(contractID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid contract ID", Code: 400}
+	}
+	aid, err := uuid.Parse(actorID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid actor ID", Code: 400}
+	}
+
+	var ct model.Contract
+	if err := s.db.WithContext(ctx).First(&ct, "id = ?", cid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, &ServiceError{Message: "Contract not found", Code: 404}
+		}
+		return nil, &ServiceError{Message: "Database error", Code: 500}
+	}
+
+	// Special: cancel is available from any non-terminal status, manager only.
+	if action == "cancel" {
+		if ct.Status == model.ContractCancelled || ct.Status == model.ContractClosed {
+			return nil, &ServiceError{Message: "Cannot cancel a closed/cancelled contract", Code: 409}
+		}
+		if !hasRole(actorRoles, model.RoleManager) {
+			return nil, &ServiceError{Message: "Only manager can cancel a contract", Code: 403}
+		}
+		return s.applyTransition(ctx, &ct, aid, model.ContractCancelled, comment)
+	}
+
+	actions, ok := contractStateMachine[ct.Status]
+	if !ok {
+		return nil, &ServiceError{Message: fmt.Sprintf("No transitions available from status %q", ct.Status), Code: 409}
+	}
+	rule, ok := actions[action]
+	if !ok {
+		return nil, &ServiceError{Message: fmt.Sprintf("Action %q is not valid for status %q", action, ct.Status), Code: 409}
+	}
+
+	if rule.required == "" {
+		if !hasAnyHeadRole(actorRoles) {
+			return nil, &ServiceError{Message: "Requires a head role to perform this action", Code: 403}
+		}
+	} else {
+		if !hasRole(actorRoles, rule.required) {
+			return nil, &ServiceError{Message: fmt.Sprintf("Action %q requires role %q", action, rule.required), Code: 403}
+		}
+	}
+
+	return s.applyTransition(ctx, &ct, aid, rule.next, comment)
+}
+
+func (s *ContractSvc) applyTransition(ctx context.Context, ct *model.Contract, actorID uuid.UUID, next model.ContractStatus, comment string) (*model.Contract, error) {
+	prev := ct.Status
+	event := model.ApprovalEvent{
+		EntityType: "contract",
+		EntityID:   ct.ID,
+		ActorID:    actorID,
+		FromStatus: string(prev),
+		ToStatus:   string(next),
+		Comment:    comment,
+	}
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(ct).Update("status", next).Error; err != nil {
+			return err
+		}
+		return tx.Create(&event).Error
+	}); err != nil {
+		return nil, &ServiceError{Message: "Transition failed", Code: 500}
+	}
+	ct.Status = next
+	return ct, nil
+}
+
+func (s *ContractSvc) ListApprovals(ctx context.Context, contractID string) ([]model.ApprovalEvent, error) {
+	uid, err := uuid.Parse(contractID)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid contract ID", Code: 400}
+	}
+	var events []model.ApprovalEvent
+	if err := s.db.WithContext(ctx).
+		Where("entity_type = 'contract' AND entity_id = ?", uid).
+		Order("created_at ASC").
+		Find(&events).Error; err != nil {
+		return nil, &ServiceError{Message: "Query failed", Code: 500}
+	}
+	return events, nil
 }
 
 // ============================================================

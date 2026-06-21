@@ -342,6 +342,38 @@ func (h *ContractHandler) DeleteContract(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusNoContent).Send(nil)
 }
 
+// POST /contracts/:id/transition
+func (h *ContractHandler) TransitionContract(c *fiber.Ctx) error {
+	claims := jwtClaims(c)
+	if claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse(Unauthorized, "Unauthorized"))
+	}
+	var body struct {
+		Action  string `json:"action"`
+		Comment string `json:"comment"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	if body.Action == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "action is required"))
+	}
+	contract, err := h.svc.Transition(c.Context(), c.Params("id"), claims.UserID, claims.Roles, body.Action, body.Comment)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(contract, "Contract status updated"))
+}
+
+// GET /contracts/:id/approvals
+func (h *ContractHandler) ListContractApprovals(c *fiber.Ctx) error {
+	events, err := h.svc.ListApprovals(c.Context(), c.Params("id"))
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(events))
+}
+
 // GET /contracts/:id/line-items
 func (h *ContractHandler) ListLineItems(c *fiber.Ctx) error {
 	items, err := h.svc.ListLineItems(c.Context(), c.Params("id"))

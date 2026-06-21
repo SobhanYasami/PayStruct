@@ -1,6 +1,6 @@
 ---
 tags: [api, routes]
-updated: 2026-06-15
+updated: 2026-06-20
 ---
 
 # API Routes
@@ -12,7 +12,7 @@ Response envelope: `{ status, data: T | { data: T[], total, page, limit }, messa
 ## Auth / Users
 
 | Method | Path | Auth | Roles | Handler |
-|--------|------|------|-------|---------|
+| ------ | ---- | ---- | ----- | ------- |
 | POST | `/users/auth/signin` | ❌ | — | `UserHandler.SignIn` |
 | GET | `/users/me/` | ✅ | any | `UserHandler.GetMe` |
 | PUT | `/users/me/` | ✅ | any | `UserHandler.UpdateMe` |
@@ -25,7 +25,7 @@ Response envelope: `{ status, data: T | { data: T[], total, page, limit }, messa
 ## Companies
 
 | Method | Path | Auth | Roles |
-|--------|------|------|-------|
+| ------ | ---- | ---- | ----- |
 | GET | `/company/management/` | ✅ | sudoer |
 | GET | `/company/management/:id` | ✅ | sudoer |
 | POST | `/company/management/` | ✅ | sudoer |
@@ -35,7 +35,7 @@ Response envelope: `{ status, data: T | { data: T[], total, page, limit }, messa
 ## Projects
 
 | Method | Path | Auth | Roles |
-|--------|------|------|-------|
+| ------ | ---- | ---- | ----- |
 | GET | `/projects` | ✅ | any |
 | GET | `/projects/:id` | ✅ | any |
 | POST | `/projects` | ✅ | manager, engineering_head |
@@ -47,55 +47,70 @@ Query params: `page`, `limit`, `status`, `search`.
 ## Contractors
 
 | Method | Path | Auth | Roles |
-|--------|------|------|-------|
-| GET/POST/GET:id/PUT:id/DELETE:id | `/contractors` | ✅ | any |
+| ------ | ---- | ---- | ----- |
+| GET/POST | `/contractors` | ✅ | any |
+| GET/PUT/DELETE | `/contractors/:id` | ✅ | any |
 
 Query params: `page`, `limit`, `search`.
 
 ## Contracts
 
-| Method | Path | Auth | Roles |
-|--------|------|------|-------|
-| GET | `/contracts` | ✅ | manager, engineering_head, finance_head, juridical_head |
-| GET | `/contracts/:id` | ✅ | head roles |
-| POST | `/contracts` | ✅ | head roles |
-| PUT | `/contracts/:id` | ✅ | head roles |
-| DELETE | `/contracts/:id` | ✅ | head roles |
-| GET | `/contracts/:id/line-items` | ✅ | head roles |
-| POST | `/contracts/:id/line-items` | ✅ | head roles |
-| PUT | `/contracts/:id/line-items/:itemId` | ✅ | head roles |
-| DELETE | `/contracts/:id/line-items/:itemId` | ✅ | head roles |
-| GET | `/contracts/:id/attachments` | ✅ | head roles |
-| POST | `/contracts/:id/attachments` | ✅ | head roles |
+| Method | Path | Auth | Roles | Notes |
+| ------ | ---- | ---- | ----- | ----- |
+| GET | `/contracts` | ✅ | head roles | `page`, `limit`, `project_id`, `search` |
+| GET | `/contracts/:id` | ✅ | head roles | |
+| POST | `/contracts` | ✅ | head roles | |
+| PUT | `/contracts/:id` | ✅ | head roles | |
+| DELETE | `/contracts/:id` | ✅ | head roles | |
+| GET | `/contracts/:id/line-items` | ✅ | head roles | |
+| POST | `/contracts/:id/line-items` | ✅ | head roles | |
+| PUT | `/contracts/:id/line-items/:itemId` | ✅ | head roles | |
+| DELETE | `/contracts/:id/line-items/:itemId` | ✅ | head roles | |
+| POST | `/contracts/:id/transition` | ✅ | head roles | body: `{ action, comment }` |
+| GET | `/contracts/:id/approvals` | ✅ | head roles | returns `[]ApprovalEvent` |
+| GET | `/contracts/:id/attachments` | ✅ | head roles | |
+| POST | `/contracts/:id/attachments` | ✅ | head roles | multipart, field `document_type` |
 
-Query params: `page`, `limit`, `project_id`, `search`.
+Head roles: `manager`, `engineering_head`, `finance_head`, `juridical_head` (+ sudoer/admin bypass).
+
+### Transition Actions
+
+| Action | Valid From | Required Role |
+| ------ | ---------- | ------------- |
+| `submit` | `draft` | any head role |
+| `approve` | `pending_*` | stage-specific role |
+| `reject` | `pending_*` | stage-specific role |
+| `sign` | `ready_to_print` | `manager` |
+| `cancel` | any | `manager` |
+
+→ [[flows/Contract Approval Workflow]]
 
 ## Statements
 
 | Method | Path | Auth | Notes |
-|--------|------|------|-------|
-| POST | `/contracts/:contractId/statements` | ✅ | create new statement |
-| GET | `/contracts/:contractId/statements` | ✅ | list for contract |
-| GET | `/statements/:id` | ✅ | full detail with work/extra/deduction items |
-| PUT | `/statements/:id/works-done` | ✅ | replace work done items, triggers Recompute() |
-| POST | `/statements/:id/extra-works` | ✅ | add extra work line |
-| DELETE | `/statements/:id/extra-works/:ewId` | ✅ | remove extra work line |
-| GET | `/statements/:id/deductions` | ✅ | list custom deductions |
-| POST | `/statements/:id/deductions` | ✅ | add deduction line |
-| PUT | `/statements/:id/deductions/:did` | ✅ | update deduction |
-| DELETE | `/statements/:id/deductions/:did` | ✅ | remove deduction |
+| ------ | ---- | ---- | ----- |
+| POST | `/contracts/:contractId/statements` | ✅ | create |
+| GET | `/contracts/:contractId/statements` | ✅ | list |
+| GET | `/statements/:id` | ✅ | full detail |
+| PUT | `/statements/:id/works-done` | ✅ | replace work items, triggers Recompute() |
+| POST | `/statements/:id/extra-works` | ✅ | add extra work |
+| DELETE | `/statements/:id/extra-works/:ewId` | ✅ | |
+| GET | `/statements/:id/deductions` | ✅ | |
+| POST | `/statements/:id/deductions` | ✅ | |
+| PUT | `/statements/:id/deductions/:did` | ✅ | |
+| DELETE | `/statements/:id/deductions/:did` | ✅ | |
 | PATCH | `/statements/:id/transition` | ✅ | advance/reject approval state |
-| DELETE | `/statements/:id` | ✅ | delete (draft only) |
-| GET | `/statements/:id/report` | ✅ | download Excel (streams `application/vnd.openxmlformats...`) |
+| DELETE | `/statements/:id` | ✅ | draft only |
+| GET | `/statements/:id/report` | ✅ | streams Excel (`application/vnd.openxmlformats…`) |
 
 ## Attachments
 
 | Method | Path | Auth | Notes |
-|--------|------|------|-------|
+| ------ | ---- | ---- | ----- |
 | DELETE | `/attachments/:id` | ✅ | head roles only |
 
 ## Static Files
 
 `GET /files-storage/**` — served directly from `../storage/` on disk. No auth (public URL).
 
-→ See [[RBAC]] for role definitions, [[backend/Attachment Service]] for upload constraints
+→ [[RBAC]], [[backend/Attachment Service]]

@@ -15,6 +15,7 @@ import (
 
 	"github.com/sobhan-yasami/docs-db-panel/internal/database"
 	"github.com/sobhan-yasami/docs-db-panel/internal/handlers"
+	"github.com/sobhan-yasami/docs-db-panel/internal/middlewares"
 	"github.com/sobhan-yasami/docs-db-panel/internal/routes"
 )
 
@@ -55,6 +56,11 @@ func main() {
 	if err := database.Seed(db); err != nil {
 		log.Fatalf("❌ Database seed failed: %v", err)
 	}
+
+	// Wire the DB into the auth middleware so tokens referencing a stale/deleted
+	// principal are rejected with 401 (forces re-login) instead of surfacing as
+	// confusing FK violations on the first write.
+	middlewares.SetAuthDB(db)
 
 	app := fiber.New(fiber.Config{
 		Prefork:       false,

@@ -1,6 +1,6 @@
 ---
 tags: [index, map-of-content]
-updated: 2026-06-15
+updated: 2026-06-20
 ---
 
 # FinManager — Knowledge Graph
@@ -41,9 +41,10 @@ PostgreSQL
 
 ### Business Flows
 - [[flows/Statement Approval Workflow]] — 5-stage state machine
+- [[flows/Contract Approval Workflow]] — 5-stage contract sign-off state machine
 - [[flows/Financial Calculations]] — how net_amount is derived
 - [[flows/Report Generation]] — Excel statement export (Persian)
-- [[flows/Contract Creation]] — active-project gate, file upload
+- [[flows/Contract Creation]] — multi-step wizard, WBS, file upload
 
 ### Backend
 - [[backend/Backend Overview]]

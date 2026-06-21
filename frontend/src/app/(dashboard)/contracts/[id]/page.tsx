@@ -14,9 +14,11 @@ import {
   contractsApi,
   type Attachment,
   type ContractLineItem,
+  type ContractApprovalEvent,
   type CreateLineItemReq,
   type UpdateLineItemReq,
 } from "@/lib/api/contracts";
+import { useAuthStore } from "@/lib/stores/auth";
 import DocumentViewer from "@/components/domain/DocumentViewer";
 import { contractorsApi } from "@/lib/api/contractors";
 import { projectsApi } from "@/lib/api/projects";
@@ -90,6 +92,29 @@ const wbsDefaults: WbsForm = {
   sort_order: undefined,
 };
 
+// ─── approval workflow config ──────────────────────────────────────────────────
+
+const STATUS_ORDER = [
+  "draft", "pending_engineering", "pending_finance",
+  "pending_legal", "pending_ceo", "ready_to_print", "signed",
+];
+
+const APPROVAL_STAGES = [
+  { label: "تأیید مهندسی",  role: "engineering_head", pendingStatus: "pending_engineering", action: "approve" },
+  { label: "تأیید مالی",    role: "finance_head",      pendingStatus: "pending_finance",      action: "approve" },
+  { label: "تأیید حقوقی",   role: "juridical_head",    pendingStatus: "pending_legal",         action: "approve" },
+  { label: "تأیید مدیریت",  role: "manager",           pendingStatus: "pending_ceo",           action: "approve" },
+  { label: "ثبت امضا",      role: "manager",           pendingStatus: "ready_to_print",        action: "sign" },
+] as const;
+
+function stageState(contractStatus: string, pendingStatus: string): "done" | "active" | "pending" {
+  const ci = STATUS_ORDER.indexOf(contractStatus);
+  const si = STATUS_ORDER.indexOf(pendingStatus);
+  if (ci > si) return "done";
+  if (ci === si) return "active";
+  return "pending";
+}
+
 // ─── page ──────────────────────────────────────────────────────────────────────
 
 export default function ContractDetailPage() {
@@ -97,9 +122,13 @@ export default function ContractDetailPage() {
   const router = useRouter();
   const qc = useQueryClient();
 
+  const user = useAuthStore((s) => s.user);
+  const userRoles: string[] = user?.roles ?? [];
+
   const [createOpen, setCreateOpen] = useState(false);
   const [editItem, setEditItem] = useState<ContractLineItem | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [approvalComment, setApprovalComment] = useState("");
 
   const [createStmtOpen, setCreateStmtOpen] = useState(false);
   const [viewerAttachment, setViewerAttachment] = useState<Attachment | null>(null);
@@ -150,6 +179,31 @@ export default function ContractDetailPage() {
     enabled: !!id,
   });
   const attachments: Attachment[] = Array.isArray(attachmentsRes?.data) ? attachmentsRes.data : [];
+
+  const { data: approvalsRes } = useQuery({
+    queryKey: ["contract-approvals", id],
+    queryFn: () => contractsApi.listApprovals(id),
+    enabled: !!id,
+  });
+  const approvalEvents: ContractApprovalEvent[] = Array.isArray(approvalsRes?.data) ? approvalsRes.data : [];
+
+  // Editing WBS + docs locked once contract has entered approval or been rejected
+  const canEdit = contract?.status === "draft" && approvalEvents.length === 0;
+  // Statements only make sense on an active contract
+  const canCreateStatement = contract?.status === "active";
+
+  const transitionMutation = useMutation({
+    mutationFn: ({ action, comment }: { action: string; comment: string }) =>
+      contractsApi.transition(id, action, comment),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contract", id] });
+      qc.invalidateQueries({ queryKey: ["contract-approvals", id] });
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      setApprovalComment("");
+      toast.success("وضعیت قرارداد بروزرسانی شد");
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.detail || e.title : "خطا در تغییر وضعیت"),
+  });
 
   const handleStmtDownload = async (stmtId: string) => {
     try {
@@ -318,6 +372,113 @@ export default function ContractDetailPage() {
         </div>
       </div>
 
+      {/* ── approval workflow ── */}
+      {contract.status !== "active" && contract.status !== "closed" && contract.status !== "cancelled" && (
+        <div className="bg-white border rounded-xl px-6 py-5">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-base font-semibold text-primary">گردش کار تأیید</h2>
+            {contract.status === "draft" && userRoles.some((r) =>
+              ["engineering_head", "finance_head", "juridical_head", "manager"].includes(r)
+            ) && (
+              <button
+                onClick={() => transitionMutation.mutate({ action: "submit", comment: "" })}
+                disabled={transitionMutation.isPending}
+                className="text-xs bg-status-pm/10 text-status-pm border border-status-pm/30 rounded-lg px-3 py-1.5 hover:bg-status-pm/20 transition disabled:opacity-50"
+              >
+                ارسال برای تأیید مهندسی
+              </button>
+            )}
+          </div>
+
+          {/* step chain */}
+          <div className="flex items-start gap-0 overflow-x-auto pb-2">
+            {APPROVAL_STAGES.map((stage, i) => {
+              const state = stageState(contract.status, stage.pendingStatus);
+              const approvedEvent = approvalEvents.find(
+                (e) => e.from_status === stage.pendingStatus && e.to_status !== "draft"
+              );
+              return (
+                <div key={i} className="flex items-start flex-1 min-w-0">
+                  <div className="flex flex-col items-center gap-1.5 flex-1">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors
+                      ${state === "done" ? "bg-status-approved text-white"
+                        : state === "active" ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                        : "bg-muted text-muted-foreground"}`}>
+                      {state === "done" ? "✓" : i + 1}
+                    </div>
+                    <span className={`text-[10px] text-center leading-tight px-1 ${state === "active" ? "text-primary font-semibold" : state === "done" ? "text-status-approved" : "text-muted-foreground"}`}>
+                      {stage.label}
+                    </span>
+                    {approvedEvent && (
+                      <span className="text-[9px] text-muted-foreground text-center leading-tight px-1">
+                        {new Date(approvedEvent.created_at).toLocaleDateString("fa-IR")}
+                      </span>
+                    )}
+                  </div>
+                  {i < APPROVAL_STAGES.length - 1 && (
+                    <div className={`flex-none w-8 h-0.5 mt-4 transition-colors ${state === "done" ? "bg-status-approved" : "bg-muted"}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* action area for current active stage */}
+          {APPROVAL_STAGES.map((stage) => {
+            if (contract.status !== stage.pendingStatus) return null;
+            if (!userRoles.includes(stage.role)) return null;
+            return (
+              <div key={stage.pendingStatus} className="mt-4 pt-4 border-t space-y-3">
+                <textarea
+                  value={approvalComment}
+                  onChange={(e) => setApprovalComment(e.target.value)}
+                  placeholder="توضیحات (اختیاری)..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                  rows={2}
+                />
+                <div className="flex gap-2">
+                  {stage.action === "sign" ? (
+                    <button
+                      onClick={() => transitionMutation.mutate({ action: "sign", comment: approvalComment })}
+                      disabled={transitionMutation.isPending}
+                      className="flex-1 bg-status-approved text-white rounded-lg py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition"
+                    >
+                      {transitionMutation.isPending ? "..." : "ثبت امضا"}
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => transitionMutation.mutate({ action: "approve", comment: approvalComment })}
+                        disabled={transitionMutation.isPending}
+                        className="flex-1 bg-status-approved text-white rounded-lg py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition"
+                      >
+                        {transitionMutation.isPending ? "..." : "تأیید"}
+                      </button>
+                      <button
+                        onClick={() => transitionMutation.mutate({ action: "reject", comment: approvalComment })}
+                        disabled={transitionMutation.isPending}
+                        className="flex-1 bg-status-rejected/10 text-status-rejected border border-status-rejected/30 rounded-lg py-2 text-sm font-semibold hover:bg-status-rejected/20 disabled:opacity-50 transition"
+                      >
+                        رد
+                      </button>
+                    </>
+                  )}
+                  {userRoles.includes("manager") && (
+                    <button
+                      onClick={() => transitionMutation.mutate({ action: "cancel", comment: approvalComment })}
+                      disabled={transitionMutation.isPending}
+                      className="px-3 border rounded-lg py-2 text-xs text-muted-foreground hover:text-status-rejected hover:border-status-rejected/30 transition"
+                    >
+                      لغو قرارداد
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── project & contractor cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <InfoCard title="پروژه">
@@ -356,13 +517,15 @@ export default function ContractDetailPage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-primary">آیتم‌های قرارداد (WBS / BoQ)</h2>
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition"
-          >
-            <Plus size={15} />
-            افزودن آیتم
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition"
+            >
+              <Plus size={15} />
+              افزودن آیتم
+            </button>
+          )}
         </div>
 
         <div className="bg-white border rounded-xl overflow-hidden">
@@ -382,7 +545,7 @@ export default function ContractDetailPage() {
                     <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-32">قیمت واحد</th>
                     <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-32">جمع</th>
                     <th className="text-right px-4 py-2.5 font-medium text-muted-foreground w-20">ارز</th>
-                    <th className="w-20"></th>
+                    {canEdit && <th className="w-20"></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -395,22 +558,24 @@ export default function ContractDetailPage() {
                       <td className="px-4 py-3 font-mono">{parseFloat(item.unit_rate).toLocaleString("fa-IR")}</td>
                       <td className="px-4 py-3 font-mono text-money-in">{totalLineItem(item)}</td>
                       <td className="px-4 py-3 text-muted-foreground">{item.currency_code}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1 justify-end">
-                          <button
-                            onClick={() => openEdit(item)}
-                            className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteItemId(item.id)}
-                            className="p-1.5 rounded hover:bg-status-rejected/10 text-muted-foreground hover:text-status-rejected transition"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
+                      {canEdit && (
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1 justify-end">
+                            <button
+                              onClick={() => openEdit(item)}
+                              className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteItemId(item.id)}
+                              className="p-1.5 rounded hover:bg-status-rejected/10 text-muted-foreground hover:text-status-rejected transition"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -425,7 +590,7 @@ export default function ContractDetailPage() {
                           return acc + qty * rate;
                         }, 0).toLocaleString("fa-IR")}
                       </td>
-                      <td colSpan={2}></td>
+                      <td colSpan={canEdit ? 2 : 1}></td>
                     </tr>
                   </tfoot>
                 )}
@@ -441,7 +606,9 @@ export default function ContractDetailPage() {
           <h2 className="text-base font-semibold text-primary">صورت وضعیت‌ها</h2>
           <button
             onClick={() => setCreateStmtOpen(true)}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition"
+            disabled={!canCreateStatement}
+            title={!canCreateStatement ? "صورت وضعیت فقط برای قراردادهای فعال قابل ایجاد است" : undefined}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Plus size={15} />
             صورت وضعیت جدید
@@ -533,14 +700,16 @@ export default function ContractDetailPage() {
                       )}
                       <span className="max-w-32 truncate">{att.file_name}</span>
                     </button>
-                    <button
-                      onClick={() => deleteAttachmentMutation.mutate(att.id)}
-                      className="p-1 rounded text-muted-foreground hover:text-status-rejected hover:bg-status-rejected/10 transition"
-                    >
-                      <Trash size={12} />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => deleteAttachmentMutation.mutate(att.id)}
+                        className="p-1 rounded text-muted-foreground hover:text-status-rejected hover:bg-status-rejected/10 transition"
+                      >
+                        <Trash size={12} />
+                      </button>
+                    )}
                   </div>
-                ) : (
+                ) : canEdit ? (
                   <>
                     <input
                       ref={(el) => { slotInputRefs.current[key] = el; }}
@@ -562,6 +731,8 @@ export default function ContractDetailPage() {
                       بارگذاری
                     </button>
                   </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
                 )}
               </div>
             );

@@ -1,5 +1,28 @@
 import { apiFetch } from "./client";
 
+export type ContractStatus =
+  | "draft"
+  | "pending_engineering"
+  | "pending_finance"
+  | "pending_legal"
+  | "pending_ceo"
+  | "ready_to_print"
+  | "signed"
+  | "active"
+  | "closed"
+  | "cancelled";
+
+export interface ContractApprovalEvent {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  actor_id: string;
+  from_status: string;
+  to_status: string;
+  comment?: string;
+  created_at: string;
+}
+
 export interface Contract {
   id: string;
   company_id: string;
@@ -11,7 +34,7 @@ export interface Contract {
   title: string;
   description?: string;
   type: "lump_sum" | "unit_rate" | "cost_plus" | "time_material" | "construction_management" | "design_bid_build" | "design_build" | "labor_only" | "turnkey" | "percentage";
-  status: string;
+  status: ContractStatus;
   gross_budget: string;
   currency: string;
   performance_bond_pct_bps: number;
@@ -23,6 +46,10 @@ export interface Contract {
   starts_on?: string;
   ends_on?: string;
   scanned_file_url?: string;
+  boq_version?: string;
+  contract_coefficient?: string;
+  management_fee_pct_bps?: number;
+  fee_calculation_method?: string;
   contractor_name?: string;
   project_name?: string;
   created_at: string;
@@ -63,6 +90,10 @@ export interface CreateContractReq {
   retention_pct_bps?: number;
   advance_pct_bps?: number;
   social_security_pct_bps?: number;
+  boq_version?: string;
+  contract_coefficient?: string;
+  management_fee_pct_bps?: number;
+  fee_calculation_method?: string;
 }
 
 export type UpdateContractReq = Partial<Omit<CreateContractReq, "project_id" | "contractor_id">>;
@@ -161,4 +192,13 @@ export const contractsApi = {
 
   deleteAttachment: (id: string) =>
     apiFetch<void>(`/attachments/${id}`, { method: "DELETE" }),
+
+  transition: (id: string, action: string, comment?: string) =>
+    apiFetch<Envelope<Contract>>(`/contracts/${id}/transition`, {
+      method: "POST",
+      body: JSON.stringify({ action, comment: comment ?? "" }),
+    }),
+
+  listApprovals: (id: string) =>
+    apiFetch<Envelope<ContractApprovalEvent[]>>(`/contracts/${id}/approvals`),
 };

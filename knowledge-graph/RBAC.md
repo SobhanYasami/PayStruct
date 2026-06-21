@@ -1,20 +1,20 @@
 ---
 tags: [rbac, auth, roles]
-updated: 2026-06-15
+updated: 2026-06-20
 ---
 
 # RBAC — Role-Based Access Control
 
 ## Role Taxonomy
 
-```
+```text
 sudoer / admin          — super-admin, bypass all role gates
 ─────────────────────────────────────────────────────
 Head roles (IsHead=true, signing authority):
-  manager               — project + contract write
-  engineering_head      — project + contract write
-  finance_head          — contract read/write
-  juridical_head        — contract read/write
+  manager               — project + contract write; cancel/sign contracts; CEO approval stage
+  engineering_head      — project + contract write; engineering approval stage
+  finance_head          — contract read/write; finance approval stage
+  juridical_head        — contract read/write; legal approval stage
   security_head         — head read access
 ─────────────────────────────────────────────────────
 Operational roles:
@@ -31,7 +31,7 @@ Stored as `text[]` on `employees.roles` (PostgreSQL array).
 File: `backend/internal/middlewares/authorize.go`
 
 | Middleware | Passes if |
-|-----------|-----------|
+| ---------- | --------- |
 | `Authenticate(secret)` | Valid HS256 JWT; injects `claims` into `c.Locals("claims")` |
 | `SuperAdminOnly()` | `claims.Roles` contains `"sudoer"` |
 | `RequireRole(name)` | `claims.Roles` contains exactly `name` |
@@ -42,14 +42,29 @@ All middleware reads `*schemas.JWTClaims` from `c.Locals("claims")` — set by `
 ## Route Gates
 
 | Resource | Read | Write |
-|----------|------|-------|
+| -------- | ---- | ----- |
 | Projects | any authenticated | manager, engineering_head |
 | Contractors | any authenticated | any authenticated |
 | Contracts | head roles | head roles |
+| Contract transitions | head roles | head roles (role varies per stage) |
 | Employees | sudoer | sudoer |
 | Companies | sudoer | sudoer |
 | Attachments (delete) | head roles | head roles |
 | Statements | any authenticated | any authenticated |
+
+## Contract Approval Stage Roles
+
+| Stage | Pending Status | Required Role |
+| ----- | -------------- | ------------- |
+| Submit | `draft` → `pending_engineering` | any head role |
+| Engineering | `pending_engineering` | `engineering_head` |
+| Finance | `pending_finance` | `finance_head` |
+| Legal | `pending_legal` | `juridical_head` |
+| CEO | `pending_ceo` | `manager` |
+| Sign | `ready_to_print` | `manager` |
+| Cancel | any | `manager` |
+
+→ [[flows/Contract Approval Workflow]]
 
 ## Frontend Guards
 
@@ -61,8 +76,9 @@ const canWrite = user?.roles?.some(r => WRITE_ROLES.includes(r));
 ```
 
 - Contracts page: hides "New Contract" button + edit/delete actions if `!canWrite`
-- Employees page: `user.roles.includes("sudoer")` gate (show "دسترسی ندارید" otherwise)
-- Project status change: inline `<select>` in project list (any authed user can see projects)
+- Contract detail approval buttons: gated per stage role via `userRoles.includes(stage.role)`
+- Employees page: `user.roles.includes("sudoer")` gate
+- Project status change: any authed user
 
 ## JWT Claims
 
@@ -79,4 +95,4 @@ type JWTClaims struct {
 
 Token signed with `JWT_SECRET` env var (HS256). Expiry configured in `TokenService`.
 
-→ See [[backend/Auth & JWT]], [[API Routes]]
+→ [[backend/Auth & JWT]], [[API Routes]]

@@ -235,6 +235,14 @@ END$$`,
 
 		`CREATE INDEX IF NOT EXISTS idx_approval_events_entity
 		 ON approval_events (entity_type, entity_id, created_at DESC)`,
+
+		// Widen status column and update check constraint for contract approval workflow.
+		`ALTER TABLE contracts ALTER COLUMN status TYPE varchar(32)`,
+		`ALTER TABLE contracts DROP CONSTRAINT IF EXISTS chk_contracts_status`,
+		`ALTER TABLE contracts ADD CONSTRAINT chk_contracts_status CHECK (
+			status IN ('draft','pending_engineering','pending_finance','pending_legal',
+			           'pending_ceo','ready_to_print','signed','active','closed','cancelled')
+		)`,
 	}
 	for _, s := range stmts {
 		if err := db.Exec(s).Error; err != nil {

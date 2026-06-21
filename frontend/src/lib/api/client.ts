@@ -27,6 +27,14 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     try {
       body = await res.json();
     } catch {}
+    // Stale/invalid session: clear auth and bounce to login so the user can
+    // re-authenticate instead of getting stuck on opaque downstream errors.
+    if (res.status === 401 && typeof window !== "undefined") {
+      useAuthStore.getState().logout();
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login";
+      }
+    }
     const detail = body.detail ?? body.message ?? "";
     throw new ApiError(res.status, body.title ?? res.statusText, detail, body.type);
   }

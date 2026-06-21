@@ -68,7 +68,7 @@ type Contract struct {
 	Description string       `gorm:"type:text" json:"description,omitempty"`
 	Type        ContractType `gorm:"type:varchar(32);not null;default:'lump_sum';check:type IN ('lump_sum','unit_rate','cost_plus','time_material','construction_management','design_bid_build','design_build','labor_only','turnkey','percentage')" json:"type"`
 
-	Status      ContractStatus  `gorm:"type:varchar(16);not null;default:'draft';index;check:status IN ('draft','signed','active','closed','cancelled')" json:"status"`
+	Status      ContractStatus  `gorm:"type:varchar(32);not null;default:'draft';index;check:status IN ('draft','pending_engineering','pending_finance','pending_legal','pending_ceo','ready_to_print','signed','active','closed','cancelled')" json:"status"`
 	GrossBudget decimal.Decimal `gorm:"type:numeric(20,8);not null;default:0" json:"gross_budget"`
 	Currency    string          `gorm:"size:3;not null;default:'IRR';check:char_length(currency)=3" json:"currency"`
 
@@ -87,6 +87,14 @@ type Contract struct {
 	EndsOn   *time.Time `gorm:"index" json:"ends_on,omitempty"`
 
 	ScannedFileURL string `gorm:"size:512" json:"scanned_file_url,omitempty"`
+
+	// Unit-rate contract fields.
+	BOQVersion          string          `gorm:"size:128"                                                                                   json:"boq_version,omitempty"`
+	ContractCoefficient decimal.Decimal `gorm:"type:numeric(8,4);not null;default:1"                                                       json:"contract_coefficient"`
+
+	// Cost-plus contract fields.
+	ManagementFeePctBps  int    `gorm:"not null;default:0;check:management_fee_pct_bps >= 0 AND management_fee_pct_bps <= 10000" json:"management_fee_pct_bps"`
+	FeeCalculationMethod string `gorm:"size:32"                                                                                json:"fee_calculation_method,omitempty"`
 
 	Company    *Company           `gorm:"foreignKey:CompanyID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"    json:"-"`
 	Project    *Project           `gorm:"foreignKey:ProjectID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"    json:"-"`
