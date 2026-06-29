@@ -1,6 +1,6 @@
 ---
 tags: [flow, contract, approval, state-machine]
-updated: 2026-06-20
+updated: 2026-06-29
 ---
 
 # Contract Approval Workflow
@@ -11,12 +11,13 @@ updated: 2026-06-20
 
 ```text
 draft
-  ──[submit]──▶  pending_engineering   (any head role)
-  ──[approve]──▶ pending_finance       (engineering_head)
-  ──[approve]──▶ pending_legal         (juridical_head)
-  ──[approve]──▶ pending_ceo           (finance_head)
-  ──[approve]──▶ ready_to_print        (manager)
-  ──[sign]────▶  signed                (manager)
+  ──[submit]────▶ pending_engineering   (any head role)
+  ──[approve]───▶ pending_finance       (engineering_head)
+  ──[approve]───▶ pending_legal         (juridical_head)
+  ──[approve]───▶ pending_ceo           (finance_head)
+  ──[approve]───▶ ready_to_print        (manager)
+  ──[sign]──────▶ signed                (manager)  → sets signed_at timestamp
+  ──[activate]──▶ active                (manager)
 
 Any pending_* ──[reject]──▶ draft      (current stage's required role)
 Any status    ──[cancel]──▶ cancelled  (manager only)
@@ -24,16 +25,17 @@ Any status    ──[cancel]──▶ cancelled  (manager only)
 
 ## Transition Table
 
-| From | Action | To | Required Role |
-| ---- | ------ | -- | ------------- |
-| `draft` | `submit` | `pending_engineering` | any head role |
-| `pending_engineering` | `approve` | `pending_finance` | `engineering_head` |
-| `pending_finance` | `approve` | `pending_legal` | `finance_head` |
-| `pending_legal` | `approve` | `pending_ceo` | `juridical_head` |
-| `pending_ceo` | `approve` | `ready_to_print` | `manager` |
-| `ready_to_print` | `sign` | `signed` | `manager` |
-| `pending_*` | `reject` | `draft` | stage's required role |
-| any | `cancel` | `cancelled` | `manager` |
+| From | Action | To | Required Role | Side Effect |
+| ---- | ------ | -- | ------------- | ----------- |
+| `draft` | `submit` | `pending_engineering` | any head role | |
+| `pending_engineering` | `approve` | `pending_finance` | `engineering_head` | |
+| `pending_finance` | `approve` | `pending_legal` | `finance_head` | |
+| `pending_legal` | `approve` | `pending_ceo` | `juridical_head` | |
+| `pending_ceo` | `approve` | `ready_to_print` | `manager` | |
+| `ready_to_print` | `sign` | `signed` | `manager` | sets `signed_at = NOW()` |
+| `signed` | `activate` | `active` | `manager` | enables statement creation |
+| `pending_*` | `reject` | `draft` | stage's required role | |
+| any | `cancel` | `cancelled` | `manager` | |
 
 ## Backend Implementation
 
@@ -53,7 +55,7 @@ var contractStateMachine = map[models.ContractStatus]map[string]contractTransiti
 `Transition(ctx, contractID, actorID, actorRoles, action, comment)`:
 1. Fetch contract, look up `contractStateMachine[current][action]`
 2. Check `actorRoles` contains `requiredRole` (or manager/sudoer)
-3. DB transaction: `UPDATE contracts SET status = nextStatus` + INSERT `approval_events`
+3. DB transaction: `Updates(map)` — `status = nextStatus` + optionally `signed_at = NOW()` when next == `signed` — + INSERT `approval_events`
 4. Return updated contract
 
 `ListApprovals(ctx, contractID)`: queries `approval_events WHERE entity_type='contract' AND entity_id=contractID`.

@@ -25,6 +25,13 @@ type CreateStatementReq struct {
 	Notes       string `json:"notes"`
 }
 
+type UpdateStatementReq struct {
+	PeriodStart *string `json:"period_start"`
+	PeriodEnd   *string `json:"period_end"`
+	IssuedOn    *string `json:"issued_on"`
+	Notes       *string `json:"notes"`
+}
+
 // WorksDoneItem — user supplies line_item_id (WBS ref) and accumulated quantity_done.
 // Description/unit/unit_price are copied from the ContractLineItem.
 type WorksDoneItem struct {
@@ -228,6 +235,13 @@ func (s *StatementService) SetWorksDone(ctx context.Context, statementID string,
 				continue // skip invalid refs
 			}
 
+			// For unit_rate contracts apply contract_coefficient so the effective price
+			// reflects the competitive adjustment from the tender (ضریب پیمان).
+			effectiveRate := wbs.UnitRate
+			if ct.Type == model.ContractUnitRate {
+				effectiveRate = effectiveRate.Mul(ct.ContractCoefficient)
+			}
+
 			newItems = append(newItems, model.WorkDoneItem{
 				StatementID: sid,
 				LineItemID:  &liID,
@@ -236,8 +250,8 @@ func (s *StatementService) SetWorksDone(ctx context.Context, statementID string,
 				Description: wbs.Description,
 				UnitCode:    wbs.Unit,
 				Quantity:    qty,
-				UnitPrice:   wbs.UnitRate,
-				Amount:      qty.Mul(wbs.UnitRate),
+				UnitPrice:   effectiveRate,
+				Amount:      qty.Mul(effectiveRate),
 			})
 			lineNo++
 		}
@@ -259,6 +273,7 @@ func (s *StatementService) SetWorksDone(ctx context.Context, statementID string,
 		stmt.Recompute(
 			ct.RetentionPctBps, ct.AdvancePctBps,
 			ct.VatPctBps, ct.SocialSecurityPctBps,
+			ct.ManagementFeePctBps,
 			advanceOutstanding, grossBudget,
 		)
 
@@ -340,7 +355,7 @@ func (s *StatementService) AddExtraWork(ctx context.Context, statementID string,
 		var ct model.Contract
 		tx.First(&ct, "id = ?", stmt.ContractID)
 		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
-		stmt.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero, grossBudget)
+		stmt.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, ct.ManagementFeePctBps, decimal.Zero, grossBudget)
 		tx.Model(&stmt).Updates(map[string]any{
 			"extra_amount": stmt.ExtraAmount,
 			"net_amount":   stmt.NetAmount,
@@ -392,7 +407,7 @@ func (s *StatementService) DeleteExtraWork(ctx context.Context, statementID, ext
 		var ct model.Contract
 		tx.First(&ct, "id = ?", full.ContractID)
 		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
-		full.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero, grossBudget)
+		full.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, ct.ManagementFeePctBps, decimal.Zero, grossBudget)
 		tx.Model(&full).Updates(map[string]any{
 			"extra_amount": full.ExtraAmount,
 			"net_amount":   full.NetAmount,
@@ -452,7 +467,7 @@ func (s *StatementService) AddDeduction(ctx context.Context, statementID string,
 		var ct model.Contract
 		tx.First(&ct, "id = ?", stmt.ContractID)
 		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
-		stmt.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero, grossBudget)
+		stmt.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, ct.ManagementFeePctBps, decimal.Zero, grossBudget)
 		tx.Model(&stmt).Updates(map[string]any{
 			"deduction_amount": stmt.DeductionAmount,
 			"net_amount":       stmt.NetAmount,
@@ -526,7 +541,7 @@ func (s *StatementService) UpdateDeduction(ctx context.Context, statementID, ded
 		var ct model.Contract
 		tx.First(&ct, "id = ?", full.ContractID)
 		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
-		full.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero, grossBudget)
+		full.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, ct.ManagementFeePctBps, decimal.Zero, grossBudget)
 		tx.Model(&full).Updates(map[string]any{
 			"deduction_amount": full.DeductionAmount,
 			"net_amount":       full.NetAmount,
@@ -579,7 +594,7 @@ func (s *StatementService) DeleteDeduction(ctx context.Context, statementID, ded
 		var ct model.Contract
 		tx.First(&ct, "id = ?", full.ContractID)
 		grossBudget, _ := decimal.NewFromString(ct.GrossBudget.String())
-		full.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, decimal.Zero, grossBudget)
+		full.Recompute(ct.RetentionPctBps, ct.AdvancePctBps, ct.VatPctBps, ct.SocialSecurityPctBps, ct.ManagementFeePctBps, decimal.Zero, grossBudget)
 		tx.Model(&full).Updates(map[string]any{
 			"deduction_amount": full.DeductionAmount,
 			"net_amount":       full.NetAmount,
@@ -684,6 +699,62 @@ func hasAnyRole(callerRoles, required []string) bool {
 		}
 	}
 	return false
+}
+
+// --------------- Update header ---------------
+
+func (s *StatementService) Update(ctx context.Context, id string, req UpdateStatementReq) (*model.InterimStatement, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, &ServiceError{Message: "Invalid statement ID", Code: 400}
+	}
+	var stmt model.InterimStatement
+	if err := s.db.WithContext(ctx).First(&stmt, "id = ?", uid).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, &ServiceError{Message: "Statement not found", Code: 404}
+		}
+		return nil, &ServiceError{Message: "Database error", Code: 500}
+	}
+	if stmt.Status != model.StatementDraft {
+		return nil, &ServiceError{Message: "Only draft statements can be edited", Code: 422}
+	}
+
+	cols := map[string]any{}
+	if req.PeriodStart != nil {
+		ps, err := time.Parse("2006-01-02", *req.PeriodStart)
+		if err != nil {
+			return nil, &ServiceError{Message: "Invalid period_start (expected YYYY-MM-DD)", Code: 400}
+		}
+		cols["period_start"] = ps
+		stmt.PeriodStart = ps
+	}
+	if req.PeriodEnd != nil {
+		pe, err := time.Parse("2006-01-02", *req.PeriodEnd)
+		if err != nil {
+			return nil, &ServiceError{Message: "Invalid period_end (expected YYYY-MM-DD)", Code: 400}
+		}
+		cols["period_end"] = pe
+		stmt.PeriodEnd = pe
+	}
+	if req.IssuedOn != nil {
+		io, err := time.Parse("2006-01-02", *req.IssuedOn)
+		if err != nil {
+			return nil, &ServiceError{Message: "Invalid issued_on (expected YYYY-MM-DD)", Code: 400}
+		}
+		cols["issued_on"] = io
+		stmt.IssuedOn = io
+	}
+	if req.Notes != nil {
+		cols["notes"] = *req.Notes
+		stmt.Notes = *req.Notes
+	}
+	if len(cols) == 0 {
+		return &stmt, nil
+	}
+	if err := s.db.WithContext(ctx).Model(&stmt).Updates(cols).Error; err != nil {
+		return nil, &ServiceError{Message: "Update failed", Code: 500}
+	}
+	return &stmt, nil
 }
 
 // --------------- Delete ---------------

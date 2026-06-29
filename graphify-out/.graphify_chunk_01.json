@@ -1,0 +1,945 @@
+{
+  "nodes": [
+    {
+      "id": "readme_finmanager",
+      "label": "FinManager Root README",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_docker_compose_postgres",
+      "label": "Backend Docker Compose (PostgreSQL service)",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/docker-compose.yml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_middlewares_jwt_readme_jwt_validation_module",
+      "label": "JWT Validation Module",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_middlewares_jwt_readme_validatetoken",
+      "label": "ValidateToken",
+      "file_type": "concept",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 67",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_middlewares_jwt_readme_validateclaims",
+      "label": "ValidateClaims",
+      "file_type": "concept",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 34",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_middlewares_jwt_readme_parsetoken",
+      "label": "ParseToken",
+      "file_type": "concept",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 107",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_middlewares_jwt_readme_jwtclaims",
+      "label": "JWTClaims",
+      "file_type": "concept",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 110",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_middlewares_jwt_readme_hs256_revocation_best_practices",
+      "label": "JWT Best Practices: Secret Rotation, Revocation Store (Redis), Short Lifetime",
+      "file_type": "rationale",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 130",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_models_readme_domain_model",
+      "label": "Internal Models README (PayStruct Domain Layer)",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_models_readme_company",
+      "label": "Company model",
+      "file_type": "concept",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 17",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_models_readme_employee",
+      "label": "Employee model",
+      "file_type": "concept",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_models_readme_project",
+      "label": "Project model",
+      "file_type": "concept",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 19",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_models_readme_contractor",
+      "label": "Contractor model",
+      "file_type": "concept",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 20",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_models_readme_contract",
+      "label": "Contract model",
+      "file_type": "concept",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 21",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_models_readme_statusstatement",
+      "label": "StatusStatement model",
+      "file_type": "concept",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 22",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_models_readme_shopspring_decimal_rationale",
+      "label": "Use shopspring/decimal for all money to avoid float rounding errors",
+      "file_type": "rationale",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 69",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_internal_models_readme_sti_rationale",
+      "label": "Single-table inheritance chosen over table-per-subclass (no subclass-distinct attributes today)",
+      "file_type": "rationale",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 67",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "docker_compose_root_postgres",
+      "label": "Root Docker Compose (PostgreSQL + healthcheck)",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/docker-compose.yml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "frontend_agents_md_nextjs_agent_rules",
+      "label": "Frontend AGENTS.md (Next.js agent rules)",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/frontend/AGENTS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "frontend_claude_md",
+      "label": "Frontend CLAUDE.md",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/frontend/CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "frontend_readme_nextjs_app",
+      "label": "Frontend README (Next.js app)",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/frontend/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "frontend_pnpm_workspace_yaml",
+      "label": "Frontend pnpm workspace config",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/frontend/pnpm-workspace.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "graphify_out_converted_statement_report_format_db93c1cf_statement_report",
+      "label": "Statement Report Format (converted from Excel, Persian)",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/graphify-out/converted/statement-report-format_db93c1cf.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_00___index_md_finmanager_knowledge_graph",
+      "label": "FinManager Knowledge Graph Index",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/00 - Index.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_api_routes_md_api_routes",
+      "label": "API Routes",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/API Routes.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_architecture_md_architecture",
+      "label": "Architecture",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_architecture_md_bps_for_percentages_rationale",
+      "label": "BPS (basis-points) for all rate fields to avoid float rounding",
+      "file_type": "rationale",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md",
+      "source_location": "line 78",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_architecture_md_dashboard_route_group_rationale",
+      "label": "(dashboard) route group — parenthesised segments not in URL",
+      "file_type": "rationale",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md",
+      "source_location": "line 77",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_architecture_md_polymorphic_attachment_rationale",
+      "label": "Polymorphic Attachment via entity_type + entity_id",
+      "file_type": "rationale",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md",
+      "source_location": "line 81",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_data_model_md_data_model",
+      "label": "Data Model",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Data Model.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_rbac_md_rbac",
+      "label": "RBAC",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/RBAC.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_backend_attachment_service_md_attachment_service",
+      "label": "Attachment Service",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Attachment Service.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_backend_auth___jwt_md_auth_jwt",
+      "label": "Auth & JWT",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Auth & JWT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_backend_backend_overview_md_backend_overview",
+      "label": "Backend Overview",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Backend Overview.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph_backend_mock_data_seeder_md_mock_data_seeder",
+      "label": "Mock Data Seeder",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Mock Data Seeder.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "knowledge_graph__trash_welcome_md_obsidian_vault",
+      "label": "Obsidian Vault Welcome (trashed)",
+      "file_type": "document",
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/.trash/Welcome.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "knowledge_graph_00___index_md_finmanager_knowledge_graph",
+      "target": "knowledge_graph_architecture_md_architecture",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/00 - Index.md",
+      "source_location": "line 28",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_00___index_md_finmanager_knowledge_graph",
+      "target": "knowledge_graph_api_routes_md_api_routes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/00 - Index.md",
+      "source_location": "line 29",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_00___index_md_finmanager_knowledge_graph",
+      "target": "knowledge_graph_rbac_md_rbac",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/00 - Index.md",
+      "source_location": "line 30",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_00___index_md_finmanager_knowledge_graph",
+      "target": "knowledge_graph_data_model_md_data_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/00 - Index.md",
+      "source_location": "line 33",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_00___index_md_finmanager_knowledge_graph",
+      "target": "knowledge_graph_backend_backend_overview_md_backend_overview",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/00 - Index.md",
+      "source_location": "line 50",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_00___index_md_finmanager_knowledge_graph",
+      "target": "knowledge_graph_backend_auth___jwt_md_auth_jwt",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/00 - Index.md",
+      "source_location": "line 51",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_00___index_md_finmanager_knowledge_graph",
+      "target": "knowledge_graph_backend_attachment_service_md_attachment_service",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/00 - Index.md",
+      "source_location": "line 52",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_00___index_md_finmanager_knowledge_graph",
+      "target": "knowledge_graph_backend_mock_data_seeder_md_mock_data_seeder",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/00 - Index.md",
+      "source_location": "line 53",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_architecture_md_architecture",
+      "target": "knowledge_graph_data_model_md_data_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md",
+      "source_location": "line 83",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_architecture_md_architecture",
+      "target": "knowledge_graph_rbac_md_rbac",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md",
+      "source_location": "line 83",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_architecture_md_architecture",
+      "target": "knowledge_graph_backend_auth___jwt_md_auth_jwt",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md",
+      "source_location": "line 83",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_api_routes_md_api_routes",
+      "target": "knowledge_graph_rbac_md_rbac",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/API Routes.md",
+      "source_location": "line 116",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_api_routes_md_api_routes",
+      "target": "knowledge_graph_backend_attachment_service_md_attachment_service",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/API Routes.md",
+      "source_location": "line 116",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_rbac_md_rbac",
+      "target": "knowledge_graph_backend_auth___jwt_md_auth_jwt",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/RBAC.md",
+      "source_location": "line 98",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_rbac_md_rbac",
+      "target": "knowledge_graph_api_routes_md_api_routes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/RBAC.md",
+      "source_location": "line 98",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_auth___jwt_md_auth_jwt",
+      "target": "knowledge_graph_rbac_md_rbac",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Auth & JWT.md",
+      "source_location": "line 43",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_backend_overview_md_backend_overview",
+      "target": "knowledge_graph_backend_auth___jwt_md_auth_jwt",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Backend Overview.md",
+      "source_location": "line 77",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_backend_overview_md_backend_overview",
+      "target": "knowledge_graph_backend_attachment_service_md_attachment_service",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Backend Overview.md",
+      "source_location": "line 77",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_backend_overview_md_backend_overview",
+      "target": "knowledge_graph_api_routes_md_api_routes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Backend Overview.md",
+      "source_location": "line 77",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_mock_data_seeder_md_mock_data_seeder",
+      "target": "knowledge_graph_rbac_md_rbac",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Mock Data Seeder.md",
+      "source_location": "line 97",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_mock_data_seeder_md_mock_data_seeder",
+      "target": "knowledge_graph_api_routes_md_api_routes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Mock Data Seeder.md",
+      "source_location": "line 97",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_mock_data_seeder_md_mock_data_seeder",
+      "target": "backend_internal_models_readme_company",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Mock Data Seeder.md",
+      "source_location": "line 97",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_mock_data_seeder_md_mock_data_seeder",
+      "target": "backend_internal_models_readme_employee",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Mock Data Seeder.md",
+      "source_location": "line 97",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_middlewares_jwt_readme_validatetoken",
+      "target": "backend_internal_middlewares_jwt_readme_parsetoken",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 121",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_middlewares_jwt_readme_validatetoken",
+      "target": "backend_internal_middlewares_jwt_readme_validateclaims",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 122",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_middlewares_jwt_readme_validateclaims",
+      "target": "backend_internal_middlewares_jwt_readme_jwtclaims",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 123",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_middlewares_jwt_readme_jwt_validation_module",
+      "target": "backend_internal_middlewares_jwt_readme_validatetoken",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 99",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_middlewares_jwt_readme_jwt_validation_module",
+      "target": "backend_internal_middlewares_jwt_readme_validateclaims",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 105",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_middlewares_jwt_readme_jwt_validation_module",
+      "target": "backend_internal_middlewares_jwt_readme_parsetoken",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 107",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_auth___jwt_md_auth_jwt",
+      "target": "backend_internal_middlewares_jwt_readme_jwt_validation_module",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Auth & JWT.md",
+      "source_location": "line 33",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_attachment_service_md_attachment_service",
+      "target": "backend_internal_models_readme_contract",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Attachment Service.md",
+      "source_location": "line 69",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_models_readme_domain_model",
+      "target": "backend_internal_models_readme_company",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 17",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_models_readme_domain_model",
+      "target": "backend_internal_models_readme_employee",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 18",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_models_readme_domain_model",
+      "target": "backend_internal_models_readme_project",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 19",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_models_readme_domain_model",
+      "target": "backend_internal_models_readme_contractor",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 20",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_models_readme_domain_model",
+      "target": "backend_internal_models_readme_contract",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 21",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_models_readme_domain_model",
+      "target": "backend_internal_models_readme_statusstatement",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 22",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_data_model_md_data_model",
+      "target": "backend_internal_models_readme_domain_model",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Data Model.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_models_readme_statusstatement",
+      "target": "graphify_out_converted_statement_report_format_db93c1cf_statement_report",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_backend_auth___jwt_md_auth_jwt",
+      "target": "backend_internal_middlewares_jwt_readme_jwtclaims",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Auth & JWT.md",
+      "source_location": "line 13",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_middlewares_jwt_readme_jwt_validation_module",
+      "target": "knowledge_graph_rbac_md_rbac",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "backend_docker_compose_postgres",
+      "target": "docker_compose_root_postgres",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/docker-compose.yml",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_claude_md",
+      "target": "frontend_agents_md_nextjs_agent_rules",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/frontend/CLAUDE.md",
+      "source_location": "line 1",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_readme_nextjs_app",
+      "target": "frontend_agents_md_nextjs_agent_rules",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/frontend/README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_architecture_md_bps_for_percentages_rationale",
+      "target": "backend_internal_models_readme_shopspring_decimal_rationale",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_architecture_md_bps_for_percentages_rationale",
+      "target": "knowledge_graph_architecture_md_architecture",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md",
+      "source_location": "line 78",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_models_readme_shopspring_decimal_rationale",
+      "target": "backend_internal_models_readme_domain_model",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 69",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_models_readme_sti_rationale",
+      "target": "backend_internal_models_readme_employee",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md",
+      "source_location": "line 67",
+      "weight": 1.0
+    },
+    {
+      "source": "knowledge_graph_architecture_md_polymorphic_attachment_rationale",
+      "target": "knowledge_graph_backend_attachment_service_md_attachment_service",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md",
+      "source_location": "line 81",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_internal_middlewares_jwt_readme_hs256_revocation_best_practices",
+      "target": "backend_internal_middlewares_jwt_readme_jwt_validation_module",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/middlewares/jwt/readme.md",
+      "source_location": "line 130",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "hyperedge_jwt_auth_rbac_pipeline",
+      "label": "JWT validation pipeline: ParseToken → ValidateClaims → RBAC middleware gate",
+      "nodes": [
+        "backend_internal_middlewares_jwt_readme_validatetoken",
+        "backend_internal_middlewares_jwt_readme_validateclaims",
+        "knowledge_graph_rbac_md_rbac"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/backend/Auth & JWT.md"
+    },
+    {
+      "id": "hyperedge_contract_domain_entities",
+      "label": "Contract domain: Project + Contractor + Contract together form a payment contract",
+      "nodes": [
+        "backend_internal_models_readme_project",
+        "backend_internal_models_readme_contractor",
+        "backend_internal_models_readme_contract"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/backend/internal/models/README.md"
+    },
+    {
+      "id": "hyperedge_financial_precision_stack",
+      "label": "Financial precision stack: shopspring/decimal + BPS rates + NUMERIC(20,8) in Postgres",
+      "nodes": [
+        "backend_internal_models_readme_shopspring_decimal_rationale",
+        "knowledge_graph_architecture_md_bps_for_percentages_rationale",
+        "knowledge_graph_data_model_md_data_model"
+      ],
+      "relation": "implement",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/mnt/Data/0x00-{OnGoingJobs}/0x000 {Jobs}/0x01-{ Freelancing }/0x00-{FinManager}/knowledge-graph/Architecture.md"
+    }
+  ],
+  "input_tokens": 9800,
+  "output_tokens": 3200
+}

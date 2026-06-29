@@ -117,6 +117,13 @@ export interface SetWorksDonePayload {
   items: { line_item_id: string; quantity_done: string }[];
 }
 
+export interface UpdateStatementPayload {
+  period_start?: string;
+  period_end?: string;
+  issued_on?: string;
+  notes?: string;
+}
+
 interface Envelope<T> { status: string; data: T; message: string }
 interface ListPayload<T> { data: T[]; total: number; page: number; limit: number }
 
@@ -132,6 +139,12 @@ export const statementsApi = {
   create: (contractId: string, payload: { period_start: string; period_end: string; issued_on: string; notes?: string }) =>
     apiFetch<Envelope<InterimStatement>>(`/contracts/${contractId}/statements`, {
       method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  update: (id: string, payload: UpdateStatementPayload) =>
+    apiFetch<Envelope<InterimStatement>>(`/statements/${id}`, {
+      method: "PATCH",
       body: JSON.stringify(payload),
     }),
 

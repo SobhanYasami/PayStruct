@@ -55,7 +55,9 @@ func (InterimStatement) TableName() string { return "interim_statements" }
 
 // Recompute updates all cached aggregate fields from in-memory child slices.
 // grossBudget is the parent contract's gross_budget (used for progress %).
-func (s *InterimStatement) Recompute(retentionBps, advanceBps, vatBps, socialSecBps int, advanceOutstanding, grossBudget decimal.Decimal) {
+// managementFeeBps is non-zero only for cost_plus contracts: gross_amount becomes
+// the management fee (ExtraWorkItems hold actual costs in that mode).
+func (s *InterimStatement) Recompute(retentionBps, advanceBps, vatBps, socialSecBps, managementFeeBps int, advanceOutstanding, grossBudget decimal.Decimal) {
 	gross := decimal.Zero
 	for i := range s.WorkDoneItems {
 		gross = gross.Add(s.WorkDoneItems[i].Amount)
@@ -69,8 +71,18 @@ func (s *InterimStatement) Recompute(retentionBps, advanceBps, vatBps, socialSec
 		customDeductions = customDeductions.Add(s.DeductionItems[i].Amount)
 	}
 
-	grossTotal := gross.Add(extra)
 	bpsDivisor := decimal.NewFromInt(10000)
+
+	// For cost_plus contracts: ExtraWorkItems are actual costs; GrossAmount is the
+	// management fee computed on those costs. grossTotal = actual_costs + management_fee.
+	if managementFeeBps > 0 {
+		mgmtFee := extra.Mul(decimal.NewFromInt(int64(managementFeeBps))).Div(bpsDivisor)
+		s.GrossAmount = mgmtFee
+	} else {
+		s.GrossAmount = gross
+	}
+
+	grossTotal := s.GrossAmount.Add(extra)
 
 	retention := grossTotal.Mul(decimal.NewFromInt(int64(retentionBps))).Div(bpsDivisor)
 	advanceRate := grossTotal.Mul(decimal.NewFromInt(int64(advanceBps))).Div(bpsDivisor)
@@ -79,7 +91,6 @@ func (s *InterimStatement) Recompute(retentionBps, advanceBps, vatBps, socialSec
 	socialSec := grossTotal.Mul(decimal.NewFromInt(int64(socialSecBps))).Div(bpsDivisor)
 	net := grossTotal.Sub(retention).Sub(advance).Add(vat).Sub(socialSec).Sub(s.LdAmount).Sub(customDeductions)
 
-	s.GrossAmount = gross
 	s.ExtraAmount = extra
 	s.DeductionAmount = customDeductions
 	s.RetentionAmount = retention
@@ -89,7 +100,7 @@ func (s *InterimStatement) Recompute(retentionBps, advanceBps, vatBps, socialSec
 	s.NetAmount = net
 
 	if grossBudget.GreaterThan(decimal.Zero) {
-		pct := gross.Div(grossBudget).Mul(decimal.NewFromInt(100))
+		pct := grossTotal.Div(grossBudget).Mul(decimal.NewFromInt(100))
 		s.ProgressPct = &pct
 	}
 }

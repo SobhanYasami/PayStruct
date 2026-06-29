@@ -19,6 +19,7 @@ func SetupStatementRoutes(router fiber.Router, h *handlers.StatementHandler, rh 
 	// Flat statement operations
 	stmts := router.Group("/statements", auth)
 	stmts.Get("/:id", h.GetStatement)
+	stmts.Patch("/:id", h.UpdateStatement)
 	stmts.Put("/:id/works-done", h.SetWorksDone)
 	stmts.Post("/:id/extra-works", h.AddExtraWork)
 	stmts.Delete("/:id/extra-works/:ewId", h.DeleteExtraWork)

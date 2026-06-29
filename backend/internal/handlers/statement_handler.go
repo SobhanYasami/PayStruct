@@ -53,6 +53,19 @@ func (h *StatementHandler) GetStatement(c *fiber.Ctx) error {
 	return c.JSON(SuccessResponse(stmt))
 }
 
+// PATCH /statements/:id
+func (h *StatementHandler) UpdateStatement(c *fiber.Ctx) error {
+	var req services.UpdateStatementReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(BadRequest, "Invalid request body"))
+	}
+	stmt, err := h.svc.Update(c.Context(), c.Params("id"), req)
+	if err != nil {
+		return serviceErr(c, err)
+	}
+	return c.JSON(SuccessResponse(stmt, "Statement updated"))
+}
+
 // PUT /statements/:id/works-done
 func (h *StatementHandler) SetWorksDone(c *fiber.Ctx) error {
 	var req services.SetWorksDoneReq

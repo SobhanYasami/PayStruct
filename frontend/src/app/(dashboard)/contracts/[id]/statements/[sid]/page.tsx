@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Plus, Trash2, Pencil } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Pencil, Settings2 } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import {
@@ -14,6 +14,7 @@ import {
   type DeductionItem,
   type ExtraWorkItem,
   type WorkDoneItem,
+  type UpdateStatementPayload,
 } from "@/lib/api/interim-statements";
 import { contractsApi, type ContractLineItem } from "@/lib/api/contracts";
 import { contractorsApi } from "@/lib/api/contractors";
@@ -83,6 +84,14 @@ const deductionSchema = z.object({
 });
 type DeductionForm = z.infer<typeof deductionSchema>;
 
+const editStmtSchema = z.object({
+  period_start: z.string().min(1, "تاریخ شروع الزامی است"),
+  period_end: z.string().min(1, "تاریخ پایان الزامی است"),
+  issued_on: z.string().min(1, "تاریخ صدور الزامی است"),
+  notes: z.string().optional(),
+});
+type EditStmtForm = z.infer<typeof editStmtSchema>;
+
 // ─── page ──────────────────────────────────────────────────────────────────────
 
 export default function StatementDetailPage() {
@@ -101,6 +110,7 @@ export default function StatementDetailPage() {
   const [confirmTransition, setConfirmTransition] = useState<{ to: string; label: string; requireComment?: boolean } | null>(null);
 
   // Works-done local state: map line_item_id → quantity_done
+  const [editStmtOpen, setEditStmtOpen] = useState(false);
   const [worksDoneMap, setWorksDoneMap] = useState<Record<string, string>>({});
   const [worksDirty, setWorksDirty] = useState(false);
 
@@ -158,11 +168,31 @@ export default function StatementDetailPage() {
   // ── forms ──
   const extraForm = useForm<ExtraWorkForm>({ resolver: zodResolver(extraWorkSchema), defaultValues: { description: "", unit: "", quantity: "", unit_price: "", reason: "" } });
   const deductForm = useForm<DeductionForm>({ resolver: zodResolver(deductionSchema), defaultValues: { description: "", unit: "", quantity: "", unit_price: "" } });
+  const editStmtForm = useForm<EditStmtForm>({ resolver: zodResolver(editStmtSchema), defaultValues: { period_start: "", period_end: "", issued_on: "", notes: "" } });
 
   const invalidateStmt = () => qc.invalidateQueries({ queryKey: ["statement", sid] });
   const invalidateStmts = () => qc.invalidateQueries({ queryKey: ["statements", contractId] });
 
   // ── mutations ──
+  const updateStmtMutation = useMutation({
+    mutationFn: (payload: UpdateStatementPayload) => statementsApi.update(sid, payload),
+    onSuccess: (res) => {
+      invalidateStmt();
+      invalidateStmts();
+      setEditStmtOpen(false);
+      toast.success("صورت وضعیت ویرایش شد");
+      // Re-seed form with saved values
+      const d = res.data;
+      editStmtForm.reset({
+        period_start: d.period_start.slice(0, 10),
+        period_end: d.period_end.slice(0, 10),
+        issued_on: d.issued_on.slice(0, 10),
+        notes: d.notes ?? "",
+      });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.detail || e.title : "خطا"),
+  });
+
   const worksDoneMutation = useMutation({
     mutationFn: (items: { line_item_id: string; quantity_done: string }[]) =>
       statementsApi.setWorksDone(sid, { items }),
@@ -281,6 +311,7 @@ export default function StatementDetailPage() {
   };
 
   const isDraft = stmt?.status === "draft";
+  const isCostPlus = contract?.type === "cost_plus";
 
   // Available transitions for this user
   const userRoles = user?.roles ?? [];
@@ -318,6 +349,23 @@ export default function StatementDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold text-primary">صورت وضعیت #{stmt.sequence_no}</h1>
               <StatusBadge status={stmt.status} />
+              {isDraft && (
+                <button
+                  onClick={() => {
+                    editStmtForm.reset({
+                      period_start: stmt.period_start.slice(0, 10),
+                      period_end: stmt.period_end.slice(0, 10),
+                      issued_on: stmt.issued_on.slice(0, 10),
+                      notes: stmt.notes ?? "",
+                    });
+                    setEditStmtOpen(true);
+                  }}
+                  title="ویرایش مشخصات صورت وضعیت"
+                  className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition"
+                >
+                  <Settings2 size={15} />
+                </button>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {toJalali(stmt.period_start)} — {toJalali(stmt.period_end)}
@@ -392,10 +440,12 @@ export default function StatementDetailPage() {
       {/* ── tabs ── */}
       <div className="bg-white border rounded-xl overflow-hidden">
         <div className="flex border-b overflow-x-auto">
-          {(["works", "extra", "deductions", "financial"] as Tab[]).map((t) => {
+          {(["works", "extra", "deductions", "financial"] as Tab[]).filter((t) =>
+            isCostPlus ? t !== "works" : true
+          ).map((t) => {
             const labels: Record<Tab, string> = {
               works: "کارهای انجام شده",
-              extra: "کارهای اضافه",
+              extra: isCostPlus ? "هزینه‌های واقعی" : "کارهای اضافه",
               deductions: "کسورات",
               financial: "خلاصه مالی",
             };
@@ -495,22 +545,29 @@ export default function StatementDetailPage() {
             </div>
           )}
 
-          {/* Extra Works Tab */}
+          {/* Extra Works / Actual Costs Tab */}
           {tab === "extra" && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-semibold">کارهای اضافه</h3>
+                <div>
+                  <h3 className="text-sm font-semibold">{isCostPlus ? "هزینه‌های واقعی" : "کارهای اضافه"}</h3>
+                  {isCostPlus && (
+                    <p className="text-xs text-muted-foreground mt-0.5">هزینه‌های دستمزد، مصالح، تجهیزات و پیمانکاران جزء</p>
+                  )}
+                </div>
                 {isDraft && (
                   <button
                     onClick={() => setAddExtraOpen(true)}
                     className="flex items-center gap-1 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition"
                   >
-                    <Plus size={14} /> افزودن
+                    <Plus size={14} /> {isCostPlus ? "ثبت هزینه" : "افزودن"}
                   </button>
                 )}
               </div>
               {extraWorkItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">کار اضافه‌ای ثبت نشده است</p>
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  {isCostPlus ? "هزینه‌ای ثبت نشده است" : "کار اضافه‌ای ثبت نشده است"}
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -659,8 +716,17 @@ export default function StatementDetailPage() {
           {tab === "financial" && (
             <div className="space-y-4">
               <div className="max-w-md mx-auto space-y-1">
-                <FinRow label="مبلغ ناخالص کارهای انجام‌شده" value={fmt(stmt.gross_amount, stmt.currency)} />
-                <FinRow label="کارهای اضافه" value={fmt(stmt.extra_amount, stmt.currency)} />
+                {isCostPlus ? (
+                  <>
+                    <FinRow label="هزینه‌های واقعی" value={fmt(stmt.extra_amount, stmt.currency)} />
+                    <FinRow label="حق‌الزحمه مدیریت" value={fmt(stmt.gross_amount, stmt.currency)} />
+                  </>
+                ) : (
+                  <>
+                    <FinRow label="مبلغ ناخالص کارهای انجام‌شده" value={fmt(stmt.gross_amount, stmt.currency)} />
+                    <FinRow label="کارهای اضافه" value={fmt(stmt.extra_amount, stmt.currency)} />
+                  </>
+                )}
                 <FinRow label="جمع کل" value={fmt(String(parseFloat(stmt.gross_amount) + parseFloat(stmt.extra_amount)), stmt.currency)} bold />
                 <div className="border-t my-2" />
                 <FinRow label="کسر ضمانت حسن انجام" value={`(${fmt(stmt.retention_amount, stmt.currency)})`} negative />
@@ -677,8 +743,35 @@ export default function StatementDetailPage() {
         </div>
       </div>
 
-      {/* ── Add Extra Work Sheet ── */}
-      <Sheet open={addExtraOpen} onClose={() => { setAddExtraOpen(false); extraForm.reset(); }} title="افزودن کار اضافه">
+      {/* ── Edit Statement Sheet ── */}
+      <Sheet open={editStmtOpen} onClose={() => setEditStmtOpen(false)} title="ویرایش مشخصات صورت وضعیت">
+        <form onSubmit={editStmtForm.handleSubmit((d) => updateStmtMutation.mutate({
+          period_start: d.period_start,
+          period_end: d.period_end,
+          issued_on: d.issued_on,
+          notes: d.notes || undefined,
+        }))} className="space-y-4">
+          <Field label="تاریخ شروع دوره" error={editStmtForm.formState.errors.period_start?.message}>
+            <input {...editStmtForm.register("period_start")} type="date" className={inputCls} dir="ltr" />
+          </Field>
+          <Field label="تاریخ پایان دوره" error={editStmtForm.formState.errors.period_end?.message}>
+            <input {...editStmtForm.register("period_end")} type="date" className={inputCls} dir="ltr" />
+          </Field>
+          <Field label="تاریخ صدور" error={editStmtForm.formState.errors.issued_on?.message}>
+            <input {...editStmtForm.register("issued_on")} type="date" className={inputCls} dir="ltr" />
+          </Field>
+          <Field label="یادداشت">
+            <textarea {...editStmtForm.register("notes")} className={`${inputCls} resize-none`} rows={2} />
+          </Field>
+          <button type="submit" disabled={updateStmtMutation.isPending}
+            className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition">
+            {updateStmtMutation.isPending ? "در حال ذخیره..." : "ذخیره تغییرات"}
+          </button>
+        </form>
+      </Sheet>
+
+      {/* ── Add Extra Work / Actual Cost Sheet ── */}
+      <Sheet open={addExtraOpen} onClose={() => { setAddExtraOpen(false); extraForm.reset(); }} title={isCostPlus ? "ثبت هزینه واقعی" : "افزودن کار اضافه"}>
         <form onSubmit={extraForm.handleSubmit((d) => addExtraMutation.mutate(d))} className="space-y-4">
           <Field label="شرح کار" error={extraForm.formState.errors.description?.message}>
             <textarea {...extraForm.register("description")} className={`${inputCls} resize-none`} rows={2} />

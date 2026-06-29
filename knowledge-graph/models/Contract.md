@@ -1,6 +1,6 @@
 ---
 tags: [model, entity]
-updated: 2026-06-20
+updated: 2026-06-29
 ---
 
 # Contract
@@ -20,6 +20,7 @@ Core financial agreement between a [[models/Project]] owner and a [[models/Contr
 | `status` | varchar(32) | 10 values — see Status Machine below |
 | `gross_budget` | NUMERIC(20,8) | total contract value |
 | `currency` | char(3) | default `IRR` |
+| `signed_at` | timestamptz nullable | set automatically when `sign` transition fires |
 | `starts_on`, `ends_on` | date nullable | contract period |
 | `employer_id` | uuid nullable | FK → contractors (project owner / کارفرما) |
 | `consultant_id` | uuid nullable | FK → contractors (consulting engineer / مشاور مهندسی) |
@@ -68,8 +69,8 @@ draft
       → pending_legal    (approve — finance_head)
         → pending_ceo    (approve — juridical_head)
           → ready_to_print (approve — manager)
-            → signed     (sign — manager)
-              → active   (external / manual)
+            → signed     (sign — manager)  ← sets signed_at = NOW()
+              → active   (activate — manager)
                 → closed (external / manual)
 
 Any pending_* → draft   (reject — current-stage role)
@@ -96,6 +97,18 @@ Statement creation: only allowed when `contract.status === "active"`.
 - `sort_order`, `description`, `unit`, `quantity`, `unit_rate`, `currency_code`
 - Denormalized `contractor_id`, `project_id` from parent Contract for query convenience
 - Referenced by `WorkDoneItem.line_item_id` in statements
+
+### Budget Enforcement
+
+`CreateLineItem` and `UpdateLineItem` enforce `gross_budget` when it is positive:
+
+```sql
+SELECT COALESCE(SUM(quantity * unit_rate), 0)
+FROM contract_line_items WHERE contract_id = $1
+```
+
+On create: rejects with 422 if `existingSum + newQty * newRate > gross_budget`.  
+On update: projects new total (`totalSum - oldRow + newRow`) before saving; 422 if exceeded.
 
 ## Attachments
 
