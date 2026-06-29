@@ -18,9 +18,9 @@ Response envelope: `{ status, data: T | { data: T[], total, page, limit }, messa
 | PUT | `/users/me/` | ✅ | any | `UserHandler.UpdateMe` |
 | GET | `/users/employees/list` | ✅ | sudoer | `UserHandler.GetAllEmployee` |
 | GET | `/users/employees/:id` | ✅ | sudoer | `UserHandler.GetEmployee` |
-| POST | `/users/employees/create` | ✅ | sudoer | `UserHandler.CreateEmployee` |
-| PUT | `/users/employees/:id` | ✅ | sudoer | `UserHandler.UpdateEmployee` |
-| DELETE | `/users/employees/:id` | ✅ | sudoer | `UserHandler.DeleteEmployee` |
+| POST | `/users/employees/create` | ✅ | manager (+ sudoer/admin bypass) | `UserHandler.CreateEmployee` |
+| PUT | `/users/employees/:id` | ✅ | manager (+ sudoer/admin bypass) | `UserHandler.UpdateEmployee` |
+| DELETE | `/users/employees/:id` | ✅ | manager (+ sudoer/admin bypass) | `UserHandler.DeleteEmployee` |
 
 ## Companies
 

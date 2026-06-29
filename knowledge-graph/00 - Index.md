@@ -50,6 +50,7 @@ PostgreSQL
 - [[backend/Backend Overview]]
 - [[backend/Auth & JWT]]
 - [[backend/Attachment Service]]
+- [[backend/Mock Data Seeder]] — test fixture script, company hierarchy, position→role mapping
 
 ### Frontend
 - [[frontend/Frontend Overview]]
