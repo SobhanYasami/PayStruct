@@ -37,6 +37,7 @@ const DOC_SLOTS = [
   { key: "drawings_specs",      label: "نقشه‌ها و مشخصات فنی" },
   { key: "guarantees",          label: "ضمانت‌نامه‌ها" },
   { key: "approved_schedule",   label: "برنامه زمان‌بندی تأییدشده" },
+  { key: "signed_contract",     label: "قرارداد امضاشده" },
 ] as const;
 
 type DocKey = typeof DOC_SLOTS[number]["key"];
@@ -96,7 +97,7 @@ const wbsDefaults: WbsForm = {
 
 const STATUS_ORDER = [
   "draft", "pending_engineering", "pending_finance",
-  "pending_legal", "pending_ceo", "ready_to_print", "signed",
+  "pending_legal", "pending_ceo", "ready_to_print", "signed", "active",
 ];
 
 const APPROVAL_STAGES = [
@@ -105,6 +106,7 @@ const APPROVAL_STAGES = [
   { label: "تأیید حقوقی",   role: "juridical_head",    pendingStatus: "pending_legal",         action: "approve" },
   { label: "تأیید مدیریت",  role: "manager",           pendingStatus: "pending_ceo",           action: "approve" },
   { label: "ثبت امضا",      role: "manager",           pendingStatus: "ready_to_print",        action: "sign" },
+  { label: "فعال‌سازی",     role: "manager",           pendingStatus: "signed",                action: "activate" },
 ] as const;
 
 function stageState(contractStatus: string, pendingStatus: string): "done" | "active" | "pending" {
@@ -191,6 +193,8 @@ export default function ContractDetailPage() {
   const canEdit = contract?.status === "draft" && approvalEvents.length === 0;
   // Statements only make sense on an active contract
   const canCreateStatement = contract?.status === "active";
+  // Signed document upload allowed while waiting for manager to activate
+  const canUploadSignedDoc = contract?.status === "ready_to_print" || contract?.status === "signed";
 
   const transitionMutation = useMutation({
     mutationFn: ({ action, comment }: { action: string; comment: string }) =>
@@ -427,8 +431,53 @@ export default function ContractDetailPage() {
           {APPROVAL_STAGES.map((stage) => {
             if (contract.status !== stage.pendingStatus) return null;
             if (!userRoles.includes(stage.role)) return null;
+            const signedAtt = attachments.find((a) => a.document_type === "signed_contract");
             return (
               <div key={stage.pendingStatus} className="mt-4 pt-4 border-t space-y-3">
+                {/* Print + upload area for ready_to_print */}
+                {stage.action === "sign" && (
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-800">
+                      <FileText size={14} className="shrink-0 mt-0.5" />
+                      <span>قرارداد را پرینت کنید، بر روی کاغذ امضا نمایید، سند امضاشده را بارگذاری کنید، سپس «ثبت امضا» را بزنید.</span>
+                    </div>
+                    {signedAtt ? (
+                      <div className="flex items-center gap-2 border border-status-approved/40 rounded-lg px-3 py-2 text-xs bg-status-approved/5">
+                        <FileText size={13} className="text-status-approved shrink-0" />
+                        <span className="flex-1 text-status-approved font-medium truncate">{signedAtt.file_name}</span>
+                        <button
+                          onClick={() => deleteAttachmentMutation.mutate(signedAtt.id)}
+                          className="text-muted-foreground hover:text-status-rejected transition"
+                        >
+                          <Trash size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          ref={(el) => { slotInputRefs.current["signed_contract"] = el; }}
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) uploadMutation.mutate({ file, documentType: "signed_contract" });
+                            e.target.value = "";
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => slotInputRefs.current["signed_contract"]?.click()}
+                          disabled={uploadMutation.isPending}
+                          className="flex items-center justify-center gap-1.5 w-full text-xs border border-dashed rounded-lg px-3 py-2.5 text-primary hover:bg-primary/5 disabled:opacity-50 transition"
+                        >
+                          <FileUp size={13} />
+                          بارگذاری قرارداد امضاشده
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
                 <textarea
                   value={approvalComment}
                   onChange={(e) => setApprovalComment(e.target.value)}
@@ -444,6 +493,14 @@ export default function ContractDetailPage() {
                       className="flex-1 bg-status-approved text-white rounded-lg py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition"
                     >
                       {transitionMutation.isPending ? "..." : "ثبت امضا"}
+                    </button>
+                  ) : stage.action === "activate" ? (
+                    <button
+                      onClick={() => transitionMutation.mutate({ action: "activate", comment: approvalComment })}
+                      disabled={transitionMutation.isPending}
+                      className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition"
+                    >
+                      {transitionMutation.isPending ? "..." : "فعال‌سازی قرارداد"}
                     </button>
                   ) : (
                     <>
@@ -683,7 +740,9 @@ export default function ContractDetailPage() {
         <div className="bg-white border rounded-xl divide-y overflow-hidden">
           {DOC_SLOTS.map(({ key, label }) => {
             const att = attachments.find((a) => a.document_type === key);
-            const canUpload = !att && attachments.length < 3;
+            const isSignedSlot = key === "signed_contract";
+            const effectiveCanEdit = isSignedSlot ? canUploadSignedDoc : canEdit;
+            const canUpload = !att && (isSignedSlot || attachments.length < 3);
             return (
               <div key={key} className="flex items-center gap-3 px-4 py-3">
                 <span className="flex-1 text-sm text-muted-foreground">{label}</span>
@@ -700,7 +759,7 @@ export default function ContractDetailPage() {
                       )}
                       <span className="max-w-32 truncate">{att.file_name}</span>
                     </button>
-                    {canEdit && (
+                    {effectiveCanEdit && (
                       <button
                         onClick={() => deleteAttachmentMutation.mutate(att.id)}
                         className="p-1 rounded text-muted-foreground hover:text-status-rejected hover:bg-status-rejected/10 transition"
@@ -709,7 +768,7 @@ export default function ContractDetailPage() {
                       </button>
                     )}
                   </div>
-                ) : canEdit ? (
+                ) : effectiveCanEdit ? (
                   <>
                     <input
                       ref={(el) => { slotInputRefs.current[key] = el; }}

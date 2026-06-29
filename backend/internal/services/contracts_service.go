@@ -908,6 +908,9 @@ var contractStateMachine = map[model.ContractStatus]map[string]contractTransitio
 	model.ContractReadyToPrint: {
 		"sign": {next: model.ContractSigned, required: model.RoleManager},
 	},
+	model.ContractSigned: {
+		"activate": {next: model.ContractActive, required: model.RoleManager},
+	},
 }
 
 func hasRole(roles []string, role model.Role) bool {
@@ -990,7 +993,13 @@ func (s *ContractSvc) applyTransition(ctx context.Context, ct *model.Contract, a
 		Comment:    comment,
 	}
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(ct).Update("status", next).Error; err != nil {
+		cols := map[string]any{"status": next}
+		if next == model.ContractSigned {
+			now := time.Now()
+			cols["signed_at"] = now
+			ct.SignedAt = &now
+		}
+		if err := tx.Model(ct).Updates(cols).Error; err != nil {
 			return err
 		}
 		return tx.Create(&event).Error
@@ -1077,10 +1086,27 @@ func (s *ContractSvc) CreateLineItem(ctx context.Context, contractID string, req
 		currency = "IRR"
 	}
 
-	// Denormalize contractor_id and project_id from parent contract.
+	// Load contract for denormalization and budget enforcement.
 	var ct model.Contract
-	if err := s.db.WithContext(ctx).Select("contractor_id, project_id").First(&ct, "id = ?", cid).Error; err != nil {
+	if err := s.db.WithContext(ctx).Select("contractor_id, project_id, gross_budget").First(&ct, "id = ?", cid).Error; err != nil {
 		return nil, &ServiceError{Message: "Contract not found", Code: 404}
+	}
+
+	// Enforce: existing WBS total + this item ≤ gross_budget (skipped when budget is zero).
+	if ct.GrossBudget.IsPositive() {
+		var existingSum decimal.Decimal
+		s.db.WithContext(ctx).Raw(
+			"SELECT COALESCE(SUM(quantity * unit_rate), 0) FROM contract_line_items WHERE contract_id = ?", cid,
+		).Scan(&existingSum)
+		if existingSum.Add(qty.Mul(rate)).GreaterThan(ct.GrossBudget) {
+			return nil, &ServiceError{
+				Message: fmt.Sprintf(
+					"جمع آیتم‌های WBS (%.0f) از مبلغ قرارداد (%.0f) بیشتر می‌شود",
+					existingSum.Add(qty.Mul(rate)).InexactFloat64(), ct.GrossBudget.InexactFloat64(),
+				),
+				Code: 422,
+			}
+		}
 	}
 
 	item := model.ContractLineItem{
@@ -1113,6 +1139,9 @@ func (s *ContractSvc) UpdateLineItem(ctx context.Context, itemID string, req Upd
 		return nil, &ServiceError{Message: "Database error", Code: 500}
 	}
 
+	// Track final qty/rate for budget check (default to existing values).
+	newQty, newRate := item.Quantity, item.UnitRate
+
 	updates := make(map[string]any)
 	if req.Description != nil {
 		updates["description"] = *req.Description
@@ -1132,6 +1161,7 @@ func (s *ContractSvc) UpdateLineItem(ctx context.Context, itemID string, req Upd
 	if req.Quantity != nil {
 		if v, err := decimal.NewFromString(*req.Quantity); err == nil {
 			updates["quantity"] = v
+			newQty = v
 		} else {
 			return nil, &ServiceError{Message: "Invalid quantity", Code: 400}
 		}
@@ -1139,10 +1169,35 @@ func (s *ContractSvc) UpdateLineItem(ctx context.Context, itemID string, req Upd
 	if req.UnitRate != nil {
 		if v, err := decimal.NewFromString(*req.UnitRate); err == nil {
 			updates["unit_rate"] = v
+			newRate = v
 		} else {
 			return nil, &ServiceError{Message: "Invalid unit_rate", Code: 400}
 		}
 	}
+
+	// Budget guard: only fires when qty or rate changes.
+	if req.Quantity != nil || req.UnitRate != nil {
+		var ct model.Contract
+		if err := s.db.WithContext(ctx).Select("gross_budget").First(&ct, "id = ?", item.ContractID).Error; err == nil && ct.GrossBudget.IsPositive() {
+			var totalSum decimal.Decimal
+			s.db.WithContext(ctx).Raw(
+				"SELECT COALESCE(SUM(quantity * unit_rate), 0) FROM contract_line_items WHERE contract_id = ?",
+				item.ContractID,
+			).Scan(&totalSum)
+			// Subtract old item contribution, add new.
+			projected := totalSum.Sub(item.Quantity.Mul(item.UnitRate)).Add(newQty.Mul(newRate))
+			if projected.GreaterThan(ct.GrossBudget) {
+				return nil, &ServiceError{
+					Message: fmt.Sprintf(
+						"جمع آیتم‌های WBS (%.0f) از مبلغ قرارداد (%.0f) بیشتر می‌شود",
+						projected.InexactFloat64(), ct.GrossBudget.InexactFloat64(),
+					),
+					Code: 422,
+				}
+			}
+		}
+	}
+
 	if len(updates) > 0 {
 		if err := s.db.WithContext(ctx).Model(&item).Updates(updates).Error; err != nil {
 			return nil, &ServiceError{Message: "Update failed", Code: 500}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -598,6 +598,16 @@ export function CreateContractSheet({
   const form = useForm<FormData>({ resolver: zodResolver(schema), defaultValues });
   const { register, control, formState: { errors }, handleSubmit, reset, watch, trigger } = form;
   const contractType = watch("type");
+  const grossBudgetRaw = watch("gross_budget");
+
+  const grossBudget = useMemo(() => parseFloat(grossBudgetRaw ?? "") || 0, [grossBudgetRaw]);
+
+  const wbsTotal = useMemo(
+    () => wbsRows.reduce((sum, row) => sum + (parseFloat(row.quantity) || 0) * (parseFloat(row.unit_rate) || 0), 0),
+    [wbsRows],
+  );
+
+  const wbsOverBudget = grossBudget > 0 && wbsTotal > grossBudget;
 
   const { data: projectRes } = useQuery({
     queryKey: ["project", defaultProjectId],
@@ -851,6 +861,23 @@ export function CreateContractSheet({
         {/* ══ Step 3: آیتم‌های WBS ══ */}
         {step === 3 && (
           <div className="space-y-3">
+            {/* budget progress bar */}
+            {grossBudget > 0 && (
+              <div className={`flex items-center justify-between gap-3 text-xs px-3 py-2 rounded-lg border ${
+                wbsOverBudget
+                  ? "bg-red-50 border-red-200 text-red-700"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-700"
+              }`}>
+                <span>جمع: {wbsTotal.toLocaleString("fa-IR")}</span>
+                <span className="font-semibold">
+                  {wbsOverBudget
+                    ? `⚠ ${(wbsTotal - grossBudget).toLocaleString("fa-IR")} بیش از سقف`
+                    : `باقی: ${(grossBudget - wbsTotal).toLocaleString("fa-IR")}`}
+                </span>
+                <span>سقف: {grossBudget.toLocaleString("fa-IR")}</span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">آیتم‌های قرارداد (WBS)</p>
               <button
@@ -904,24 +931,15 @@ export function CreateContractSheet({
                     />
                   </Field>
                   <Field label="تعداد">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      dir="ltr"
+                    <BudgetInput
                       value={row.quantity}
-                      onChange={(e) => setWbsRows((prev) => prev.map((r) => r._id === row._id ? { ...r, quantity: e.target.value } : r))}
-                      className={inputCls}
+                      onChange={(v) => setWbsRows((prev) => prev.map((r) => r._id === row._id ? { ...r, quantity: v } : r))}
                     />
                   </Field>
                   <Field label="نرخ واحد">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      dir="ltr"
+                    <BudgetInput
                       value={row.unit_rate}
-                      onChange={(e) => setWbsRows((prev) => prev.map((r) => r._id === row._id ? { ...r, unit_rate: e.target.value } : r))}
-                      className={inputCls}
-                      placeholder="0"
+                      onChange={(v) => setWbsRows((prev) => prev.map((r) => r._id === row._id ? { ...r, unit_rate: v } : r))}
                     />
                   </Field>
                   <Field label="ارز">
@@ -1016,7 +1034,8 @@ export function CreateContractSheet({
             <button
               type="button"
               onClick={goNext}
-              disabled={projectNotActive}
+              disabled={projectNotActive || (step === 3 && wbsOverBudget)}
+              title={step === 3 && wbsOverBudget ? "جمع آیتم‌های WBS از مبلغ قرارداد بیشتر است" : undefined}
               className="flex-1 bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition"
             >
               بعدی

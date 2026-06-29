@@ -3,10 +3,10 @@
 Mock data seeder — hits the live REST API to insert test fixtures.
 
 Seeding order:
-  1. Companies (parent → sub, with employees + head assignment)
-  2. Projects
-  3. Contractors
-  4. Consultants
+  1. Companies (parent → sub, employees + head assignment)
+  2. Projects         → scoped to ASSIGN_TO company (sudoer body override)
+  3. Contractors      → scoped to ASSIGN_TO company (re-login as its manager)
+  4. Consultants      → same token
 
 Reads credentials + base URL from env (falls back to dev defaults):
   API_URL             default: http://localhost:5000/api/v1
@@ -24,19 +24,25 @@ API_BASE = os.environ.get("API_URL", "http://localhost:5000/api/v1")
 EMAIL    = os.environ.get("BOOTSTRAP_USERNAME", "admin@system.local")
 PASSWORD = os.environ.get("BOOTSTRAP_PASSWORD", "admin123")
 
-# position (Persian) → roles array sent to API
+# Sub-company that owns all projects / contractors / consultants.
+# The seeder re-logins as this company's manager so JWT carries the right company_id.
+ASSIGN_TO              = "خانه سازی گیلان"
+ASSIGN_MANAGER_EMAIL   = "s.naderi@bayganeman.ir"   # مدیر عامل of گیلان
+ASSIGN_MANAGER_PASSWORD = "pass1234"
+
+# position (Persian) → roles[]
 POSITION_ROLES: dict[str, list[str]] = {
-    "مدیر عامل":   ["manager"],
-    "مدیر مالی":   ["finance_head"],
-    "مدیر حقوقی":  ["juridical_head"],
-    "مدیر فنی":    ["engineering_head"],
-    "مدیر امنیت":  ["security_head"],
-    "کارمند فنی":  ["engineering"],
-    "کارمند مالی": ["finance"],
-    "کارمند امنیت":["security"],
+    "مدیر عامل":    ["manager"],
+    "مدیر مالی":    ["finance_head"],
+    "مدیر حقوقی":   ["juridical_head"],
+    "مدیر فنی":     ["engineering_head"],
+    "مدیر امنیت":   ["security_head"],
+    "کارمند فنی":   ["engineering"],
+    "کارمند مالی":  ["finance"],
+    "کارمند امنیت": ["security"],
 }
 
-# position → company head field for the UPDATE call
+# position → company head field wired via PUT /company/management/:id
 POSITION_HEAD_FIELD: dict[str, str] = {
     "مدیر عامل":  "manager_id",
     "مدیر مالی":  "financial_head_id",
@@ -92,16 +98,23 @@ def ok(resp: dict, label: str) -> bool:
 
 # ── auth ─────────────────────────────────────────────────────────────────────
 
-def login() -> str:
-    print(f"Logging in as {EMAIL} …")
+def authenticate(email: str, password: str, fatal: bool = False) -> str | None:
     resp  = _request("POST", "/users/auth/signin",
-                     {"email": EMAIL, "password": PASSWORD}, None)
+                     {"email": email, "password": password}, None)
     token = (resp.get("data") or {}).get("token", "")
     if not token:
-        print("Login failed — check EMAIL/PASSWORD and that the server is running.")
-        sys.exit(1)
-    print("  ✓ authenticated\n")
+        if fatal:
+            print(f"Login failed for {email} — check credentials and server.")
+            sys.exit(1)
+        return None
     return token
+
+
+def login() -> str:
+    print(f"Logging in as {EMAIL} …")
+    token = authenticate(EMAIL, PASSWORD, fatal=True)
+    print("  ✓ authenticated (sudoer)\n")
+    return token  # type: ignore[return-value]
 
 
 # ── fixtures ─────────────────────────────────────────────────────────────────
@@ -355,33 +368,32 @@ CONSULTANTS = [
 # ── seeding logic ─────────────────────────────────────────────────────────────
 
 def seed_employees(employees: list[dict], company_id: str, token: str) -> dict[str, str]:
-    """Create employees for a company; return {head_field: employee_id} for heads."""
+    """Create employees; return {head_field: employee_id} for head positions."""
     heads: dict[str, str] = {}
     for emp in employees:
         position = emp.get("position", "")
-        roles    = POSITION_ROLES.get(position, [])
         req = {
             "first_name":      emp["first_name"],
             "last_name":       emp["last_name"],
             "email":           emp["email"],
             "national_id":     emp.get("national_num") or emp.get("national_id", ""),
             "password":        emp["password"],
-            "roles":           roles,
+            "roles":           POSITION_ROLES.get(position, []),
             "company_id":      company_id,
             "employment_type": "official",
         }
         resp = post("/users/employees/create", req, token)
         label = f"{emp['first_name']} {emp['last_name']} ({position})"
         if ok(resp, label):
-            emp_id = extract_id(resp)
-            head_field = POSITION_HEAD_FIELD.get(position)
-            if emp_id and head_field:
-                heads[head_field] = emp_id
+            emp_id  = extract_id(resp)
+            head_fld = POSITION_HEAD_FIELD.get(position)
+            if emp_id and head_fld:
+                heads[head_fld] = emp_id
     return heads
 
 
 def seed_company(company: dict, token: str, parent_id: str | None = None) -> str | None:
-    """Create a company, its employees, and wire heads. Returns created company ID."""
+    """Create company, seed employees, wire heads. Returns new company ID."""
     req: dict = {"name": company["name"], "reg_num": company["reg_num"]}
     if parent_id:
         req["parent_id"] = parent_id
@@ -398,45 +410,73 @@ def seed_company(company: dict, token: str, parent_id: str | None = None) -> str
     if employees:
         heads = seed_employees(employees, company_id, token)
         if heads:
-            update_body = {"name": company["name"], "reg_num": company["reg_num"]}
+            update_body: dict = {"name": company["name"], "reg_num": company["reg_num"]}
             update_body.update(heads)
-            put_resp = put(f"/company/management/{company_id}", update_body, token)
-            if ok(put_resp, f"  → heads assigned for {company['name']}"):
-                pass
+            ok(put(f"/company/management/{company_id}", update_body, token),
+               f"  → heads assigned for {company['name']}")
 
     return company_id
 
 
-def seed_companies(token: str) -> None:
+def seed_companies(token: str) -> dict[str, str]:
+    """Seed all companies; return {company_name: company_id}."""
     print("Creating companies …")
+    ids: dict[str, str] = {}
     for company in COMPANIES:
-        company_id = seed_company(company, token)
-        if not company_id:
+        cid = seed_company(company, token)
+        if not cid:
             continue
+        ids[company["name"]] = cid
         for sub in company.get("sub_companies") or []:
-            seed_company(sub, token, parent_id=company_id)
+            sub_id = seed_company(sub, token, parent_id=cid)
+            if sub_id:
+                ids[sub["name"]] = sub_id
+    return ids
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    token = login()
+    sudoer_token = login()
 
-    seed_companies(token)
+    company_ids = seed_companies(sudoer_token)
 
+    # Resolve target company ID for projects / contractors / consultants.
+    target_id = company_ids.get(ASSIGN_TO)
+    if not target_id:
+        print(f"\nWARN: '{ASSIGN_TO}' not found in seeded companies — "
+              "projects/contractors/consultants will fall back to sudoer's company.")
+
+    # Projects: sudoer admin-override accepts company_id in body.
     print("\nCreating projects …")
     for p in PROJECTS:
-        ok(post("/projects", p, token), p["name"])
+        body = {**p, "company_id": target_id} if target_id else p
+        ok(post("/projects", body, sudoer_token), p["name"])
 
-    print("\nCreating contractors …")
+    # Contractors + consultants: company_id comes from JWT claims only —
+    # re-login as the target company's manager so the token carries its company_id.
+    scoped_token: str
+    if target_id:
+        print(f"\nRe-logging in as {ASSIGN_MANAGER_EMAIL} ({ASSIGN_TO}) …")
+        tok = authenticate(ASSIGN_MANAGER_EMAIL, ASSIGN_MANAGER_PASSWORD)
+        if tok:
+            scoped_token = tok
+            print(f"  ✓ scoped token acquired\n")
+        else:
+            print(f"  WARN: scoped login failed — falling back to sudoer token")
+            scoped_token = sudoer_token
+    else:
+        scoped_token = sudoer_token
+
+    print("Creating contractors …")
     for c in CONTRACTORS:
         label = (c.get("company_name") or
                  f"{c.get('first_name', '')} {c.get('last_name', '')}".strip())
-        ok(post("/contractors", c, token), label)
+        ok(post("/contractors", c, scoped_token), label)
 
     print("\nCreating consultant engineering companies …")
     for c in CONSULTANTS:
-        ok(post("/consultants", c, token), c["name"])
+        ok(post("/consultants", c, scoped_token), c["name"])
 
     print("\nDone.")
 
